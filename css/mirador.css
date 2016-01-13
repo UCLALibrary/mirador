@@ -1122,7 +1122,7 @@ li.highlight {
 .mirador-pan-zoom-controls {
   position: absolute;
   width: 100px;
-  height: 65px;
+  height: 165px;
   bottom:0;
   right:0;
   margin:1%;
@@ -1158,6 +1158,30 @@ li.highlight {
   position:absolute;
   right:70px;
   top:30px;
+}
+.mirador-osd-zoom-2x {
+  font-size:130%;
+  position:absolute;
+  right:70px;
+  top:55px;
+}
+.mirador-osd-zoom-3x {
+  font-size:130%;
+  position:absolute;
+  right:70px;
+  top:80px;
+}
+.mirador-osd-zoom-4x {
+  font-size:130%;
+  position:absolute;
+  right:70px;
+  top:105px;
+}
+.mirador-osd-zoom-5x {
+  font-size:130%;
+  position:absolute;
+  right:70px;
+  top:130px;
 }
 .mirador-osd-go-home {
   position: absolute;

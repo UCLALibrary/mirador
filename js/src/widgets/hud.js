@@ -118,6 +118,33 @@
         }
       });
 
+      /* zoom by specified amount */
+      var miradorOsdZoomBy = function(zoomLevel) {
+        var osd = _this.parent.osd;
+
+        // go home first
+        osd.viewport.goHome();
+
+        // then, zoom in by 2x
+        if ( osd.viewport ) {
+          osd.viewport.zoomBy(zoomLevel);
+          osd.viewport.applyConstraints();
+        }
+      };
+
+      this.parent.element.find('.mirador-osd-zoom-2x').on('click', function() {
+        miradorOsdZoomBy(2.0);
+      });
+      this.parent.element.find('.mirador-osd-zoom-3x').on('click', function() {
+        miradorOsdZoomBy(3.0);
+      });
+      this.parent.element.find('.mirador-osd-zoom-4x').on('click', function() {
+        miradorOsdZoomBy(4.0);
+      });
+      this.parent.element.find('.mirador-osd-zoom-5x').on('click', function() {
+        miradorOsdZoomBy(5.0);
+      });
+
       this.parent.element.find('.mirador-osd-fullscreen').on('click', function() {
         if (OpenSeadragon.isFullScreen()) {
           OpenSeadragon.exitFullScreen();
@@ -334,6 +361,21 @@
                                  '<a class="mirador-osd-zoom-out hud-control" role="button" aria-label="Zoom out">',
                                  '<i class="fa fa-minus-circle"></i>',
                                  '</a>',
+
+                                 /* prefefined zoom levels */
+                                 '<a class="mirador-osd-zoom-2x hud-control" role="button" aria-label="Zoom 2x">',
+                                 '<i>2x</i>',
+                                 '</a>',
+                                 '<a class="mirador-osd-zoom-3x hud-control" role="button" aria-label="Zoom 3x">',
+                                 '<i>3x</i>',
+                                 '</a>',
+                                 '<a class="mirador-osd-zoom-4x hud-control" role="button" aria-label="Zoom 4x">',
+                                 '<i>4x</i>',
+                                 '</a>',
+                                 '<a class="mirador-osd-zoom-5x hud-control" role="button" aria-label="Zoom 5x">',
+                                 '<i>5x</i>',
+                                 '</a>',
+
                                  '<a class="mirador-osd-go-home hud-control" role="button" aria-label="Reset image bounds">',
                                  '<i class="fa fa-home"></i>',
                                  '</a>',
