@@ -39,7 +39,9 @@
             this.element.append(this.template({
                 mainMenuCls: this.mainMenuCls,
                 showBookmark : this.state.getStateProperty('mainMenuSettings').buttons.bookmark,
-                showLayout : this.state.getStateProperty('mainMenuSettings').buttons.layout,
+                showLayout : this.state.getStateProperty('mainMenuSettings').buttons.layout && !this.state.getStateProperty('flexibleWorkspace'),
+		showAddSlot : this.state.getStateProperty('flexibleWorkspace'),
+		showWorkspaceDownload: this.state.getStateProperty('workspaceDownload'),
                 showOptions: this.state.getStateProperty('mainMenuSettings').buttons.options,
                 showFullScreenViewer : this.state.getStateProperty('mainMenuSettings').buttons.fullScreenViewer,
                 userButtons: this.state.getStateProperty('mainMenuSettings').userButtons,
@@ -79,6 +81,14 @@
             this.element.find('.fullscreen-viewer').on('click', function() {
               jQuery.publish('TOGGLE_FULLSCREEN');
             });
+
+	    this.element.find('.add-flexible-slot').on('click', function() {
+	      jQuery.publish('ADD_FLEXIBLE_SLOT');
+	    });
+
+            this.element.find('.workspace-upload').on('click', function() { 
+              jQuery.publish('TOGGLE_WORKSPACE_UPLOAD_PANEL');
+            });
         },
 
         template: Handlebars.compile([
@@ -106,6 +116,25 @@
           '<li>',
             '<a href="javascript:;" class="change-layout" title="{{t "changeLayout"}}">',
               '<span class="fa fa-th-large fa-lg fa-fw"></span> {{t "changeLayout"}}',
+            '</a>',
+          '</li>',
+        '{{/if}}',
+        '{{#if showAddSlot}}',
+          '<li>',
+            '<a href="javascript:;" class="add-flexible-slot" title="Add Slot">',
+              '<span class="fa fa-th-large fa-lg fa-fw"></span> Add Slot',
+            '</a>',
+          '</li>',
+        '{{/if}}',
+        '{{#if showWorkspaceDownload}}',
+          '<li>',
+            '<a href="javascript:;" class="workspace-download" title="Download Workspace">',
+              '<span class="fa fa-download fa-lg fa-fw"></span> Download Workspace',
+            '</a>',
+          '</li>',
+          '<li>',
+            '<a href="javascript:;" class="workspace-upload" title="Upload Workspace">',
+              '<span class="fa fa-upload fa-lg fa-fw"></span> Upload Workspace',
             '</a>',
           '</li>',
         '{{/if}}',
