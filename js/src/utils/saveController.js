@@ -147,7 +147,7 @@
         this.save();
         this.updateDownloadLink();
       }
-      jQuery.publish("saveControllerConfigUpdated");
+      //jQuery.publish("saveControllerConfigUpdated");
     },
 
     bindEvents: function() {
