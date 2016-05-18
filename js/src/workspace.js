@@ -31,6 +31,9 @@
 
       this.bindEvents();
       this.listenForActions();
+
+      // y u no work???
+      //jQuery('.layout-slot').draggable().resizable();
     },
 
     listenForActions: function() {
@@ -99,14 +102,31 @@
       _this.eventEmitter.subscribe('RESET_WORKSPACE_LAYOUT', function(event, options) {
         _this.resetLayout(options.layoutDescription);
       });
+
+      jQuery.subscribe('ADD_FLEXIBLE_SLOT', function(event, options) {
+    // simply splitRight on the rigthtmost slot
+    _this.splitRight(_this.slots[_this.slots.length - 1]);
+      });
     },
 
     bindEvents: function() {
       var _this = this;
 
-      d3.select(window).on('resize', function(event) {
-        _this.calculateLayout();
-      });
+      jQuery('.layout-slot').draggable().resizable()
+        .on('dragstop', function(event, ui) {
+          _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].x = ui.position.left;
+          _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].y = ui.position.top;
+          _this.calculateLayout();
+          var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
+          _this.eventEmitter.publish('layoutChanged', root);
+        })
+        .on('resizestop', function(event, ui) {
+          _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].dx = ui.size.width;
+          _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].dy = ui.size.height;
+          _this.calculateLayout();
+          var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
+          _this.eventEmitter.publish('layoutChanged', root);
+        });
     },
 
     get: function(prop, parent) {
@@ -128,7 +148,94 @@
 
     calculateLayout: function(resetting) {
       var _this = this,
-      layout;
+      layout,
+      divs;
+
+      // if flexible layout is enabled, do not use isfahan
+      // instead, use flexible layout settings for width, height, and offset
+
+/*
+      if ($.DEFAULT_SETTINGS.flexibleWorkspace === true) {
+        // 
+        console.log('hi');
+    // create layout representation of the windows - a list of objects
+    // with 5 properties: id, x, y, dx, dy
+    layout = [];
+        for (var i = 0; i < parseInt(_this.layoutDescription.nSlots); i++)
+    {
+      layout[i] = {
+        id: $.genUUID(),
+        x: 50 + 50 * i,
+        y: 50 + 50 * i,
+        dx: 500,
+        dy: 500
+      };
+
+    }
+    _this.layout = layout;
+
+        divs = d3.select("#" + _this.element.attr('id')).selectAll(".layout-slot")
+        .data(layout, function(d) { return d.id; });
+
+        divs.enter().append("div")
+        .attr("class", "layout-slot")
+        .attr("data-layout-slot-id", function(d) { return d.id; })
+        .call(cell)
+        .each(function(d) {
+          var appendTo = _this.element.children('div').filter('[data-layout-slot-id="'+ d.id+'"]')[0];
+          _this.slots.push(new $.Slot({
+            slotID: d.id,
+            focused: true,
+            appendTo: appendTo,
+            state: _this.state
+          }));
+        });
+
+        divs.exit()
+        .remove("div")
+        .each(function(d) { 
+          var slotMap = _this.slots.reduce(function(map, temp_slot) {
+            if (d.id === temp_slot.slotID) {
+              map[d.id] = temp_slot;
+            }
+            return map;
+          }, {}),
+          slot = slotMap[d.id];
+  
+          if (slot && slot.window && !resetting) {
+            _this.eventEmitter.publish("windowRemoved", slot.window.id);
+          }
+          
+          // nullify the window parameter of old slots
+          slot.window = null;
+          _this.slots.splice(_this.slots.indexOf(slot), 1);
+        });
+        _this.eventEmitter.publish("layoutChanged", layout);
+        _this.eventEmitter.publish('slotsUpdated', {slots: _this.slots});
+
+        return;
+      }
+      */
+
+      // save layout description
+      //
+      
+      if ($.DEFAULT_SETTINGS.flexibleWorkspace === true && typeof _this.layoutDescription === 'object' && !_this.slotCoordinates) {
+        // iterate over _this.layoutDescription.children and store in _this.slotCoordinates
+        _this.slotCoordinates = {};
+        var childs = _this.layoutDescription.children;
+        var keyy;
+        for (var p = 0; p < childs.length; p++) {
+          // save the coordinates
+          keyy = childs[p].id;
+
+          _this.slotCoordinates[keyy] = {};
+          _this.slotCoordinates[keyy].x = childs[p].x;
+          _this.slotCoordinates[keyy].y = childs[p].y;
+          _this.slotCoordinates[keyy].dx = childs[p].dx;
+          _this.slotCoordinates[keyy].dy = childs[p].dy;
+        }
+      }
 
       _this.layout = layout = new Isfahan({
         containerId: _this.element.attr('id'),
@@ -137,12 +244,64 @@
         padding: 3 
       });
 
+      // if felx workspace is enabled
+      //   go thru _this.layout and load the coords into the children attr
+      var slotX = 50, slotY = 50, slotDX = 500, slotDY = 500;
+
+      if ($.DEFAULT_SETTINGS.flexibleWorkspace === true) {
+
+        var children = _this.layout[0].children;
+        if (!_this.slotCoordinates) {
+          // if we are initializing the workspace, then cascade windows
+          // TODO: try to stop this function from executing more than once
+          console.log('FLEXIBLE_DESKTOP_ENABLED');
+    
+          _this.slotCoordinates = {};
+          for (var i = 0; i < children.length; i++) {
+
+            children[i].x = slotX * (i + 1);
+            children[i].y = slotY * (i + 1);
+            children[i].dx = slotDX;
+            children[i].dy = slotDY;
+    
+            // save the coordinates
+            _this.slotCoordinates[children[i].id] = {};
+            _this.slotCoordinates[children[i].id].x = children[i].x;
+            _this.slotCoordinates[children[i].id].y = children[i].y;
+            _this.slotCoordinates[children[i].id].dx = children[i].dx;
+            _this.slotCoordinates[children[i].id].dy = children[i].dy;
+          }
+
+        } else {
+          // restore the saved coordinates
+          for (var j = 0; j < children.length; j++) {
+
+            // if _this.slotCoordinates doesnt have anything for this children item
+            //   add it
+            if (!_this.slotCoordinates[children[j].id]) {
+              _this.slotCoordinates[children[j].id] = {};
+              _this.slotCoordinates[children[j].id].x = slotX * _this.nSlots + 1;
+              _this.slotCoordinates[children[j].id].y = slotY * _this.nSlots + 1;
+              _this.slotCoordinates[children[j].id].dx = slotDX;
+              _this.slotCoordinates[children[j].id].dy = slotDY;
+            }
+
+            // restore it
+            children[j].x = _this.slotCoordinates[children[j].id].x;
+            children[j].y = _this.slotCoordinates[children[j].id].y;
+            children[j].dx = _this.slotCoordinates[children[j].id].dx;
+            children[j].dy = _this.slotCoordinates[children[j].id].dy;
+          }
+        }
+      }
+
       var data = layout.filter( function(d) {
         return !d.children;
       });
+      _this.nSlots = data.length;
 
       // Data Join.
-      var divs = d3.select("#" + _this.element.attr('id')).selectAll(".layout-slot")
+      divs = d3.select("#" + _this.element.attr('id')).selectAll(".layout-slot")
       .data(data, function(d) { return d.id; });
 
       // Implicitly updates the existing elements.
@@ -172,6 +331,9 @@
         }));
       });
 
+      // add draggable/resizable events to new div
+      _this.bindEvents();
+
       // Exit
       divs.exit()
       .remove("div")
@@ -191,6 +353,11 @@
         // nullify the window parameter of old slots
         slot.window = null;
         _this.slots.splice(_this.slots.indexOf(slot), 1);
+
+        // remove it from the slotCoordinates var
+        if (_this.slotCoordinates[d.id]) {
+          delete _this.slotCoordinates[d.id];
+        }
       });
 
       function cell() {
@@ -215,7 +382,7 @@
 
     split: function(targetSlot, direction) {
       var _this = this,
-      node = jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; })[0];
+      node = jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; })[0],
       nodeIndex = node.parent ? node.parent.children.indexOf(node) : 0,
       nodeIsNotRoot = node.parent;
 

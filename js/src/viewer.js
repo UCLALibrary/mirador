@@ -20,7 +20,8 @@
         'workspacePanelVisible': false,
         'manifestsPanelVisible': false,
         'optionsPanelVisible': false,
-        'bookmarkPanelVisible': false
+        'bookmarkPanelVisible': false,
+        'workspaceUploadPanelVisible': false
       },
       manifests:             []
     }, options);
@@ -92,7 +93,7 @@
       // add workspace configuration
       this.layout = typeof this.state.getStateProperty('layout') !== 'string' ? JSON.stringify(this.state.getStateProperty('layout')) : this.state.getStateProperty('layout');
       this.workspace = new $.Workspace({
-        layoutDescription: this.layout.charAt(0) === '{' ? JSON.parse(this.layout) : $.layoutDescriptionFromGridString(this.layout),
+        layoutDescription: this.layout.charAt(0) === '{' ? JSON.parse(this.layout) : !isNaN(this.layout) ? $.layoutDescriptionFromGridString('1x' + this.layout) : $.layoutDescriptionFromGridString(this.layout),
         appendTo: this.element.find('.mirador-viewer'),
         state: this.state,
         eventEmitter: this.eventEmitter
@@ -108,6 +109,11 @@
       //only instatiate bookmarkPanel if we need it
       if (showMainMenu && this.state.getStateProperty('mainMenuSettings').buttons.bookmark) {
         this.bookmarkPanel = new $.BookmarkPanel({ appendTo: this.element.find('.mirador-viewer'), state: this.state, eventEmitter: this.eventEmitter });
+      }
+
+      // add file upload panel
+      if (showMainMenu && this.state.getStateProperty('workspaceDownload')) {
+        this.workspaceUploadPanel = new $.WorkspaceUploadPanel({ appendTo: this.element.find('.mirador-viewer'), state: this.state });
       }
 
       // set this to be displayed
@@ -144,6 +150,10 @@
 
       _this.eventEmitter.subscribe('TOGGLE_BOOKMARK_PANEL', function(event) {
         _this.toggleBookmarkPanel();
+      });
+
+      _this.eventEmitter.subscribe('TOGGLE_WORKSPACE_UPLOAD_PANEL', function(event) {
+        _this.toggleWorkspaceUploadPanel();
       });
 
       _this.eventEmitter.subscribe('TOGGLE_FULLSCREEN', function(event) {
@@ -229,6 +239,10 @@
 
     toggleBookmarkPanel: function() {
       this.toggleOverlay('bookmarkPanelVisible');
+    },
+
+    toggleWorkspaceUploadPanel: function() {
+      this.toggleOverlay('workspaceUploadPanelVisible');
     },
 
     getManifestsData: function() {
