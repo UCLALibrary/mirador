@@ -7,13 +7,15 @@
       appendTo:          null,
       windowId:          null,
       structures:        [],
+      manifestVersion:   null,
       previousSelectedElements: [],
       selectedElements: [],
       openElements:     [],
       hoveredElement:   [],
       selectContext:    null,
       tocData: {},
-      active: null
+      active: null,
+      eventEmitter: null
     }, options);
 
     this.init();
@@ -27,7 +29,7 @@
         this.element = jQuery(this.emptyTemplate()).appendTo(this.appendTo);
       } else {
         this.element = jQuery(this.template({ ranges: this.getTplData() })).appendTo(this.appendTo);
-        this.tocData = this.initTocData();
+        this.tocData = _this.initTocData();
         this.selectedElements = $.getRangeIDByCanvasID(_this.structures, _this.canvasID);
         this.element.find('.has-child ul').hide();
         this.render();
@@ -45,7 +47,22 @@
 
     getTplData: function() {
       var _this = this,
-      ranges = _this.extractRangeTrees(_this.structures);
+          filteredStructures = _this.structures.map(function(structure) {
+            structure.id = structure['@id'];
+            return structure;
+          }),
+          ranges;
+
+      switch (_this.manifestVersion) {
+      case '1':
+        ranges = _this.extractV1RangeTrees(_this.structures);
+        break;
+      case '2':
+        ranges = _this.extractV2RangeTrees(_this.structures);
+        break;
+      // case '2.1':
+      //   _this.extractV21RangeTrees(_this.structures);
+      }
 
       if (ranges.length < 2) {
         ranges = ranges[0].children;
@@ -58,11 +75,11 @@
       var _this = this,
       tocData = {};
 
-      jQuery.each(_this.structures, function(index, item) {
-        var rangeID = item['@id'],
+      _this.structures.forEach(function(structure) {
+        var rangeID = structure['@id'],
         attrString = '[data-rangeid="' + rangeID +'"]';
 
-        tocData[item['@id']] = {
+        tocData[structure['@id']] = {
           element: _this.element.find(attrString).closest('li')
         };
       });
@@ -70,7 +87,57 @@
       return tocData;
     },
 
-    extractRangeTrees: function(rangeList) {
+    extractV1RangeTrees: function(rangeList) {
+      var tree, parent;
+      // Recursively build tree/table of contents data structure
+      // Begins with the list of topmost categories
+      function unflatten(flatRanges, parent, tree) {
+        // To aid recursion, define the tree if it does not exist,
+        // but use the tree that is being recursively built
+        // by the call below.
+        tree = typeof tree !== 'undefined' ? tree : [];
+        parent = typeof parent !== 'undefined' ? parent : {'@id': "root", label: "Table of Contents" };
+        var children = jQuery.grep(flatRanges, function(child) { if (!child.within) { child.within = 'root'; } return child.within == parent['@id']; });
+        if ( children.length ) {
+          if ( parent['@id'] === 'root') {
+            // If there are children and their parent's
+            // id is a root, bind them to the tree object.
+            //
+            // This begins the construction of the object,
+            // and all non-top-level children are now
+            // bound the these base nodes set on the tree
+            // object.
+            children.forEach(function(child) {
+              child.level = 0;
+            });
+            tree = children;
+          } else {
+            // If the parent does not have a top-level id,
+            // bind the children to the parent node in this
+            // recursion level before handing it over for
+            // another spin.
+            //
+            // Because "child" is passed as
+            // the second parameter in the next call,
+            // in the next iteration "parent" will be the
+            // first child bound here.
+            children.forEach(function(child) {
+              child.level = parent.level+1;
+            });
+            parent.children = children;
+          }
+          // The function cannot continue to the return
+          // statement until this line stops being called,
+          // which only happens when "children" is empty.
+          jQuery.each( children, function( index, child ){ unflatten( flatRanges, child ); } );
+        }
+        return tree;
+      }
+
+      return unflatten(rangeList);
+    },
+
+    extractV2RangeTrees: function(rangeList) {
       var tree, parent;
       // Recursively build tree/table of contents data structure
       // Begins with the list of topmost categories
@@ -131,12 +198,12 @@
       toOpen = jQuery.map(_this.selectedElements, function(rangeID) {
           if ((jQuery.inArray(rangeID, _this.openElements) < 0) && (jQuery.inArray(rangeID, _this.previousSelectedElements) < 0)) {
             return _this.tocData[rangeID].element.toArray();
-          }
+          } else { return false; }
       }),
       toClose = jQuery.map(_this.previousSelectedElements, function(rangeID) {
           if ((jQuery.inArray(rangeID, _this.openElements) < 0) && (jQuery.inArray(rangeID, _this.selectedElements) < 0)) {
             return _this.tocData[rangeID].element.toArray();
-          }
+          } else { return false; }
       });
 
       // Deselect elements
@@ -170,17 +237,17 @@
     bindEvents: function() {
       var _this = this;
 
-      // jQuery.subscribe('focusChanged', function(_, focusFrame) {
+      // _this.eventEmitter.subscribe('focusChanged', function(_, focusFrame) {
       // });
 
-      // jQuery.subscribe('cursorFrameUpdated', function(_, cursorBounds) {
+      // _this.eventEmitter.subscribe('cursorFrameUpdated', function(_, cursorBounds) {
       // });
 
-      jQuery.subscribe('tabStateUpdated.' + _this.windowId, function(_, data) {
+      _this.eventEmitter.subscribe('tabStateUpdated.' + _this.windowId, function(_, data) {
         _this.tabStateUpdated(data);
       });
 
-      jQuery.subscribe(('currentCanvasIDUpdated.' + _this.windowId), function(event, canvasID) {
+      _this.eventEmitter.subscribe(('currentCanvasIDUpdated.' + _this.windowId), function(event, canvasID) {
         if (!_this.structures) { return; }
         _this.setSelectedElements($.getRangeIDByCanvasID(_this.structures, canvasID));
         _this.render();
@@ -193,7 +260,7 @@
             canvasID = jQuery.grep(_this.structures, function(item) { return item['@id'] == rangeID; })[0].canvases[0],
             isLeaf = jQuery(this).closest('li').hasClass('leaf-item');
 
-        jQuery.publish('SET_CURRENT_CANVAS_ID.' + _this.windowId, canvasID);
+        _this.eventEmitter.publish('SET_CURRENT_CANVAS_ID.' + _this.windowId, canvasID);
       });
 
       _this.element.find('.toc-caret').on('click', function(event) {
@@ -286,13 +353,15 @@
     },
 
     hide: function() {
+      var _this = this;
       jQuery(this.appendTo).hide();
-      jQuery.publish('ADD_CLASS.'+this.windowId, 'focus-max-width');
+      _this.eventEmitter.publish('ADD_CLASS.'+this.windowId, 'focus-max-width');
     },
 
     show: function() {
+      var _this = this;
       jQuery(this.appendTo).show({effect: "fade", duration: 300, easing: "easeInCubic"});
-      jQuery.publish('REMOVE_CLASS.'+this.windowId, 'focus-max-width');
+      _this.eventEmitter.publish('REMOVE_CLASS.'+this.windowId, 'focus-max-width');
     }
 
   };

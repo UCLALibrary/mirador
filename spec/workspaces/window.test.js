@@ -1,15 +1,17 @@
 describe('Window', function() {
   describe('Basic Operation', function() {
     beforeEach(function() {
+      this.eventEmitter = new Mirador.EventEmitter();
       this.appendTo = jQuery('<div/>');
       Mirador.viewer = {
         // all of this global state should be 
         // removed as soon as possible.
+        eventEmitter: this.eventEmitter,
         annotationEndpoints: [],
         workspace: {
           slots: []
         }
-      }
+      };
       spyOn(Mirador, 'ThumbnailsView').and.callFake(function() {
         this.updateImages = jasmine.createSpy();
         this.toggle = jasmine.createSpy();
@@ -22,7 +24,8 @@ describe('Window', function() {
         this.adjustHeight = jasmine.createSpy();
       });
       this.window = new Mirador.Window({
-        state: new Mirador.SaveController(Mirador.DEFAULT_SETTINGS),
+        state: new Mirador.SaveController(jQuery.extend(true, {}, Mirador.DEFAULT_SETTINGS, {eventEmitter:this.eventEmitter})),
+        eventEmitter: this.eventEmitter,
         manifest: {
           jsonLd: {
             sequences: [
@@ -43,6 +46,9 @@ describe('Window', function() {
           },
           getStructures: function() {
             return [];
+          },
+          getVersion: function() {
+            return '1';
           }
         },
         appendTo: this.appendTo
