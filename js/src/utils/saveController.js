@@ -7,7 +7,9 @@
       originalConfig: null, // Don't know if we really need this.
       shareEndpoint: null, // the place where POST requests for new saved sessions will go 
       historySize: null, // wishful thinking for later.
-      sessionID: null
+      sessionID: null,
+      slots: [],
+      eventEmitter: null
     });
 
     // error check - removes invalid annotation tools
@@ -22,14 +24,15 @@
       config.mainMenuSettings.buttons = {};
     }
 
-    this.init(jQuery.extend(false, $.DEFAULT_SETTINGS, config));
-
+    this.init(jQuery.extend(true, {}, $.DEFAULT_SETTINGS, config));
   };
 
   $.SaveController.prototype = {
 
     init: function(config) {
       var _this = this;
+      
+      this.eventEmitter = config.eventEmitter;
       
       // Don't want to save session, therefore don't set up save controller
       if (config.saveSession === false) {
@@ -136,6 +139,7 @@
     },
 
     set: function(prop, value, options) {
+      var _this = this;
       // when a property of the config is updated,
       // save it to localStore.
       if (options) {
@@ -147,7 +151,8 @@
         this.save();
         this.updateDownloadLink();
       }
-      //jQuery.publish("saveControllerConfigUpdated");
+      // TODO: do not execute following line if flexible desktop is enabled
+      _this.eventEmitter.publish("saveControllerConfigUpdated");
     },
 
     bindEvents: function() {
@@ -156,7 +161,7 @@
       // available data to update the appropriate 
       // field in the stored config.
 
-      jQuery.subscribe('windowUpdated', function(event, options) {
+      _this.eventEmitter.subscribe('windowUpdated', function(event, options) {
         var windowObjects = _this.currentConfig.windowObjects;
         if (windowObjects && windowObjects.length > 0) {
           jQuery.each(windowObjects, function(index, window){
@@ -170,7 +175,7 @@
         _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
       });
 
-      jQuery.subscribe("imageBoundsUpdated", function(event, options) {   
+      _this.eventEmitter.subscribe("imageBoundsUpdated", function(event, options) {   
         var windowObjects = _this.currentConfig.windowObjects;   
         if (windowObjects && windowObjects.length > 0) {   
           jQuery.each(windowObjects, function(index, window){    
@@ -185,22 +190,22 @@
         _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );   
       });
 
-      jQuery.subscribe('ANNOTATIONS_LIST_UPDATED', function(event, options) {
+      _this.eventEmitter.subscribe('ANNOTATIONS_LIST_UPDATED', function(event, options) {
         if (!_this.windowsAnnotationsLists) {
           _this.windowsAnnotationsLists = {};
         }
         _this.windowsAnnotationsLists[options.windowId] = options.annotationsList;
-        jQuery.publish('annotationListLoaded.' + options.windowId);
+        _this.eventEmitter.publish('annotationListLoaded.' + options.windowId);
       });
 
-      jQuery.subscribe('WINDOW_ELEMENT_UPDATED', function(event, options) {
+      _this.eventEmitter.subscribe('WINDOW_ELEMENT_UPDATED', function(event, options) {
         if (!_this.windowsElements) {
           _this.windowsElements = {};
         }
         _this.windowsElements[options.windowId] = options.element;
       });
 
-      jQuery.subscribe('windowSlotAddressUpdated', function(event, options) {
+      _this.eventEmitter.subscribe('windowSlotAddressUpdated', function(event, options) {
         var windowObjects = _this.currentConfig.windowObjects;
         if (windowObjects && windowObjects.length > 0) {
           jQuery.each(windowObjects, function(index, window){
@@ -214,7 +219,7 @@
         _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
       });
 
-      jQuery.subscribe('manifestQueued', function(event, manifestObject, repository) {
+      _this.eventEmitter.subscribe('manifestQueued', function(event, manifestObject, repository) {
         var data = _this.currentConfig.data,
         objectInConfig = false,
         url = manifestObject.uri;
@@ -233,11 +238,11 @@
         _this.set('manifests', manifests, {parent: 'currentConfig'});
       });
 
-      jQuery.subscribe("slotsUpdated", function(event, options) {
+      _this.eventEmitter.subscribe("slotsUpdated", function(event, options) {
         _this.slots = options.slots;
       });
 
-      jQuery.subscribe("layoutChanged", function(event, layoutDescription) {
+      _this.eventEmitter.subscribe("layoutChanged", function(event, layoutDescription) {
         // string parents to prevent invalid circular representation.
         var serialisedLayout = JSON.stringify(layoutDescription, function(key, value) {
           if (key === 'parent') return undefined;
@@ -246,7 +251,7 @@
         _this.set('layout', serialisedLayout, {parent: "currentConfig"} );
       });
 
-      jQuery.subscribe("windowSlotAdded", function(event, options) {
+      _this.eventEmitter.subscribe("windowSlotAdded", function(event, options) {
         var windowObjects = _this.currentConfig.windowObjects,
         inArray = jQuery.grep(windowObjects, function(windowObj) {
           return windowObj.id === options.id;
@@ -260,18 +265,18 @@
         }
       });
 
-        jQuery.subscribe("windowsRemoved", function(event) {
+        _this.eventEmitter.subscribe("windowsRemoved", function(event) {
           _this.set("windowObjects", [], {parent: "currentConfig"} );
         });
 
-      jQuery.subscribe("windowRemoved", function(event, windowID) {
+      _this.eventEmitter.subscribe("windowRemoved", function(event, windowID) {
         var windowObjects = jQuery.grep(_this.currentConfig.windowObjects, function(window, index) {
           return window.id !== windowID;
         });
         _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
       });
 
-      jQuery.subscribe('etc...', function(junk) {
+      _this.eventEmitter.subscribe('etc...', function(junk) {
         // handle adding the property in the appropriate place 
         // in this.currentConfig by passing to the _this.set(), 
         // which "saves" to localstore as a side effect.
@@ -286,7 +291,7 @@
       // currently do that the way the app is written, since we 
       // didn't actually follow that patttern almost anywhere. 
       // 
-      // jQuery.subscribe('set', function(junk) {
+      // _this.eventEmitter.subscribe('set', function(junk) {
       //  // 1.) send the junk to a parser function
       //  // 2.) use this.set(parsedJunk) to update
       //  // this.currentConfig, with the side effect of

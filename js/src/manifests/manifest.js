@@ -67,7 +67,6 @@
         dataType: 'json',
         async: true
       });
-
       this.request.done(function(jsonLd) {
         _this.jsonLd = _this.generateInfoWrapper(jsonLd);
       });
@@ -78,7 +77,7 @@
       this.request.done(function(jsonLd) {
         _this.jsonLd = jsonLd;
       });
-      setTimeout(function () { _this.request.resolve(manifestContent); }, 0);
+      _this.request.resolve(manifestContent); // resolve immediately
     },
     getThumbnailForCanvas : function(canvas, width) {
       var version = "1.1",
@@ -113,6 +112,15 @@
         thumbnailUrl = $.Iiif.makeUriWithWidth(service['@id'], width, version);
       }
       return thumbnailUrl;
+    },
+    getVersion: function() {
+      var versionMap = {
+        'http://www.shared-canvas.org/ns/context.json': '1', // is this valid?
+        'http://iiif.io/api/presentation/1/context.json': '1',
+        'http://iiif.io/api/presentation/2/context.json': '2',
+        'http://iiif.io/api/presentation/2.1/context.json': '2.1'
+      };
+      return versionMap[this.jsonLd['@context']];
     },
     getCanvases : function() {
       var _this = this;
@@ -164,8 +172,8 @@
                       '@id': infoJson,
                       '@type': "dctypes:Image",
                       format: "image/jpeg",
-                      height: infoJson.width,
-                      width: infoJson.height,
+                      height: infoJson.height,
+                      width: infoJson.width,
                       service: {
                         '@id': infoJson['@id'],
                         '@context': infoJson['@context'],

@@ -130,18 +130,27 @@ a {
   padding: 0 15px;
 }
 
-.mirador-main-menu a,
-.mirador-main-menu a:active,
-.mirador-main-menu a:visited {
+.mirador-main-menu a {
   color: #fff;
   font-weight: normal;
   text-decoration: none;
+  opacity: 0.6;
 }
 
-.mirador-main-menu a:focus {
+.mirador-main-menu a:hover {
+  opacity: 1;
+}
+
+.mirador-main-menu a.active {
+  opacity: 1;
+  border-bottom: 2px solid deepskyblue;
+}
+
+
+/*.mirador-main-menu a:focus {
   border-bottom: 2px solid deepskyblue;
   outline: none;
-}
+}*/
 
 .mirador-main-menu-bar .window-options-menu {
   position: relative;
@@ -256,7 +265,7 @@ a {
 #bookmark-panel h3, #workspace-upload-panel h3  {
   text-align: center;
 }
-.container {
+#manifest-select-menu .container {
   position: relative;
   width: 100%;
   height:100%;
@@ -1040,7 +1049,7 @@ li.highlight {
 
 /* Canvas HUD
 ----------------------- */
-.mirador-canvas-hud {
+/*.mirador-canvas-hud {
   position:absolute;
   left: 0;
   top:0;
@@ -1048,12 +1057,12 @@ li.highlight {
   right:0;
   background: rgba(255, 0, 128, 0.5);
   pointer-events: none;
-}
+}*/
 .hud-control {
   cursor: pointer;
   color:white;
   text-shadow: 0 0 5px black;
-  transition: all 0.3s ease;
+  /*transition: all 0.3s ease;*/
   opacity: 0.6;
   font-size: 18px;
   z-index:2;
@@ -1067,12 +1076,15 @@ li.highlight {
   z-index:2;
 }
 .hud-control:hover {
-  transition: all 0.3s ease;
+  /*transition: all 0.3s ease;*/
   opacity: 1;
 }
-.mirador-osd-edit-mode.selected, .mirador-osd-annotations-layer.selected {
+.hud-control.selected {
   opacity: 1;
   /*transition: none;*/
+}
+.hud-control.hidden {
+  opacity: 0;
 }
 .mirador-osd-previous {
   position:absolute;
@@ -1594,16 +1606,14 @@ ul.scroll-listing-thumbs li .thumb-label {
 ---------------------------------------------------------------------------- */
 
 .mirador-viewer .sub-title {
-  border-bottom: 1px dotted #ccc;
+  border-bottom: 2px solid #ccc;
   color: #666;
   font-weight: bold;
-  margin: 10px 20px 0 20px;
+  margin: 10px 20px 5px 20px;
   padding: 0 5px 5px 0;
 }
 
 .mirador-viewer .metadata-listing {
-  display: table;
-  table-layout: fixed;
   width: 100%;
   margin: 0;
   padding: 0px 20px 10px 20px;
@@ -1611,18 +1621,16 @@ ul.scroll-listing-thumbs li .thumb-label {
 }
 
 .mirador-viewer .metadata-item {
-  padding-bottom: 5px;
+  padding: 5px 0;
 }
 
 .mirador-viewer .metadata-label, .mirador-viewer .metadata-value {
   line-height: 1.5;
-  margin-left: 3%;
 }
 
 .mirador-viewer .metadata-label {
   text-transform: capitalize;
   color: #555;
-  margin-left: 3%;
   font-style: italic;
 }
 
@@ -1644,8 +1652,8 @@ ul.scroll-listing-thumbs li .thumb-label {
 }
 
 .metadata-logo {
-  width: 80px;
-  margin-left: 3%;
+  max-height: 120px;
+  max-width: 100%;
 }
 
 
@@ -1690,7 +1698,7 @@ a.mirador-icon-annotations [class^="icon-"] {
   color: black
 }
 
-ul.dropdown {
+.mirador-viewer ul.dropdown {
   display: none;
   width: 160px;
   z-index: 3;
@@ -1706,7 +1714,7 @@ ul.dropdown {
   border: 1px solid #B1B1B1;
 }
 
-.dropdown li {
+.mirador-viewer .dropdown li {
   margin:0;
   cursor: pointer;
   box-sizing: border-box;
@@ -1715,7 +1723,8 @@ ul.dropdown {
   width:100%;
   text-align:left;
 }
-.dropdown li:hover {
+
+.mirador-viewer .dropdown li:hover {
   border-left: 3px solid deepskyblue;
   background-color: #dddddd;
   padding-left: 7px;
@@ -1765,7 +1774,8 @@ a.mirador-icon-window-menu, a.mirador-icon-view-type {
 .mirador-viewer a.mirador-icon-metadata-view:hover, 
 .mirador-viewer a.mirador-icon-empty-slot:hover, 
 .mirador-viewer a.mirador-icon-window-menu:hover, 
-.mirador-viewer a.mirador-icon-toc:hover {
+.mirador-viewer a.mirador-icon-toc:hover,
+.mirador-viewer a.mirador-osd-fullscreen:hover {
   color: black;
 }
 
@@ -1799,7 +1809,7 @@ a.mirador-icon-window-menu, a.mirador-icon-view-type {
   padding: 0;
   clear: both;
 }
-.qtip-content {
+.qtip-viewer .qtip-content {
   min-width: 275px;
   max-height: 200px;
   overflow: auto;
