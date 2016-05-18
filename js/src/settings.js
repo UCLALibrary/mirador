@@ -184,6 +184,22 @@
     'lockController' : {
       'lockProfile' : 'lazyZoom',
       'notifyMaxMin' : true
+    },
+
+    // physical ruler
+    'scalebar': {
+      'type': 3, // RULER
+      'minWidth': '300px',
+      'location': 4, // BOTTOM_LEFT
+      'xOffset': 10,
+      'yOffset': 10,
+      'orientation': 1, // VERTICAL
+      'stayInsideImage': true,
+      'color': 'black',
+      'fontColor': 'rgb(100, 100, 100)',
+      'backgroundColor': 'rgba(255, 255, 255, 0.3)',
+      'fontSize': 'small',
+      'barThickness': 1
     }
   };
 
