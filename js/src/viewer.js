@@ -113,7 +113,7 @@
 
       // add file upload panel
       if (showMainMenu && this.state.getStateProperty('workspaceDownload')) {
-        this.workspaceUploadPanel = new $.WorkspaceUploadPanel({ appendTo: this.element.find('.mirador-viewer'), state: this.state });
+        this.workspaceUploadPanel = new $.WorkspaceUploadPanel({ appendTo: this.element.find('.mirador-viewer'), state: this.state, eventEmitter: this.eventEmitter });
       }
 
       // set this to be displayed
