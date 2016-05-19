@@ -149,8 +149,9 @@
       }
       if (this.currentConfig.saveSession) {
         this.save();
+        this.updateDownloadLink();
       }
-      _this.eventEmitter.publish("saveControllerConfigUpdated");
+      //_this.eventEmitter.publish("saveControllerConfigUpdated");
     },
 
     bindEvents: function() {
@@ -311,6 +312,16 @@
       // only accepts strings.
 
       localStorage.setItem(_this.sessionID, JSON.stringify(_this.currentConfig));
+    },
+
+    updateDownloadLink: function() {
+
+      // get reference to link
+      var link = document.getElementsByClassName('workspace-download')[0],
+      _this = this;
+      // append data to link
+      link.href = "data:text/json;charset=utf8," + encodeURIComponent(localStorage.getItem(_this.sessionID));
+      link.download = 'data.json';
     }
 
   };

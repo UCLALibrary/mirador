@@ -16,7 +16,7 @@ describe('SaveController', function () {
     });
   });
   
-  describe('Sanity check when saveSession == false', function () {
+  xdescribe('Sanity check when saveSession == false', function () {
 
     beforeEach(function () {
       this.config.saveSession = false;
@@ -36,7 +36,7 @@ describe('SaveController', function () {
     });
   });
 
-  describe('Sanity check when saveSession == true', function () {
+  xdescribe('Sanity check when saveSession == true', function () {
     
     beforeEach(function () {
       this.config.saveSession = true;

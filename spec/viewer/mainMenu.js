@@ -1,6 +1,6 @@
 describe('MainMenu', function () {
 
-  describe('default configuration', function() {
+  xdescribe('default configuration', function() {
     beforeEach(function() {
 
       //register Handlebars helper

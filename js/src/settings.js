@@ -7,7 +7,7 @@
 
     'workspaceType': 'singleObject',
 
-    'saveSession' : false,  //whether or not to store session to local storage
+    'saveSession' :true,  //whether or not to store session to local storage
 
     'workspaces' : {
       'singleObject': {
@@ -32,7 +32,9 @@
 
     'manifests' : [],
 
-    'layout': '1x1',
+    'flexibleWorkspace': true,
+    'layout': '3',
+    'workspaceDownload': true,
 
     'openManifestsPage' : false, //defaults to false, whether or not Mirador should display the manifests page,
                                 //only valid if no windowObjects have been initialized
@@ -165,13 +167,13 @@
     },
 
     'jsonStorageEndpoint': {
-      'name': 'JSONBlob API Endpoint',
-      'module': 'JSONBlobAPI',
-      'options': {
-        'ssl': true,
-        'port': '443',
-        'host': 'jsonblob.com'
-      }
+	'name': 'JSONBlob API Endpoint',
+	'module': 'JSONBlobAPI',
+	'options': {
+		'ssl': false,
+		'port': '8080',
+		'host': 'localhost'
+	}
     },
 
     'sharingEndpoint': {

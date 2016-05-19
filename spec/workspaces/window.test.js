@@ -59,7 +59,7 @@ describe('Window', function() {
       delete Mirador.viewer;
     });
 
-    describe('Initialisation', function() {
+    xdescribe('Initialisation', function() {
       it('should place itself in DOM', function() {
         expect(true).toBe(true);
         expect(this.appendTo.find('.window')).toExist();
