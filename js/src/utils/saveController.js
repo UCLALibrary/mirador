@@ -154,7 +154,7 @@
         this.updateDownloadLink();
       }
       // TODO: do not execute following line if flexible desktop is enabled
-      _this.eventEmitter.publish("saveControllerConfigUpdated");
+      //_this.eventEmitter.publish("saveControllerConfigUpdated");
     },
 
     bindEvents: function() {

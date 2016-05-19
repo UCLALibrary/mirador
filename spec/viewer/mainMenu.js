@@ -1,7 +1,7 @@
 // TODO: Mark make this pass with desktop-version code
 xdescribe('MainMenu', function () {
 
-  describe('default configuration', function() {
+  xdescribe('default configuration', function() {
     beforeEach(function() {
 
       //register Handlebars helper
