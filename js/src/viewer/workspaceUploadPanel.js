@@ -22,7 +22,7 @@
     listenForActions: function() {
       var _this = this;
       // handle subscribed events
-      jQuery.subscribe('workspaceUploadPanelVisible.set', function(_, stateValue) {
+      _this.eventEmitter.subscribe('workspaceUploadPanelVisible.set', function(_, stateValue) {
         if (stateValue) { _this.show(); return; }
         _this.hide();
       });

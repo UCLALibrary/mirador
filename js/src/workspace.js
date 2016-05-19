@@ -103,7 +103,7 @@
         _this.resetLayout(options.layoutDescription);
       });
 
-      jQuery.subscribe('ADD_FLEXIBLE_SLOT', function(event, options) {
+      _this.eventEmitter.subscribe('ADD_FLEXIBLE_SLOT', function(event, options) {
     // simply splitRight on the rigthtmost slot
     _this.splitRight(_this.slots[_this.slots.length - 1]);
       });
