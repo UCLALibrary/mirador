@@ -242,6 +242,27 @@
         }
       });
 
+      this.element.find('.mirador-osd-positive-rotate').on('click', function() {
+        var osd = _this.osd;
+        if ( osd.viewport ) {
+        var currentRotation = parseInt(osd.viewport.getRotation());
+            osd.viewport.setRotation(
+            currentRotation + 90
+          );
+          osd.viewport.applyConstraints();
+        }
+      });
+      this.element.find('.mirador-osd-negative-rotate').on('click', function() {
+        var osd = _this.osd;
+        if ( osd.viewport ) {
+          var currentRotation = parseInt(osd.viewport.getRotation());
+            osd.viewport.setRotation(
+            currentRotation - 90
+          );
+          osd.viewport.applyConstraints();
+        }
+      });
+
       this.element.find('.mirador-osd-toggle-bottom-panel').on('click', function() {
         _this.eventEmitter.publish('TOGGLE_BOTTOM_PANEL_VISIBILITY.' + _this.windowId);
       });

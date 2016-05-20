@@ -184,6 +184,12 @@
                                  '<a class="mirador-osd-go-home hud-control" role="button" aria-label="Reset image bounds">',
                                  '<i class="fa fa-home"></i>',
                                  '</a>',
+                                 '<a title="Rotate +90 degrees" class="mirador-osd-positive-rotate hud-control">',
+                                 '<i class="fa fa-rotate-right"></i>',
+                                 '</a>',
+                                 '<a title="Rotate -90 degrees" class="mirador-osd-negative-rotate hud-control">',
+                                 '<i class="fa fa-rotate-left"></i>',
+                                 '</a>',
                                  '</div>'
     ].join(''))
 

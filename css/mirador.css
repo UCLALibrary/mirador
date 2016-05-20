@@ -1119,41 +1119,53 @@ li.highlight {
   right:0;
   margin:1%;
 }
+.mirador-osd-positive-rotate {
+  font-size:130%;
+  position:absolute;
+  right:0px;
+  top:5px;
+}
+.mirador-osd-negative-rotate {
+  font-size:130%;
+  position:absolute;
+  right:0px;
+  top:30px;
+}
 .mirador-osd-up {
   position:absolute;
-  right:20px;
-  top:0;
+  right:51px;
+  top:0px;
 }
 .mirador-osd-right {
   position:absolute;
-  right:0;
+  right:31px;
   top:20px;
 }
 .mirador-osd-down {
   position:absolute;
-  right:20px;
+  right:51px;
   top:40px;
 }
 .mirador-osd-left {
   position:absolute;
-  right:40px;
+  right:71px;
   top:20px;
 }
 .mirador-osd-zoom-in {
   font-size:130%;
   position:absolute;
-  right:70px;
+  right:100px;
   top:5px;
 }
 .mirador-osd-zoom-out {
   font-size:130%;
   position:absolute;
-  right:70px;
+  right:100px;
   top:30px;
 }
 .mirador-osd-go-home {
   position: absolute;
-  right:20px;
+  right:51px;
   top:20px;
 }
 .mirador-osd-context-controls {
