@@ -103,30 +103,42 @@
         _this.resetLayout(options.layoutDescription);
       });
 
-      _this.eventEmitter.subscribe('ADD_FLEXIBLE_SLOT', function(event, options) {
-    // simply splitRight on the rigthtmost slot
-    _this.splitRight(_this.slots[_this.slots.length - 1]);
+      _this.eventEmitter.subscribe('ADD_FLEXIBLE_SLOT', function(event) {
+        // simply splitRight on the rigthtmost slot
+        _this.splitRight(_this.slots[_this.slots.length - 1]);
       });
+
+      _this.eventEmitter.subscribe('flex-slot-dragstop', $.debounce(function(event, ui) {
+        // publish "flex-slot-drag" event
+        _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].x = ui.position.left;
+        _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].y = ui.position.top;
+        _this.calculateLayout();
+        var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
+        _this.eventEmitter.publish('layoutChanged', root);
+
+      }, 100));
+
+      _this.eventEmitter.subscribe('flex-slot-resizestop', $.debounce(function(event, ui) {
+        // publish "flex-slot-resize" event
+        _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].dx = ui.size.width;
+        _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].dy = ui.size.height;
+        _this.calculateLayout();
+        var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
+        _this.eventEmitter.publish('layoutChanged', root);
+
+      }, 100));
     },
 
     bindEvents: function() {
       var _this = this;
 
       jQuery('.layout-slot').draggable().resizable()
-        .on('dragstop', function(event, ui) {
-          _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].x = ui.position.left;
-          _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].y = ui.position.top;
-          _this.calculateLayout();
-          var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
-          _this.eventEmitter.publish('layoutChanged', root);
-        })
-        .on('resizestop', function(event, ui) {
-          _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].dx = ui.size.width;
-          _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].dy = ui.size.height;
-          _this.calculateLayout();
-          var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
-          _this.eventEmitter.publish('layoutChanged', root);
-        });
+        .on('dragstop', $.debounce(function(event, ui) {
+          _this.eventEmitter.publish('flex-slot-dragstop', ui);
+        }))
+        .on('resizestop', $.debounce(function(event, ui) {
+          _this.eventEmitter.publish('flex-slot-resizestop', ui);
+        }));
     },
 
     get: function(prop, parent) {
