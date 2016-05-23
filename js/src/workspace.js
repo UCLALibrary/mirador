@@ -132,13 +132,27 @@
     bindEvents: function() {
       var _this = this;
 
-      jQuery('.layout-slot').draggable({stack: '.layout-slot'}).resizable()
-        .on('dragstop', $.debounce(function(event, ui) {
-          _this.eventEmitter.publish('flex-slot-dragstop', ui);
-        }))
-        .on('resizestop', $.debounce(function(event, ui) {
-          _this.eventEmitter.publish('flex-slot-resizestop', ui);
-        }));
+      jQuery('.layout-slot')
+      .click(function() {
+        // Bring clicked slot to the top
+        var elem = this, stack = '.layout-slot';
+        var min, group = jQuery.makeArray(jQuery(stack)).sort(function(a, b) { return (parseInt(jQuery(a).css("zIndex"), 10) || 0) - (parseInt(jQuery(b).css("zIndex"), 10) || 0); });
+
+        if (group.length < 1) return;
+        min = parseInt(group[0].style.zIndex, 10) || 0;
+        jQuery(group).each(function(i) {
+          this.style.zIndex = min+i;
+        });
+
+        if (elem === undefined) return;
+        jQuery(elem).css({'zIndex' : min+group.length});
+      })
+      .draggable({stack: '.layout-slot'}).on('dragstop', $.debounce(function(event, ui) {
+        _this.eventEmitter.publish('flex-slot-dragstop', ui);
+      }))
+      .resizable().on('resizestop', $.debounce(function(event, ui) {
+        _this.eventEmitter.publish('flex-slot-resizestop', ui);
+      }));
     },
 
     get: function(prop, parent) {
