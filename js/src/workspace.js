@@ -132,7 +132,7 @@
     bindEvents: function() {
       var _this = this;
 
-      jQuery('.layout-slot').draggable().resizable()
+      jQuery('.layout-slot').draggable({stack: '.layout-slot'}).resizable()
         .on('dragstop', $.debounce(function(event, ui) {
           _this.eventEmitter.publish('flex-slot-dragstop', ui);
         }))
