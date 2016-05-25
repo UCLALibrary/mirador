@@ -24,7 +24,9 @@ module.exports = function(grunt) {
   // libraries/plugins
   vendors = [
     'js/lib/jquery.min.js',
+    'js/lib/jquery.hasClassRegEx.js',
     'js/lib/jquery-ui.min.js',
+    'js/lib/jquery-ui.drag-multiple.min.js',
     'js/lib/jquery.scrollTo.min.js',
     'js/lib/jquery.qtip.min.js',
     'js/lib/state-machine.min.js',

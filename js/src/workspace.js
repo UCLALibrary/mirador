@@ -6,6 +6,7 @@
       workspaceSlotCls: 'slot',
       focusedSlot:      null,
       slots:            [],
+      snapGroups:       [], // format: {'snap-group-xxxx': [ list of ids ] }, ...
       windows:          [],
       appendTo:         null,
       layoutDescription:    null,
@@ -108,11 +109,31 @@
         _this.splitRight(_this.slots[_this.slots.length - 1]);
       });
 
+      _this.eventEmitter.subscribe('ADD_DRAG_HANDLE', function(event) {
+        // add drag handle
+      });
+
       _this.eventEmitter.subscribe('flex-slot-dragstop', $.debounce(function(event, ui) {
         // publish "flex-slot-drag" event
-        _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].x = ui.position.left;
-        _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].y = ui.position.top;
-        _this.calculateLayout(undefined, ui.helper[0].attributes['data-layout-slot-id'].value, undefined);
+        var id = ui.helper[0].attributes['data-layout-slot-id'].value;
+        _this.slotCoordinates[id].x = ui.position.left;
+        _this.slotCoordinates[id].y = ui.position.top;
+
+        // get all id's in the snap-group
+        var ids = [id], snapGroup = jQuery('.' + ui.helper.hasClassRegEx('^snap-group-')[0]);
+        jQuery.each(snapGroup, function(i, val) {
+          var dlsi = val.attributes['data-layout-slot-id'].value;
+          if (ids.indexOf(dlsi) === -1) {
+            ids.push(dlsi);
+            // write to slotCoordinates
+            _this.slotCoordinates[dlsi].x = val.offsetLeft;
+            _this.slotCoordinates[dlsi].y = val.offsetTop;
+          }
+        });
+
+        // pass to calculateLayout
+        _this.calculateLayout(undefined, ids, undefined);
+
         var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
         _this.eventEmitter.publish('layoutChanged', root);
 
@@ -120,9 +141,13 @@
 
       _this.eventEmitter.subscribe('flex-slot-resizestop', $.debounce(function(event, ui) {
         // publish "flex-slot-resize" event
-        _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].dx = ui.size.width;
-        _this.slotCoordinates[ui.helper[0].attributes['data-layout-slot-id'].value].dy = ui.size.height;
-        _this.calculateLayout(undefined, undefined, ui.helper[0].attributes['data-layout-slot-id'].value);
+        var id = ui.helper[0].attributes['data-layout-slot-id'].value;
+        _this.slotCoordinates[id].dx = ui.size.width;
+        _this.slotCoordinates[id].dy = ui.size.height;
+
+        var ids = [id];
+        _this.calculateLayout(undefined, undefined, ids);
+
         var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
         _this.eventEmitter.publish('layoutChanged', root);
 
@@ -131,6 +156,164 @@
 
     bindEvents: function() {
       var _this = this;
+      var createSnapGroup = function() {
+
+        /* Get the possible snap targets: */
+        var snapped = jQuery(this).data('ui-draggable').snapElements; 
+        /* Pull out only the snap targets that are "snapping": */
+        var snappedTo = jQuery.map(snapped, function(element) {
+          return element.snapping ? element.item : null;
+        });
+
+
+        if (snappedTo.length === 0) return;
+        console.log(snappedTo);
+       
+        // check to see if the dragged element has a snap-group
+        // if so, use it as the snap group list
+        // else, use empty list
+        // then, append to that list the snap-group for each snapped to element (if the element has one)
+        var snapGroupListOfDraggedElement = jQuery(this).hasClassRegEx('^snap-group-');
+        var snapGroupList;
+        var draggedElementHasSnapGroup;
+
+        if (snapGroupListOfDraggedElement) {
+          snapGroupList = snapGroupListOfDraggedElement; 
+          draggedElementHasSnapGroup = true;
+        } else {
+          snapGroupList = [];
+          draggedElementHasSnapGroup = false;
+        }
+        jQuery.each(snappedTo, function(idx, element) {
+          // get the base class of the snapped to obj
+          var snapGroup = jQuery(element).hasClassRegEx('^snap-group-')[0];
+          if (snapGroup && snapGroupList.indexOf(snapGroup) === -1) {
+            snapGroupList.push(snapGroup);
+          }
+        }); 
+
+        var newSnapGroup;
+        if (snapGroupList.length === 0) {
+          newSnapGroup = 'snap-group-' + $.genUUID();
+          // add the class to all the elems
+          jQuery(snappedTo).addClass(newSnapGroup);
+          jQuery(this).addClass(newSnapGroup);
+        } else if (snapGroupList.length === 1) {
+          // add this class to the elements
+          if (draggedElementHasSnapGroup) {
+            // add it to the others
+            jQuery(snappedTo).addClass(snapGroupList[0]);
+          } else {
+            // add it to this
+            jQuery(this).addClass(snapGroupList[0]);
+          }
+        } else {
+          // use the first snap-group for all the elements
+          newSnapGroup = snapGroupList[0];
+          var deleteSnapGroups = snapGroupList.slice(1); 
+          jQuery.each(deleteSnapGroups, function(idx, element) {
+
+            // remove the old snap group class and add the new one
+            jQuery('.' + element).removeClass('.' + element).addClass(newSnapGroup);
+          });
+        }
+        
+        /*
+        var newSnapGroup;
+        var thisSnapGroupList = jQuery(this).hasClassRegEx('^snap-group-');
+        var thisSnapGroup = thisSnapGroupList ? thisSnapGroupList[0] : undefined;
+        var snapGroups = [], snapGroupClass;
+        var selection;
+
+        jQuery.each(snappedTo, function(idx, element) {
+          // get the base class of the snapped to obj
+          snapGroupClass = jQuery(element).hasClassRegEx('^snap-group-')[0];
+          try {
+          if (snapGroupClass && snapGroups.indexOf(snapGroupClass) === -1) {
+            snapGroups.push(snapGroupClass);
+          }
+          } catch (e) {
+            console.log(e, snapGroups, typeof snapGroups);
+          }
+        }); 
+        console.assert(snapGroups.length <= 1);
+        // TODO: check to see if any snappedTo elements are snapped to anything
+        // e.g., if there are more than one snap-group (which there are cases of)
+
+
+        if (!thisSnapGroup && snapGroups.length === 0) {
+          // create new snapGroup class name and add it
+          newSnapGroup = 'snap-group-' + $.genUUID();
+          // add the class to all the elems
+          jQuery(snappedTo).addClass(newSnapGroup);
+          jQuery(this).addClass(newSnapGroup)
+        } else if (!thisSnapGroup && snapGroups.length !== 0) {
+          // use snapGroups class (add it to those without)
+          newSnapGroup = snapGroups[0];
+          // add the class to all the elem
+          //jQuery(snappedTo).addClass(newSnapGroup);
+          jQuery(this).addClass(newSnapGroup
+        } else if (thisSnapGroup && snapGroups.length === 0) {
+          // use thisSnapGroup class (add it to those without)
+          newSnapGroup = thisSnapGroup;
+          // add the class to all the elems
+          jQuery(snappedTo).addClass(newSnapGroup);
+          //jQuery(this).addClass(newSnapGroup);
+         
+        } else { // both are present
+          // add thisSnapGroup to all in snapGroups
+          // remove snapGroups[0] class
+          newSnapGroup = thisSnapGroup;
+          jQuery(snappedTo).removeClass(snapGroups[0]).addClass(newSnapGroup);
+        }
+        */
+        // replace with a check on the number of snapgroups
+        /*
+        if (!thisSnapGroup && snapGroups.length === 0) {
+          // create new snapGroup class name and add it
+          newSnapGroup = 'snap-group-' + $.genUUID();
+          // add the class to all the elems
+          jQuery(snappedTo).addClass(newSnapGroup);
+          jQuery(this).addClass(newSnapGroup)
+        } else if (!thisSnapGroup && snapGroups.length !== 0) {
+          // use snapGroups class (add it to those without)
+          newSnapGroup = snapGroups[0];
+          // add the class to all the elem
+          //jQuery(snappedTo).addClass(newSnapGroup);
+          jQuery(this).addClass(newSnapGroup
+        } else if (thisSnapGroup && snapGroups.length === 0) {
+          // use thisSnapGroup class (add it to those without)
+          newSnapGroup = thisSnapGroup;
+          // add the class to all the elems
+          jQuery(snappedTo).addClass(newSnapGroup);
+          //jQuery(this).addClass(newSnapGroup);
+         
+        } else { // both are present
+          // add thisSnapGroup to all in snapGroups
+          // remove snapGroups[0] class
+          newSnapGroup = thisSnapGroup;
+          jQuery(snappedTo).removeClass(snapGroups[0]).addClass(newSnapGroup);
+        }
+        */
+
+        // call draggable on the elems
+        jQuery('.ui-draggable.' + newSnapGroup)
+        .draggable({
+          multiple: {
+            items: function getSelectedItems() {
+              return jQuery('.ui-draggable.' + newSnapGroup);
+            },
+            beforeStart: jQuery.noop,
+            beforeStop: function beforeDragStop(jqEvent, ui) {
+              console.log(this, jqEvent, ui);
+            }
+          },
+          stack: '.layout-slot',
+          snap: true,
+          //snapMode: 'outer',
+          stop: createSnapGroup
+        });
+      };
 
       jQuery('.layout-slot')
       .click(function() {
@@ -147,7 +330,13 @@
         if (elem === undefined) return;
         jQuery(elem).css({'zIndex' : min+group.length});
       })
-      .draggable({stack: '.layout-slot'}).on('dragstop', $.debounce(function(event, ui) {
+      .draggable({
+        stack: '.layout-slot',
+        snap: true,
+        //snapMode: 'outer',
+        stop: createSnapGroup 
+      }).on('dragstop', $.debounce(function(event, ui) {
+        console.log(ui);
         _this.eventEmitter.publish('flex-slot-dragstop', ui);
       }))
       .resizable().on('resizestop', $.debounce(function(event, ui) {
@@ -172,7 +361,7 @@
       _this.eventEmitter.publish(prop + '.set', value);
     },
 
-    calculateLayout: function(resetting, draggedID, resizedID) {
+    calculateLayout: function(resetting, draggedIDs, resizedIDs) {
       var _this = this,
       layout,
       divs;
@@ -269,11 +458,11 @@
             if (!_this.slotCoordinates[keyy]) {
               _this.slotCoordinates[keyy] = {};
             }
-            if (keyy !== draggedID) {
+            if (draggedIDs === undefined || draggedIDs.indexOf(keyy) === -1) {
               _this.slotCoordinates[keyy].x = childs[p].x;
               _this.slotCoordinates[keyy].y = childs[p].y;
             }
-            if (keyy !== resizedID) {
+            if (resizedIDs === undefined || resizedIDs.indexOf(keyy) === -1) {
               _this.slotCoordinates[keyy].dx = childs[p].dx;
               _this.slotCoordinates[keyy].dy = childs[p].dy;
             }
