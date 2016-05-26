@@ -165,7 +165,7 @@
         '{{#if showAddDragHandle}}',
           '<li>',
             '<a href="javascript:;" class="add-drag-handle" title="Add Drag Handle">',
-              '<span class="fa fa-th-large fa-lg fa-fw"></span> Add Drag Handle',
+              '<span class="fa fa-suitcase fa-lg fa-fw"></span> Add Drag Handle',
             '</a>',
           '</li>',
         '{{/if}}',

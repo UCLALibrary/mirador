@@ -6,7 +6,7 @@
       workspaceSlotCls: 'slot',
       focusedSlot:      null,
       slots:            [],
-      snapGroups:       [], // format: {'snap-group-xxxx': [ list of ids ] }, ...
+      snapGroups:       [],
       windows:          [],
       appendTo:         null,
       layoutDescription:    null,
@@ -110,7 +110,26 @@
       });
 
       _this.eventEmitter.subscribe('ADD_DRAG_HANDLE', function(event) {
-        // add drag handle
+        // create new snap group
+        //   create new id
+        //   push onto the snapGroups array
+        //   use d3 to add the new div to the desktop
+        //
+        var snapGroup = 'snap-group-' + $.genUUID();
+        _this.snapGroups.push(snapGroup);
+
+        // call d3 function
+        _this.renderDragHandles();
+        //var dragHandles = d3.select('.drag-handle').data
+      });
+
+      _this.eventEmitter.subscribe('REMOVE_DRAG_HANDLE', function(event, id) {
+        _this.snapGroups = _this.snapGroups.filter(function(e, i, a) {
+          return e === id ? false : true;
+        });
+        _this.renderDragHandles();
+        
+        // call d3 function
       });
 
       _this.eventEmitter.subscribe('flex-slot-dragstop', $.debounce(function(event, ui) {
@@ -120,7 +139,8 @@
         _this.slotCoordinates[id].y = ui.position.top;
 
         // get all id's in the snap-group
-        var ids = [id], snapGroup = jQuery('.' + ui.helper.hasClassRegEx('^snap-group-')[0]);
+        var ids = [id];//, snapGroup = jQuery('.' + ui.helper.hasClassRegEx('^snap-group-')[0]);
+        /*
         jQuery.each(snapGroup, function(i, val) {
           var dlsi = val.attributes['data-layout-slot-id'].value;
           if (ids.indexOf(dlsi) === -1) {
@@ -131,6 +151,7 @@
           }
         });
 
+        */
         // pass to calculateLayout
         _this.calculateLayout(undefined, ids, undefined);
 
@@ -152,11 +173,77 @@
         _this.eventEmitter.publish('layoutChanged', root);
 
       }, 100));
+
+      _this.eventEmitter.subscribe('drag-handle-dragstop', $.debounce(function(event, ui) {
+        var id = ui.helper[0].id;
+        var ids = [];
+        jQuery('.' + id).each(function(i, val) {
+          var dlsi = val.attributes['data-layout-slot-id'].value;
+          if (ids.indexOf(dlsi) === -1) {
+            ids.push(dlsi);
+            // write to slotCoordinates
+            _this.slotCoordinates[dlsi].x = val.offsetLeft;
+            _this.slotCoordinates[dlsi].y = val.offsetTop;
+          }
+        });
+        _this.calculateLayout(undefined, ids, undefined);
+
+        var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
+        _this.eventEmitter.publish('layoutChanged', root);
+
+      }, 100));
     },
 
     bindEvents: function() {
       var _this = this;
-      var createSnapGroup = function() {
+
+      jQuery('.layout-slot')
+      .click(function() {
+        // Bring clicked slot to the top
+        var elem = this, stack = '.layout-slot';
+        var min, group = jQuery.makeArray(jQuery(stack)).sort(function(a, b) { return (parseInt(jQuery(a).css("zIndex"), 10) || 0) - (parseInt(jQuery(b).css("zIndex"), 10) || 0); });
+
+        if (group.length < 1) return;
+        min = parseInt(group[0].style.zIndex, 10) || 0;
+        jQuery(group).each(function(i) {
+          this.style.zIndex = min+i;
+        });
+
+        if (elem === undefined) return;
+        jQuery(elem).css({'zIndex' : min+group.length});
+      })
+      .draggable({
+        stack: '.layout-slot',
+        snap: '.layout-slot, .drag-handle',
+        //snapMode: 'outer',
+        stop: _this.createSnapGroup 
+      }).on('dragstop', $.debounce(function(event, ui) {
+        console.log(ui);
+        _this.eventEmitter.publish('flex-slot-dragstop', ui);
+      }))
+      .resizable().on('resizestop', $.debounce(function(event, ui) {
+        _this.eventEmitter.publish('flex-slot-resizestop', ui);
+      }));
+    },
+
+    get: function(prop, parent) {
+      if (parent) {
+        return this[parent][prop];
+      }
+      return this[prop];
+    },
+
+    set: function(prop, value, options) {
+      var _this = this;
+      if (options) {
+        this[options.parent][prop] = value;
+      } else {
+        this[prop] = value;
+      }
+      _this.eventEmitter.publish(prop + '.set', value);
+    },
+
+    createSnapGroup: function() {
 
         /* Get the possible snap targets: */
         var snapped = jQuery(this).data('ui-draggable').snapElements; 
@@ -164,11 +251,58 @@
         var snappedTo = jQuery.map(snapped, function(element) {
           return element.snapping ? element.item : null;
         });
+        var thissg, sg;
 
-
-        if (snappedTo.length === 0) return;
+        if (snappedTo.length === 0) {
+          // if it had a snap-group class, remove it
+          thissg = jQuery(this).hasClassRegEx('^snap-group-');
+          if (thissg) {
+            jQuery(this).removeClass(thissg[0]);
+          }
+          return;
+        }
         console.log(snappedTo);
+
+        // if dragging a drag-handle, can only snap to layout-slots
+        //
+        // if dragging a layout-slot, can snap to either drag-handle or layout-slot
        
+        if (jQuery(this).hasClass('layout-slot')) {
+
+          // if snapping to drag-handle, add that drag-handle's id as a class
+          // else, snapping to a layout slot
+          if (jQuery(snappedTo).hasClass('drag-handle')) {
+            jQuery(this).addClass(jQuery(snappedTo)[0].id);
+          } else if (jQuery(snappedTo).hasClass('layout-slot')) {
+            // check if it has a snap group
+            sg = jQuery(snappedTo).hasClassRegEx('^snap-group-');
+            thissg = jQuery(this).hasClassRegEx('^snap-group-');
+            if (sg) {
+              // adopt that snap-group
+              if (thissg) {
+                jQuery(this).removeClass(thissg[0]).addClass(sg[0]);
+              } else {
+                jQuery(this).addClass(sg[0]);
+              }
+            }
+            // if it doesn't have a snap-group, don't do anything
+
+          } else {
+            // TODO: throw error
+          }
+        } else if (jQuery(this).hasClass('drag-handle')) {
+          // give the snapped to element its id
+          // if the snappedTo element doesn't have a snap-group class, add a new one
+
+          sg = jQuery(snappedTo).hasClassRegEx('^snap-group-');
+          if (!sg) {
+            jQuery(snappedTo).addClass(jQuery(this)[0].id);
+          }
+
+        } else {
+          // TODO: problem, throw exception
+        }
+/*
         // check to see if the dragged element has a snap-group
         // if so, use it as the snap group list
         // else, use empty list
@@ -218,84 +352,6 @@
           });
         }
         
-        /*
-        var newSnapGroup;
-        var thisSnapGroupList = jQuery(this).hasClassRegEx('^snap-group-');
-        var thisSnapGroup = thisSnapGroupList ? thisSnapGroupList[0] : undefined;
-        var snapGroups = [], snapGroupClass;
-        var selection;
-
-        jQuery.each(snappedTo, function(idx, element) {
-          // get the base class of the snapped to obj
-          snapGroupClass = jQuery(element).hasClassRegEx('^snap-group-')[0];
-          try {
-          if (snapGroupClass && snapGroups.indexOf(snapGroupClass) === -1) {
-            snapGroups.push(snapGroupClass);
-          }
-          } catch (e) {
-            console.log(e, snapGroups, typeof snapGroups);
-          }
-        }); 
-        console.assert(snapGroups.length <= 1);
-        // TODO: check to see if any snappedTo elements are snapped to anything
-        // e.g., if there are more than one snap-group (which there are cases of)
-
-
-        if (!thisSnapGroup && snapGroups.length === 0) {
-          // create new snapGroup class name and add it
-          newSnapGroup = 'snap-group-' + $.genUUID();
-          // add the class to all the elems
-          jQuery(snappedTo).addClass(newSnapGroup);
-          jQuery(this).addClass(newSnapGroup)
-        } else if (!thisSnapGroup && snapGroups.length !== 0) {
-          // use snapGroups class (add it to those without)
-          newSnapGroup = snapGroups[0];
-          // add the class to all the elem
-          //jQuery(snappedTo).addClass(newSnapGroup);
-          jQuery(this).addClass(newSnapGroup
-        } else if (thisSnapGroup && snapGroups.length === 0) {
-          // use thisSnapGroup class (add it to those without)
-          newSnapGroup = thisSnapGroup;
-          // add the class to all the elems
-          jQuery(snappedTo).addClass(newSnapGroup);
-          //jQuery(this).addClass(newSnapGroup);
-         
-        } else { // both are present
-          // add thisSnapGroup to all in snapGroups
-          // remove snapGroups[0] class
-          newSnapGroup = thisSnapGroup;
-          jQuery(snappedTo).removeClass(snapGroups[0]).addClass(newSnapGroup);
-        }
-        */
-        // replace with a check on the number of snapgroups
-        /*
-        if (!thisSnapGroup && snapGroups.length === 0) {
-          // create new snapGroup class name and add it
-          newSnapGroup = 'snap-group-' + $.genUUID();
-          // add the class to all the elems
-          jQuery(snappedTo).addClass(newSnapGroup);
-          jQuery(this).addClass(newSnapGroup)
-        } else if (!thisSnapGroup && snapGroups.length !== 0) {
-          // use snapGroups class (add it to those without)
-          newSnapGroup = snapGroups[0];
-          // add the class to all the elem
-          //jQuery(snappedTo).addClass(newSnapGroup);
-          jQuery(this).addClass(newSnapGroup
-        } else if (thisSnapGroup && snapGroups.length === 0) {
-          // use thisSnapGroup class (add it to those without)
-          newSnapGroup = thisSnapGroup;
-          // add the class to all the elems
-          jQuery(snappedTo).addClass(newSnapGroup);
-          //jQuery(this).addClass(newSnapGroup);
-         
-        } else { // both are present
-          // add thisSnapGroup to all in snapGroups
-          // remove snapGroups[0] class
-          newSnapGroup = thisSnapGroup;
-          jQuery(snappedTo).removeClass(snapGroups[0]).addClass(newSnapGroup);
-        }
-        */
-
         // call draggable on the elems
         jQuery('.ui-draggable.' + newSnapGroup)
         .draggable({
@@ -313,52 +369,47 @@
           //snapMode: 'outer',
           stop: createSnapGroup
         });
-      };
+        */
+      },
 
-      jQuery('.layout-slot')
-      .click(function() {
-        // Bring clicked slot to the top
-        var elem = this, stack = '.layout-slot';
-        var min, group = jQuery.makeArray(jQuery(stack)).sort(function(a, b) { return (parseInt(jQuery(a).css("zIndex"), 10) || 0) - (parseInt(jQuery(b).css("zIndex"), 10) || 0); });
-
-        if (group.length < 1) return;
-        min = parseInt(group[0].style.zIndex, 10) || 0;
-        jQuery(group).each(function(i) {
-          this.style.zIndex = min+i;
-        });
-
-        if (elem === undefined) return;
-        jQuery(elem).css({'zIndex' : min+group.length});
-      })
-      .draggable({
-        stack: '.layout-slot',
-        snap: true,
-        //snapMode: 'outer',
-        stop: createSnapGroup 
-      }).on('dragstop', $.debounce(function(event, ui) {
-        console.log(ui);
-        _this.eventEmitter.publish('flex-slot-dragstop', ui);
-      }))
-      .resizable().on('resizestop', $.debounce(function(event, ui) {
-        _this.eventEmitter.publish('flex-slot-resizestop', ui);
-      }));
-    },
-
-    get: function(prop, parent) {
-      if (parent) {
-        return this[parent][prop];
-      }
-      return this[prop];
-    },
-
-    set: function(prop, value, options) {
+    renderDragHandles: function() {
       var _this = this;
-      if (options) {
-        this[options.parent][prop] = value;
-      } else {
-        this[prop] = value;
-      }
-      _this.eventEmitter.publish(prop + '.set', value);
+      var n = _this.snapGroups.length;
+      var handles = d3.selectAll('.drag-handle').data(_this.snapGroups);
+      handles.enter().append('div')
+        .attr('id', function(d) { return d; })
+        .attr('class', 'drag-handle')
+        .style('left', 50*n + 'px')
+        .style('top', 50*n + 'px')
+        .style('width', '25px')
+        .style('height', '25px')
+        .style('background-color', 'red')
+        .style('position', 'absolute')
+        .style('border-top-left-radius', '8px')
+        .style('border-top-right-radius', '8px')
+        .call(function(d) {
+          console.log('this is what we"re attaching the handler to:', d[0][d[0].length - 1]);
+          var getSnapGroup = function() { return jQuery(d[0][d[0].length - 1])[0].id; };
+          jQuery(d[0][d[0].length - 1]).draggable({
+            multiple: {
+              items: function getSelectedItems() {
+                console.log('getSelectedItems', d, getSnapGroup());
+                return jQuery('.ui-draggable.' + getSnapGroup());
+              },
+              beforeStart: jQuery.noop,
+              beforeStop: function beforeDragStop(jqEvent, ui) {
+                console.log(this, jqEvent, ui);
+              }
+            },
+            snap: '.layout-slot',
+            snapMode: 'outer',
+            stop: _this.createSnapGroup
+          }).on('dragstop', $.debounce(function(event, ui) {
+            console.log(ui);
+            _this.eventEmitter.publish('drag-handle-dragstop', ui);
+          }));
+        });
+      handles.exit().remove('div');
     },
 
     calculateLayout: function(resetting, draggedIDs, resizedIDs) {
