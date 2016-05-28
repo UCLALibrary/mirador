@@ -105,6 +105,7 @@
       _this.eventEmitter.subscribe('ADD_FLEXIBLE_SLOT', function(event) {
         // splitRight on the rigthtmost slot
         _this.splitRight(_this.slots[_this.slots.length - 1]);
+        _this.bindEvents();
       });
 
       _this.eventEmitter.subscribe('ADD_DRAG_HANDLE', function(event) {
@@ -123,9 +124,8 @@
         });
 
         // call d3 function
+        // then un-register the removed drag-handle's layout-slots
         _this.renderDragHandles();
-
-        // TODO: move the following line inside renderDragHandles()
         jQuery('.layout-slot.' + id).removeClass(id);
       });
 
@@ -186,17 +186,23 @@
 
       jQuery('.layout-slot')
       .click(function() {
-        // Bring clicked slot to the top
-        var elem = this, stack = '.layout-slot';
-        var min, group = jQuery.makeArray(jQuery(stack)).sort(function(a, b) { return (parseInt(jQuery(a).css("zIndex"), 10) || 0) - (parseInt(jQuery(b).css("zIndex"), 10) || 0); });
-
-        if (group.length < 1) return;
+        // Bring clicked window to the top
+        var elem = this,
+        stack = '.layout-slot',
+        min,
+        group = jQuery.makeArray(jQuery(stack)).sort(function(a, b) {
+          return (parseInt(jQuery(a).css("zIndex"), 10) || 0) - (parseInt(jQuery(b).css("zIndex"), 10) || 0);
+        });
+        if (group.length < 1) {
+          return;
+        }
         min = parseInt(group[0].style.zIndex, 10) || 0;
         jQuery(group).each(function(i) {
           this.style.zIndex = min+i;
         });
-
-        if (elem === undefined) return;
+        if (elem === undefined) {
+          return;
+        }
         jQuery(elem).css({'zIndex' : min+group.length});
       })
       .draggable({
@@ -211,10 +217,26 @@
         _this.eventEmitter.publish('flex-slot-resizestop', ui);
       }));
 
+      jQuery('.drag-handle').each(function(index) {
+        var __this = this; // __this and _this are different, be careful!
+        jQuery(__this).draggable({
+          multiple: {
+            items: function getSelectedItems() {
+              return jQuery('.ui-draggable.' + jQuery(__this).attr('id'));
+            },
+            beforeStart: jQuery.noop,
+          },
+          snap: '.layout-slot',
+          snapMode: 'outer',
+          stop: _this.createSnapGroup
+        }).on('dragstop', $.debounce(function(event, ui) {
+          _this.eventEmitter.publish('drag-handle-dragstop', ui);
+        }));
+      });
+
       jQuery('.drag-handle-remove')
       .click(function(event) {
-         var id = event.currentTarget.__data__;
-
+        var id = event.currentTarget.__data__;
         _this.eventEmitter.publish('REMOVE_DRAG_HANDLE', id);
       });
     },
@@ -236,10 +258,22 @@
       _this.eventEmitter.publish(prop + '.set', value);
     },
 
+    /**
+     * Add the classes required to create a snap-group with the dragged element.
+     */
     createSnapGroup: function() {
 
+      /**
+       * Get the name of the snap group that corresponds to a give jQuery selection.
+       *
+       * @param {jQuery selection} selection A jQuery selection that can contain layout-slots
+       *     and drag-handles.
+       * @return {false | Array} This returns either false or a one-element array.
+       */
       function getSnapGroup(selection) {
-        var re = '^snap-group-', reObj = new RegExp(re);
+        var re = '^snap-group-',
+        reObj = new RegExp(re);
+
         function getDragHandleId(selection) {
           var id;
           if (selection.length > 0) {
@@ -248,21 +282,19 @@
           }
           return false;
         }
-        return selection.filter('.layout-slot').hasClassRegEx(re) ||
-               getDragHandleId(selection.filter('.drag-handle'));
+        return selection.filter('.layout-slot').hasClassRegEx(re) || getDragHandleId(selection.filter('.drag-handle'));
       }
 
-      // Get the possible snap targets
-      var snapTargets = jQuery(this).data('ui-draggable').snapElements; 
-
-      // Pull out only the snap targets that are "snapping"
-      var snappedTargets = jQuery.map(snapTargets, function(element) {
+      // Get the possible snap targets, then pull out only the snap targets that are "snapping"
+      // thisSnapGroup and targetSnapGroup will either be single-element lists, or false
+      var snapTargets = jQuery(this).data('ui-draggable').snapElements,
+      snappedTargets = jQuery.map(snapTargets, function(element) {
         return element.snapping ? element.item : null;
-      });
-      var thisElt = jQuery(this), targetElts = jQuery(snappedTargets);
-
-      // these both will be single element lists, or false/undefined
-      var thisSnapGroup = getSnapGroup(thisElt), targetSnapGroup = getSnapGroup(targetElts);
+      }),
+      thisElt = jQuery(this),
+      thisSnapGroup = getSnapGroup(thisElt),
+      targetElts = jQuery(snappedTargets),
+      targetSnapGroup = getSnapGroup(targetElts);
 
       if (thisElt.filter('.layout-slot').length > 0) {
         thisElt.removeClass(thisSnapGroup[0]);
@@ -274,51 +306,40 @@
       }
     },
 
+    /**
+     * Use d3 to render the dragHandles.
+     */
     renderDragHandles: function() {
-      var _this = this;
-      var n = _this.snapGroups.length;
-      var handles = d3.selectAll('.drag-handle').data(_this.snapGroups, function(d) { return d; });
-      var handlesDiv = handles.enter().append('div')
+      var _this = this,
+      n = _this.snapGroups.length,
+      handles = d3.select('#workspace').selectAll('.drag-handle').data(_this.snapGroups, function(d) { 
+        // binds data to element by id, so that when an item is removed from _this.snapGroups,
+        // the DOM element with corresponding #id is removed, instead of the most recently added element
+        return d;
+      }),
+      handlesDiv = handles.enter().append('div')
         .attr('id', function(d) { return d; })
-        .attr('class', 'drag-handle')
-        .style('left', 50*n + 'px')
-        .style('top', '50px')
-        .style('width', '50px')
-        .style('height', '25px')
-        .style('background-color', 'red')
-        .style('position', 'absolute')
-        .style('border-top-left-radius', '8px')
-        .style('border-top-right-radius', '8px')
-        .call(function(d) {
-          var getSnapGroup = function() { return jQuery(d[0][d[0].length - 1])[0].id; };
-          jQuery(d[0][d[0].length - 1]).draggable({
-            multiple: {
-              items: function getSelectedItems() {
-                return jQuery('.ui-draggable.' + getSnapGroup());
-              },
-              beforeStart: jQuery.noop,
-            },
-            snap: '.layout-slot',
-            snapMode: 'outer',
-            stop: _this.createSnapGroup
-          }).on('dragstop', $.debounce(function(event, ui) {
-            _this.eventEmitter.publish('drag-handle-dragstop', ui);
-          }));
-        });
-      var handlesDivA = handlesDiv.append('a')
-        .classed({'drag-handle-remove': true})
-        .attr('href', 'javascript:;');
+        .classed({'drag-handle': true})
+        .style({
+          'background-color': 'red',
+          'border-top-left-radius': '8px',
+          'border-top-right-radius': '8px',
+          'height': '25px',
+          'left': 75*n + 'px',
+          'position': 'absolute',
+          'top': '50px',
+          'width': '50px'
+        }),
+      handlesDivA = handlesDiv.append('a')
+        .attr('href', 'javascript:;')
+        .classed({'drag-handle-remove': true});
+
       handlesDivA.append('i')
-        .classed({'fa fa-times': true})
         .attr('float', 'left')
+        .classed({'fa fa-times': true})
         .style('padding', '4px');
-      handles.exit().remove('div')
-        .call(function(d) {
-          console.log('break here');
-          // TODO
-          // get the id of the removed div
-          // select all elements with that class and remove that class
-        });
+
+      handles.exit().remove('div');
     },
 
     calculateLayout: function(resetting, draggedIDs, resizedIDs) {
@@ -374,7 +395,7 @@
         padding: 3 
       });
 
-      // if felx workspace is enabled
+      // if flex workspace is enabled
       //   go thru _this.layout and load the coords into the children attr
 
       if ($.DEFAULT_SETTINGS.flexibleWorkspace === true) {
@@ -438,7 +459,7 @@
       });
 
       // add draggable/resizable events to new div
-      _this.bindEvents();
+      // _this.bindEvents();
 
       // Exit
       divs.exit()
