@@ -42,13 +42,24 @@
 
     init: function() {
       var _this = this;
+
+      //initialize i18next
+      i18n.init({
+        fallbackLng: 'en', 
+        load: 'unspecific', 
+        debug: false, 
+        getAsync: true, 
+        resGetPath: _this.state.getStateProperty('buildPath') + _this.state.getStateProperty('i18nPath')+'__lng__/__ns__.json'
+      }, _this.setupViewer.bind(_this)); 
+      // because this is a callback, we need to bind "_this" to explicitly retain the calling context of this function (the viewer object instance));
+    },
+
+    setupViewer: function() {
+      var _this = this;
       //add background and positioning information on the root element that is provided in config
       var backgroundImage = _this.state.getStateProperty('buildPath') + _this.state.getStateProperty('imagesPath') + 'debut_dark.png';
       this.element.css('background-color', '#333').css('background-image','url('+backgroundImage+')').css('background-position','left top')
       .css('background-repeat','repeat').css('position','fixed');
-
-      //initialize i18next
-      i18n.init({debug: false, getAsync: false, resGetPath: _this.state.getStateProperty('buildPath') + _this.state.getStateProperty('i18nPath')+'__lng__/__ns__.json'});
 
       //register Handlebars helper
       Handlebars.registerHelper('t', function(i18n_key) {
@@ -280,34 +291,16 @@
     loadManifestFromConfig: function(options) {
       // check if there are available slots, otherwise don't process this object from config
       //if we have more windowObjects that slots in the layout, return
+      // it may not be necesary to set the slotAddress here since it is also covered in workspace
       var _this = this;
       var slotAddress = options.slotAddress ? options.slotAddress : this.workspace.getAvailableSlot() ? this.workspace.getAvailableSlot().layoutAddress : null;
+      options.slotAddress = slotAddress;
       if (!slotAddress) {
         return;
       }
 
-      var windowConfig = {
-        manifest: this.state.getStateProperty('manifests')[options.loadedManifest],
-        currentFocus : options.viewType,
-        focusesOriginal : options.availableViews,
-        currentCanvasID : options.canvasID,
-        id : options.id,
-        focusOptions : options.windowOptions,
-        bottomPanelAvailable : options.bottomPanel,
-        bottomPanelVisible : options.bottomPanelVisible,
-        sidePanelAvailable : options.sidePanel,
-        sidePanelOptions : options.sidePanelOptions,
-        sidePanelVisible : options.sidePanelVisible,
-        overlayAvailable : options.overlay,
-        annotationLayerAvailable : options.annotationLayer,
-        annotationCreationAvailable : options.annotationCreation,
-        annotationState : options.annotationState,
-        fullScreenAvailable : options.fullScreen,
-        slotAddress: slotAddress,
-        displayLayout : options.displayLayout,
-        layoutOptions: options.layoutOptions
-      };
-
+      //make a copy of options and pass that so we don't get a circular reference
+      var windowConfig = jQuery.extend(true, {}, options);
       _this.eventEmitter.publish('ADD_WINDOW', windowConfig);
     }
   };

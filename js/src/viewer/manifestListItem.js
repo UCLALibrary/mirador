@@ -57,7 +57,7 @@
       manifest = _this.manifest.jsonLd;
 
       this.tplData = {
-        label: manifest.label,
+        label: $.JsonLd.getTextValue(manifest.label),
         repository: location,
         canvasCount: manifest.sequences[0].canvases.length,
         images: []
@@ -103,6 +103,10 @@
 
         _this.imagesTotalWidth += (width + _this.margin);
         if (_this.imagesTotalWidth >= _this.maxPreviewImagesWidth) {
+          // outsized image will inherited
+          if (value.width > _this.maxPreviewImagesWidth) {
+            _this.tplData.images.push(value);
+          }
           _this.imagesTotalWidth -= (width + _this.margin);
           return false;
         }
@@ -141,8 +145,8 @@
       this.element.on('click', function() {
         var windowConfig = {
           manifest: _this.manifest,
-          currentCanvasID: null,
-          currentFocus: 'ThumbnailsView'
+          canvasID: null,
+          viewType: 'ThumbnailsView'
         };
         _this.eventEmitter.publish('ADD_WINDOW', windowConfig);
       });
@@ -151,8 +155,8 @@
         e.stopPropagation();
         var windowConfig = {
           manifest: _this.manifest,
-          currentCanvasID: jQuery(this).attr('data-image-id'),
-          currentFocus: 'ImageView'
+          canvasID: jQuery(this).attr('data-image-id'),
+          viewType: _this.state.getStateProperty('windowSettings').viewType //get the view type from settings rather than always defaulting to ImageView
         };
         _this.eventEmitter.publish('ADD_WINDOW', windowConfig);
       });
@@ -237,14 +241,16 @@
           '</div>',
         '</div>',
       '</div>',
-      '<div class="preview-images">',
-      '{{#each images}}',
-        '<img src="{{url}}" width="{{width}}" height="{{height}}" class="preview-image flash" data-image-id="{{id}}">',
-      '{{/each}}',
+      '<div class="preview-thumb">',
+        '<div class="preview-images">',
+        '{{#each images}}',
+          '<img src="{{url}}" width="{{width}}" height="{{height}}" class="preview-image flash" data-image-id="{{id}}">',
+        '{{/each}}',
+        '</div>',
+        '{{#if remaining}}',
+          '<i class="fa fa fa-ellipsis-h remaining"></i>',
+        '{{/if}}',
       '</div>',
-      '{{#if remaining}}',
-        '<i class="fa fa fa-ellipsis-h remaining"></i>',
-      '{{/if}}',
       '</li>'
     ].join(''))
   };
