@@ -1128,7 +1128,7 @@
                                  '<li class="ruler-top-left"><i class="fa fa- fa-lg fa-fw"></i> Top Left</li>',
                                  '<li class="ruler-top-middle"><i class="fa fa- fa-lg fa-fw"></i> Top Middle</li>',
                                  '<li class="ruler-top-right"><i class="fa fa- fa-lg fa-fw"></i> Top Right</li>',
-                                 '<li class="ruler-middle-lsd<F6>;47l=[eft"><i class="fa fa- fa-lg fa-fw"></i> Middle Left</li>',
+                                 '<li class="ruler-middle-left"><i class="fa fa- fa-lg fa-fw"></i> Middle Left</li>',
                                  '<li class="ruler-middle-right"><i class="fa fa- fa-lg fa-fw"></i> Middle Right</li>',
                                  '<li class="ruler-bottom-left"><i class="fa fa- fa-lg fa-fw"></i> Bottom Left</li>',
                                  '<li class="ruler-bottom-middle"><i class="fa fa- fa-lg fa-fw"></i> Bottom Middle</li>',
