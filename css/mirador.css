@@ -1117,7 +1117,7 @@ li.highlight {
 }
 .mirador-pan-zoom-controls {
   position: absolute;
-  width: 100px;
+  width: auto; /* revert to 100px */
   height: 65px;
   bottom:0;
   right:0;
@@ -1135,6 +1135,127 @@ li.highlight {
   right:0px;
   top:30px;
 }
+
+/* Additions to support image manipulation. */
+.mirador-osd-contrast {
+  font-size: 103%;
+  color: #FFF;
+  width: 175px;
+  display: block;
+  position: relative;
+  margin: 15px 0px;
+}
+.mirador-osd-brightness {
+  font-size:103%;
+  position: relative;
+  color:white;
+  width: 175px;
+  display: block;
+}
+.brightnessSlider {
+  display: inline-block;
+  margin-top:8px;
+  height: 0.4em !important;
+  width: 135px;
+  /*height:200px;*/
+}
+.contrastSlider {
+  display: inline-block;
+  margin-top:8px;
+  height: 0.4em !important;
+  width: 135px;
+  /*height:200px;*/
+}
+.brightnessSlider .ui-slider-handle {
+  width: .4em !important;
+  top: -0.4em !important;
+}
+.contrastSlider .ui-slider-handle {
+  width: .4em !important;
+  top: -0.4em !important;
+}
+.invertEffect {
+  -webkit-filter: invert(100%);
+  -moz-filter: invert(100%);
+  filter: invert(100%);
+}
+.grayscaleEffect {
+  -webkit-filter: grayscale(100%);
+  -moz-filter: grayscale(100%);
+  filter: grayscale(100%);
+}
+.invertEffect.grayscaleEffect {
+  -webkit-filter: invert(100%) grayscale(100%);
+  -moz-filter: invert(100%) grayscale(100%);
+  filter: invert(100%) grayscale(100%);
+}
+.mirador-osd-toggle-grayscale {
+  font-size:100%;
+  position:relative;
+  /*right:170px;
+  top:104px;*/
+  cursor: pointer;
+  text-align: left;
+  display: block;
+  margin: 10px 0px;
+}
+.mirador-osd-toggle-invert {
+  font-size:100%;
+  position:relative;
+  /*right:170px;
+  top:135px;*/
+  display:block;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 10px;
+}
+.mirador-osd-filters-off {
+  font-size: 100%;
+  position: absolute;
+  display: block;
+  right: 25px;
+  cursor: pointer;
+}
+.mirador-osd-filters-off span {
+  border: 1px solid white;
+  padding: 3px ;
+}
+.mirador-pan-zoom-toggle {
+    width: 60px;
+    height: 70px;
+    position: absolute;
+    bottom: 70px;
+    right: 0px;
+    color: #008000;
+    opacity: 1;
+    padding: 25px 0px;
+}
+.viewImgManip {
+  height: 70px;
+  width: 60px;
+}
+.imgManipIcon {
+  display: inline-block;
+  position: relative;
+  height: 30px;
+  width: 30px;
+  margin-left: 10px;
+  top: 8px;
+}
+.mirador-img-manipulation {
+  right:-350px;
+  height: 289px;
+  width: auto;
+  position: absolute;
+  background-color: black;
+  padding: 16px;
+  opacity:1 !important;
+  text-align: left;
+  bottom: 0px;
+  font-size: 88%;
+}
+/* end of Additions to support image manipulation. */
+
 .mirador-osd-up {
   position:absolute;
   right:51px;

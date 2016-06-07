@@ -189,8 +189,34 @@
                                  '</a>',
                                  '<a title="Rotate -90 degrees" class="mirador-osd-negative-rotate hud-control">',
                                  '<i class="fa fa-rotate-left"></i>',
+                                 '</div>',
+
+                                 /* image manipulation template */
+                                 '<div title="View Image Manipulation Tools" class="mirador-pan-zoom-toggle hud-control">',
+                                 '<img class="viewImgManip closed" src="http://165.134.241.141/brokenBooks/images/imageadjust.png">',
+                                 '</div>',
+                                 '<div class="mirador-img-manipulation hud-control">',
+                                 '<div title="Change Image Brightness" class="mirador-osd-brightness hud-control">',
+                                 '<span>Brightness</span>',
+                                 '<span class="brightnessSlider"></span>',
+                                 '<img class="imgManipIcon" src="http://165.134.241.141/brokenBooks/images/brightness.png">',
+                                 '</div>',
+                                 '<div title="Change Image Contrast" class="mirador-osd-contrast hud-control">',
+                                 '<span>Contrast</span>',
+                                 '<span class="contrastSlider"></span>',
+                                 '<img class="imgManipIcon" src="http://165.134.241.141/brokenBooks/images/contrast.png">',
+                                 '</div>',
+                                 '<a title="Toggle Grayscale" class="mirador-osd-toggle-grayscale hud-control">',
+                                 '<span>Grayscale</span><img class="imgManipIcon" src="http://165.134.241.141/brokenBooks/images/grayscale.png">',
+                                 '</a>',
+                                 '<a title="Invert Colors" class="mirador-osd-toggle-invert hud-control">',
+                                 '<span>Invert<span><img class="imgManipIcon" src="http://165.134.241.141/brokenBooks/images/invert.png">',
+                                 '</a>',
+                                 '<a title="Remove Tool Effects" class="mirador-osd-filters-off hud-control">',
+                                 '<span>RESET</span>',
                                  '</a>',
                                  '</div>'
+                                 /* end image manipulation template */
     ].join(''))
 
   };
