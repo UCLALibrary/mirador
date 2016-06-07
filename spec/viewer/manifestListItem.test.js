@@ -1,4 +1,4 @@
-describe('ManifestListItem', function () {
+xdescribe('ManifestListItem', function () {
 
   beforeEach(function() {
     this.eventEmitter = new Mirador.EventEmitter();
