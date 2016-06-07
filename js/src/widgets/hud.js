@@ -189,6 +189,7 @@
                                  '</a>',
                                  '<a title="Rotate -90 degrees" class="mirador-osd-negative-rotate hud-control">',
                                  '<i class="fa fa-rotate-left"></i>',
+                                 '</a>',
                                  '</div>',
 
                                  /* image manipulation template */
