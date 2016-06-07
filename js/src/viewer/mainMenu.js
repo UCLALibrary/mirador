@@ -42,8 +42,9 @@
                 mainMenuCls: this.mainMenuCls,
                 showBookmark : this.state.getStateProperty('mainMenuSettings').buttons.bookmark,
                 showLayout : this.state.getStateProperty('mainMenuSettings').buttons.layout && !this.state.getStateProperty('flexibleWorkspace'),
-		showAddSlot : this.state.getStateProperty('flexibleWorkspace'),
-		showWorkspaceDownload: this.state.getStateProperty('workspaceDownload'),
+		        showAddSlot : this.state.getStateProperty('flexibleWorkspace'),
+		        showAddDragHandle : this.state.getStateProperty('flexibleWorkspace'),
+		        showWorkspaceDownload: this.state.getStateProperty('workspaceDownload'),
                 showOptions: this.state.getStateProperty('mainMenuSettings').buttons.options,
                 showFullScreenViewer : this.state.getStateProperty('mainMenuSettings').buttons.fullScreenViewer,
                 userButtons: this.state.getStateProperty('mainMenuSettings').userButtons,
@@ -113,9 +114,13 @@
               _this.eventEmitter.publish('TOGGLE_FULLSCREEN');
             });
 
-	    this.element.find('.add-flexible-slot').on('click', function() {
-	      _this.eventEmitter.publish('ADD_FLEXIBLE_SLOT');
-	    });
+	        this.element.find('.add-flexible-slot').on('click', function() {
+	          _this.eventEmitter.publish('ADD_FLEXIBLE_SLOT');
+	        });
+
+	        this.element.find('.add-drag-handle').on('click', function() {
+	          _this.eventEmitter.publish('ADD_DRAG_HANDLE');
+	        });
 
             this.element.find('.workspace-upload').on('click', function() { 
               _this.eventEmitter.publish('TOGGLE_WORKSPACE_UPLOAD_PANEL');
@@ -154,6 +159,13 @@
           '<li>',
             '<a href="javascript:;" class="add-flexible-slot" title="Add Slot">',
               '<span class="fa fa-th-large fa-lg fa-fw"></span> Add Slot',
+            '</a>',
+          '</li>',
+        '{{/if}}',
+        '{{#if showAddDragHandle}}',
+          '<li>',
+            '<a href="javascript:;" class="add-drag-handle" title="Add Drag Handle">',
+              '<span class="fa fa-suitcase fa-lg fa-fw"></span> Add Drag Handle',
             '</a>',
           '</li>',
         '{{/if}}',
