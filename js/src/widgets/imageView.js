@@ -811,6 +811,11 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
+
+          // tell lock controller to move any synchronized views
+          if (_this.leading) {
+            _this.eventEmitter.publish('synchronizeZoom', _this);
+          }
         }, 30));
 
         _this.osd.addHandler('pan', $.debounce(function(){
@@ -819,7 +824,22 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
+
+          // tell lock controller to move any synchronized views
+          if (_this.leading) {
+            _this.eventEmitter.publish('synchronizePan', _this);
+          }
         }, 30));
+
+        // prevent infinite looping with coordinated zoom
+        _this.element.on({
+          mouseenter: function() {
+            _this.leading = true;
+          },
+          mouseleave: function() {
+            _this.leading = false;
+          }
+        });
 
         if (_this.state.getStateProperty('autoHideControls')) {
           var timeoutID = null,

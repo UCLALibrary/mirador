@@ -1052,6 +1052,14 @@
       this.element.find('.ruler-bottom-right').on('click', function() {
         _this.setRulerPosition('br');
       });
+
+      this.element.find('.mirador-icon-lock').on('click', function() {
+        // toggle the lock status
+        // TODO: create function toggleLock that takes an id, and checks if that slot has a locked class
+        //     if so, publish the unlock event
+        //     else, publish lock event
+        _this.eventEmitter.publish('TOGGLE_LOCK', _this.focusModules[_this.currentImageMode]);
+      });
     },
 
     // template should be based on workspace type
@@ -1136,6 +1144,11 @@
                                  '</ul>',
                                  '</a>',
                                  // end of ruler UI html
+ 
+                                 // lockController
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock" title="lock"><i class="fa fa-lock fa-lg fa-fw"></i>',
+                                 '</a>',
+                                 // end lockController
 
                                  '<h3 class="window-manifest-title" title="{{title}}" aria-label="{{title}}">{{title}}</h3>',
                                  '</div>',

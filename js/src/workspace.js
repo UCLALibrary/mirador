@@ -12,6 +12,7 @@
       appendTo:         null,
       layoutDescription:    null,
       state:            null,
+      lockController:   null,
       eventEmitter:     null
     }, options);
 

@@ -107,6 +107,9 @@
         layoutDescription: this.layout.charAt(0) === '{' ? JSON.parse(this.layout) : !isNaN(this.layout) ? $.layoutDescriptionFromGridString('1x' + this.layout) : $.layoutDescriptionFromGridString(this.layout),
         appendTo: this.element.find('.mirador-viewer'),
         state: this.state,
+        lockController: new $.LockController({
+          eventEmitter: this.eventEmitter
+        }),
         eventEmitter: this.eventEmitter
       });
 
