@@ -3,7 +3,7 @@
   $.LockController = function(options) {
 
     jQuery.extend(true, this, {
-      lockProfile: 'dimensionalLock', // TODO: pass this in via options
+      lockProfile: 'dimensionalLockOffset', // TODO: pass this in via options
       lockedWindows: [],
       eventEmitter: null,
     }, options);
@@ -19,9 +19,8 @@
 
     lockOptions: {
 
-      dimensionalLock: function(leader, follower) {
+      dimensionalLockMirror: function(leader, follower) {
 
-        console.log('dimensionalLock');
         var viewCenter = leader.osd.viewport.getCenter(),
         leaderViewportPixelWidth = leader.osd.viewport.getContainerSize().x,
         followerViewportPixelWidth = follower.osd.viewport.getContainerSize().x,
@@ -37,6 +36,29 @@
         // calculate position of top right corner such that the
         // center maintains the same real coordinates for that image.
         followerTargetRectX = viewCenter.x - ( followerTargetRectWidth/2 ),
+        followerTargetRectY = viewCenter.y - ( followerTargetRectHeight/2 ),
+        followerTargetRect = new OpenSeadragon.Rect(followerTargetRectX, followerTargetRectY, followerTargetRectWidth, followerTargetRectHeight);
+
+        follower.osd.viewport.fitBounds(followerTargetRect);
+      },
+
+      dimensionalLockOffset: function(leader, follower) {
+
+        var viewCenter = leader.osd.viewport.getCenter(),
+        leaderViewportPixelWidth = leader.osd.viewport.getContainerSize().x,
+        followerViewportPixelWidth = follower.osd.viewport.getContainerSize().x,
+        viewportRatio = followerViewportPixelWidth / leaderViewportPixelWidth,
+
+        // Construct target Rect variables from collected data.
+        leaderPhysWidth = 2,
+        followerPhysWidth = 2,
+        
+        followerTargetRectWidth = leader.osd.viewport.getBounds().width * viewportRatio,
+        followerTargetRectHeight = followerTargetRectWidth / follower.osd.viewport.getAspectRatio(),
+
+        // calculate position of top right corner such that the
+        // center maintains the same real coordinates for that image.
+        followerTargetRectX = viewCenter.x + ( leader.osd.viewport.getBounds().width/2 ),
         followerTargetRectY = viewCenter.y - ( followerTargetRectHeight/2 ),
         followerTargetRect = new OpenSeadragon.Rect(followerTargetRectX, followerTargetRectY, followerTargetRectWidth, followerTargetRectHeight);
 
