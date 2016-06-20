@@ -21,7 +21,8 @@
         'manifestsPanelVisible': false,
         'optionsPanelVisible': false,
         'bookmarkPanelVisible': false,
-        'workspaceUploadPanelVisible': false
+        'workspaceUploadPanelVisible': false,
+        'lockGroupsPanelVisible': false
       },
       manifests:             []
     }, options);
@@ -119,6 +120,12 @@
         eventEmitter: this.eventEmitter
       });
 
+      this.lockGroupsPanel = new $.LockGroupsPanel({
+        appendTo: this.element.find('.mirador-viewer'),
+        state: this.state,
+        eventEmitter: this.eventEmitter
+      });
+
       this.manifestsPanel = new $.ManifestsPanel({ appendTo: this.element.find('.mirador-viewer'), state: this.state, eventEmitter: this.eventEmitter });
       //only instatiate bookmarkPanel if we need it
       if (showMainMenu && this.state.getStateProperty('mainMenuSettings').buttons.bookmark) {
@@ -168,6 +175,10 @@
 
       _this.eventEmitter.subscribe('TOGGLE_WORKSPACE_UPLOAD_PANEL', function(event) {
         _this.toggleWorkspaceUploadPanel();
+      });
+
+      _this.eventEmitter.subscribe('TOGGLE_LOCK_GROUPS_PANEL', function(event) {
+        _this.toggleLockGroupsPanel();
       });
 
       _this.eventEmitter.subscribe('TOGGLE_FULLSCREEN', function(event) {
@@ -257,6 +268,10 @@
 
     toggleWorkspaceUploadPanel: function() {
       this.toggleOverlay('workspaceUploadPanelVisible');
+    },
+
+    toggleLockGroupsPanel: function() {
+      this.toggleOverlay('lockGroupsPanelVisible');
     },
 
     getManifestsData: function() {

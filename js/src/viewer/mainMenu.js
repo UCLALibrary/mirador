@@ -45,6 +45,7 @@
 		        showAddSlot : this.state.getStateProperty('flexibleWorkspace'),
 		        showAddDragHandle : this.state.getStateProperty('flexibleWorkspace'),
 		        showWorkspaceDownload: this.state.getStateProperty('workspaceDownload'),
+                // TODO: showLockGroup
                 showOptions: this.state.getStateProperty('mainMenuSettings').buttons.options,
                 showFullScreenViewer : this.state.getStateProperty('mainMenuSettings').buttons.fullScreenViewer,
                 userButtons: this.state.getStateProperty('mainMenuSettings').userButtons,
@@ -125,6 +126,10 @@
             this.element.find('.workspace-upload').on('click', function() { 
               _this.eventEmitter.publish('TOGGLE_WORKSPACE_UPLOAD_PANEL');
             });
+
+            this.element.find('.toggle-lock-groups').on('click', function() {
+              _this.eventEmitter.publish('TOGGLE_LOCK_GROUPS_PANEL');
+            });
         },
 
         template: Handlebars.compile([
@@ -169,6 +174,14 @@
             '</a>',
           '</li>',
         '{{/if}}',
+        // lockController
+          '<li>',
+            // click to turn off/on all locks
+            '<a href="javascript:;" class="toggle-lock-groups" title="Lock Groups">',
+              '<span class="fa fa-lock fa-lg fa-fw"></span> Lock Groups',
+            '</a>',
+          '</li>',
+        // end lockController
         '{{#if showWorkspaceDownload}}',
           '<li>',
             '<a href="javascript:;" class="workspace-download" title="Download Workspace">',

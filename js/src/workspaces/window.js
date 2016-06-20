@@ -325,6 +325,10 @@
       _this.eventEmitter.subscribe('ENABLE_WINDOW_FULLSCREEN', function(event) {
         _this.element.find('.mirador-osd-fullscreen').show();        
       });
+
+      _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, data) {
+        _this.renderLockGroupMenu(data);
+      });
     },
 
     bindEvents: function() {
@@ -1053,12 +1057,45 @@
         _this.setRulerPosition('br');
       });
 
+      /*
       this.element.find('.mirador-icon-lock').on('click', function() {
         // toggle the lock status
         // TODO: create function toggleLock that takes an id, and checks if that slot has a locked class
         //     if so, publish the unlock event
         //     else, publish lock event
         _this.eventEmitter.publish('TOGGLE_LOCK', _this.focusModules[_this.currentImageMode]);
+      });
+      */
+
+      this.element.find('.mirador-icon-lock-window').on('mouseenter',
+        function() {
+        _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
+      }).on('mouseleave',
+      function() {
+        _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
+      });
+
+      this.element.find('.mirador-icon-add-to-lock-group').on('click', function(event) {
+         _this.eventEmitter.publish('createLockGroup', jQuery('#new-lock-group-name').val());
+      });
+
+      this.element.find('.mirador-icon-remove-from-lock-group').on('click', function(event) {
+         _this.eventEmitter.publish('deleteLockGroup', /**/'REPLACEME');
+      });
+    },
+
+    // data is a list of lock group names
+    renderLockGroupMenu: function(data) {
+      var renderedGroups = jQuery('.lock-options-list li').map(function() { return this.id; });
+      jQuery('.lock-options-list li').each(function(i, e) {
+        if (!jQuery(e).hasClass('no-lock') && data.indexOf(jQuery(e).attr('class')) === -1) {
+          jQuery(e).remove();
+        }
+      });
+      jQuery.each(data, function(i, e) {
+        if (renderedGroups.indexOf(e) === -1) {
+          jQuery('<li class="'+e+'"><i class="fa fa-ban fa-lg fa-fw"></i></li>').appendTo('.lock-options-list');
+        }
       });
     },
 
@@ -1146,7 +1183,10 @@
                                  // end of ruler UI html
  
                                  // lockController
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock" title="lock"><i class="fa fa-lock fa-lg fa-fw"></i>',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock-window" title="lock"><i class="fa fa-lock fa-lg fa-fw"></i>',
+                                 '<ul class="dropdown lock-options-list">',
+                                 '<li class="no-lock"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
+                                 '</ul>',
                                  '</a>',
                                  // end lockController
 

@@ -4,7 +4,7 @@
 
     jQuery.extend(true, this, {
       lockProfile: 'dimensionalLockOffset', // TODO: pass this in via options
-      lockedWindows: [],
+      synchronizedWindows: { byGroup: {/* groupID -> listOfWindows */}, byWindow: {/* windowID -> groupID */} },
       eventEmitter: null,
     }, options);
 
@@ -71,6 +71,7 @@
       // subscribe to lockSlot and unlockSlot
       var _this = this;
 
+      /*
       _this.eventEmitter.subscribe('TOGGLE_LOCK', function(event, viewObj) {
         var isLocked = false;
         jQuery.each(_this.lockedWindows, function(idx, val) {
@@ -79,10 +80,32 @@
           }
         });
         if (isLocked) {
-          _this.unlockWindow(viewObj);
+          _this.removeFromLockGroup(viewObj);
         } else {
-          _this.lockWindow(viewObj);
+          _this.addToLockGroup(viewObj, );
         }
+      });
+      */
+      _this.eventEmitter.subscribe('createLockGroup', function(event, name) {
+        _this.createLockGroup(name);
+        // TODO: update list of lock groups in the dom
+        _this.eventEmitter.publish('updateLockGroupMenus', [Object.keys(_this.synchronizedWindows.byGroup)]);
+      });
+      
+      _this.eventEmitter.subscribe('deleteLockGroup', function(event, name) {
+        _this.deleteLockGroup(name);
+        // TODO: update list of lock groups in the dom
+        _this.eventEmitter.publish('updateLockGroupMenus', [Object.keys(_this.synchronizedWindows.byGroup)]);
+      });
+
+      _this.eventEmitter.subscribe('addToLockGroup', function(event, data) {
+        _this.addToLockGroup(data.viewObj, data.lockGroup);
+        // TODO: update list of lock groups in the dom
+      });
+
+      _this.eventEmitter.subscribe('removeFromLockGroup', function(event, data) {
+        _this.removeFromLockGroup(data.viewObj);
+        // TODO: update list of lock groups in the dom
       });
 
       _this.eventEmitter.subscribe('synchronizeZoom', function(event, viewObj) {
@@ -94,31 +117,75 @@
       });
     },
 
-    lockWindow: function(viewObj) {
+    // !!! Throws exception, caller must catch
+    createLockGroup: function(name) {
       var _this = this;
-      _this.lockedWindows.push(viewObj);
+      if (_this.synchronizedWindows.byGroup[name] === undefined) {
+        _this.synchronizedWindows.byGroup[name] = [];
+      } else {
+        // throw error
+        alert("There is already a lock group with that name!");
+      }
+    },
 
-      // add locked class to the slot, and change the icon from unlocked to locked
+    deleteLockGroup: function(name) {
+      var _this = this;
+      delete _this.synchronizedWindows.byGroup[name];
+
+      // go thru the byWindow object and delete any keys that have name as the value
+      // TODO: also, remove all viewObj from the lock group
+      jQuery.each(_this.synchronizedWindows.byWindow, function(k, v) {
+        if (v === name) {
+          delete _this.synchronizedWindows.byWindow[v];
+        }
+      });
+    },
+
+    // assumes that _this.synchronizedWindows.byGroup.lockGroup is an array
+    addToLockGroup: function(viewObj, lockGroup) {
+      var _this = this;
+      // check to see if the window is already locked
+      _this.removeFromLockGroup(viewObj);
+
+      // add to lockGroups
+      _this.synchronizedWindows.byGroup[lockGroup].push(viewObj);
+      _this.synchronizedWindows.byWindow[viewObj.windowId] = lockGroup;
 
     },
 
-    unlockWindow: function(viewObj) {
-      var _this = this;
-      console.log('unlockWindow');
-      _this.lockedWindows = _this.lockedWindows.filter(function(e, i, a) {
-        return e.windowId === viewObj.windowId ? false : true;
-      });
+    removeFromLockGroup: function(viewObj) {
+      var _this = this,
+      lockGroup = _this.synchronizedWindows.byWindow[viewObj.windowId],
+      lgArr,
+      idx;
+      if (lockGroup !== undefined) {
+
+        // remove from byGroup
+        lgArr = _this.synchronizedWindows.byGroup[lockGroup];
+        jQuery.each(lgArr, function(i, e) {
+          if (e.windowId === viewObj.windowId) {
+            idx = i;
+            return false;
+          }
+        });
+        lgArr.splice(idx, 1);
+        
+        // remove from byWindow
+        delete _this.synchronizedWindows.byWindow[viewObj.windowId];
+      }
 
       // remove locked class from the slot, and change the icon from locked to unlocked
     },
 
     updateFollowers: function(viewObj) {
-      var _this = this;
+      var _this = this,
+      lockGroup = _this.synchronizedWindows.byWindow[viewObj.windowId],
+      lgArr = _this.synchronizedWindows.byGroup[lockGroup];
 
-      jQuery.each(_this.lockedWindows, function(idx, val) {
+      jQuery.each(lgArr, function(idx, val) {
         if (viewObj.windowId === val.windowId) {
 
-          var followers = _this.lockedWindows.filter(function(elt) {
+          var followers = lgArr.filter(function(elt) {
             return elt.windowId === viewObj.windowId ? false : true;
           });
     
