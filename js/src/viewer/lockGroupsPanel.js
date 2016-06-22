@@ -1,3 +1,4 @@
+/*jshint scripturl:true*/
 (function($) {
 
   $.LockGroupsPanel = function(options) {
@@ -12,7 +13,7 @@
       console.log(items);
       var out = '';
       for(var i=0, l=items.length; i<l; i++) {
-        out = out + "<li>" + items[i] + "</li>";
+        out = out + "<li>" + items[i] + '<a href="javascript:;" class="mirador-btn mirador-icon-delete-lock-group"><i class="fa fa-minus fa-lg"></i></a>' + '</li>';
       }
 
       //return out + "</ul>";
@@ -41,20 +42,27 @@
       _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, lg) {
         var lockGroups = d3.select('#lock-groups').selectAll('li').data(lg, function(d) { return d; });
         lockGroups.enter().append('li')
-          .text(function(d) { return d; });
+          .text(function(d) { return d; })
+          .insert('a')
+          .attr('href', 'javascript:;')
+          .classed({'mirador-btn': true, 'mirador-icon-delete-lock-group': true})
+          .insert('i')
+          .classed({'fa': true, 'fa-minus': true, 'fa-lg': true});
         lockGroups.exit().remove();
+
+        _this.bindEvents();
       });
     },
 
     bindEvents: function() {
       var _this = this;
 
-      _this.element.find('.mirador-icon-create-lock-group').on('click', function(event) {
+      _this.element.find('.mirador-icon-create-lock-group').off('click').on('click', function(event) {
          _this.eventEmitter.publish('createLockGroup', jQuery('#new-lock-group-name').val());
       });
 
-      _this.element.find('.mirador-icon-delete-lock-group').on('click', function(event) {
-         _this.eventEmitter.publish('deleteLockGroup', /**/'REPLACEME');
+      _this.element.find('.mirador-icon-delete-lock-group').off('click').on('click', function(event) {
+         _this.eventEmitter.publish('deleteLockGroup', jQuery(this).parent().text());
       });
     },
 

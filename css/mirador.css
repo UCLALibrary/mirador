@@ -146,7 +146,6 @@ a {
   border-bottom: 2px solid deepskyblue;
 }
 
-
 /*.mirador-main-menu a:focus {
   border-bottom: 2px solid deepskyblue;
   outline: none;
@@ -1876,9 +1875,12 @@ a.mirador-icon-annotations [class^="icon-"] {
 
 .mirador-viewer .dropdown li:hover {
   border-left: 3px solid deepskyblue;
-  background-color: #dddddd;
   padding-left: 7px;
   font-weight: bold;
+}
+
+.mirador-viewer .dropdown.lock-options-list li.current-lg {
+  background-color: deepskyblue;
 }
 
 .image-list {

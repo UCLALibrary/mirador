@@ -3,7 +3,7 @@
   $.LockController = function(options) {
 
     jQuery.extend(true, this, {
-      lockProfile: 'dimensionalLockOffset', // TODO: pass this in via options
+      lockProfile: 'dimensionalLockMirror', // TODO: pass this in via options
       synchronizedWindows: { byGroup: {/* groupID -> listOfWindows */}, byWindow: {/* windowID -> groupID */} },
       eventEmitter: null,
     }, options);
@@ -136,7 +136,7 @@
       // TODO: also, remove all viewObj from the lock group
       jQuery.each(_this.synchronizedWindows.byWindow, function(k, v) {
         if (v === name) {
-          delete _this.synchronizedWindows.byWindow[v];
+          delete _this.synchronizedWindows.byWindow[k];
         }
       });
     },
@@ -182,22 +182,24 @@
       lockGroup = _this.synchronizedWindows.byWindow[viewObj.windowId],
       lgArr = _this.synchronizedWindows.byGroup[lockGroup];
 
-      jQuery.each(lgArr, function(idx, val) {
-        if (viewObj.windowId === val.windowId) {
-
-          var followers = lgArr.filter(function(elt) {
-            return elt.windowId === viewObj.windowId ? false : true;
-          });
-    
-          // for each follower, update it using the lock profile
-          jQuery.each(followers, function(i, follower) {
-            // call lockOptions
-            _this.lockOptions[_this.lockProfile](viewObj, follower);
-          });
-
-          return false;
-        }
-      });
+      if (lgArr !== undefined) {
+        jQuery.each(lgArr, function(idx, val) {
+          if (viewObj.windowId === val.windowId) {
+  
+            var followers = lgArr.filter(function(elt) {
+              return elt.windowId === viewObj.windowId ? false : true;
+            });
+      
+            // for each follower, update it using the lock profile
+            jQuery.each(followers, function(i, follower) {
+              // call lockOptions
+              _this.lockOptions[_this.lockProfile](viewObj, follower);
+            });
+  
+            return false;
+          }
+        });
+      }
     }
   };
 }(Mirador));

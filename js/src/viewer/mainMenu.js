@@ -86,49 +86,53 @@
 
         bindEvents: function() {
             var _this = this;
-            //change 'change-layout' to mouseover events rather than click?
-            this.element.find('.change-layout').on('click', function() { 
-              _this.eventEmitter.publish('TOGGLE_WORKSPACE_PANEL');
-              //remove active class from other buttons
-              _this.element.find('.bookmark-workspace').removeClass('active');
-              if (jQuery(this).hasClass('active')) {
-                jQuery(this).removeClass('active');
+
+            // takes a jQuery selection
+            var toggleActive = function(that) {
+
+              if (that.hasClass('active')) {
+                that.removeClass('active');
               } else {
-                jQuery(this).addClass('active');
+                that.addClass('active');
               }
+              
+            };
+
+            var panelSelectorEvent = {
+              'change-layout':'TOGGLE_WORKSPACE_PANEL',
+              'bookmark-workspace':'TOGGLE_BOOKMARK_PANEL',
+              'workspace-upload':'TOGGLE_WORKSPACE_UPLOAD_PANEL',
+              'toggle-lock-groups':'TOGGLE_LOCK_GROUPS_PANEL'
+            };
+            var selectorEvent = {
+              'fullscreen-viewer':'TOGGLE_FULLSCREEN',
+              'add-flexible-slot':'ADD_FLEXIBLE_SLOT',
+              'add-drag-handle':'ADD_DRAG_HANDLE',
+            };
+            var selectorsList = jQuery.map(Object.keys(selectorEvent), function(a) { return '.' + a; }).join(', ');
+            var panelSelectorsList = jQuery.map(Object.keys(panelSelectorEvent), function(a) { return '.' + a; }).join(', ');
+
+            jQuery.each(selectorEvent, function(k, v) {
+
+              _this.element.find('.' + k).on('click', function() {
+                _this.eventEmitter.publish(v);
+              });
             });
 
-            this.element.find('.bookmark-workspace').on('click', function() { 
-              _this.eventEmitter.publish('TOGGLE_BOOKMARK_PANEL');
-              //remove active class from other buttons
-              _this.element.find('.change-layout').removeClass('active');
-              if (jQuery(this).hasClass('active')) {
-                jQuery(this).removeClass('active');
-              } else {
-                jQuery(this).addClass('active');
-              }
-            });
+            jQuery.each(panelSelectorEvent, function(k, v) {
 
-            // when options are implemented, this will need to do something
-            this.element.find('.window-options').on('click', function() { });
-            this.element.find('.fullscreen-viewer').on('click', function() {
-              _this.eventEmitter.publish('TOGGLE_FULLSCREEN');
-            });
+              _this.element.find('.' + k).on('click', function() {
 
-	        this.element.find('.add-flexible-slot').on('click', function() {
-	          _this.eventEmitter.publish('ADD_FLEXIBLE_SLOT');
-	        });
+                // publish corresponding event
+                _this.eventEmitter.publish(v);
 
-	        this.element.find('.add-drag-handle').on('click', function() {
-	          _this.eventEmitter.publish('ADD_DRAG_HANDLE');
-	        });
+                // change classes around
+                jQuery(panelSelectorsList).filter(function(i, e) {
+                  return !jQuery(e).hasClass(k);
+                }).removeClass('active');
 
-            this.element.find('.workspace-upload').on('click', function() { 
-              _this.eventEmitter.publish('TOGGLE_WORKSPACE_UPLOAD_PANEL');
-            });
-
-            this.element.find('.toggle-lock-groups').on('click', function() {
-              _this.eventEmitter.publish('TOGGLE_LOCK_GROUPS_PANEL');
+                toggleActive(jQuery(this));
+              });
             });
         },
 
@@ -162,34 +166,33 @@
         '{{/if}}',
         '{{#if showAddSlot}}',
           '<li>',
-            '<a href="javascript:;" class="add-flexible-slot" title="Add Slot">',
+            '<a href="javascript:;" class="add-flexible-slot mainmenu-button" title="Add Slot">',
               '<span class="fa fa-th-large fa-lg fa-fw"></span> Add Slot',
             '</a>',
           '</li>',
         '{{/if}}',
         '{{#if showAddDragHandle}}',
           '<li>',
-            '<a href="javascript:;" class="add-drag-handle" title="Add Drag Handle">',
+            '<a href="javascript:;" class="add-drag-handle mainmenu-button" title="Add Drag Handle">',
               '<span class="fa fa-suitcase fa-lg fa-fw"></span> Add Drag Handle',
             '</a>',
           '</li>',
         '{{/if}}',
         // lockController
           '<li>',
-            // click to turn off/on all locks
-            '<a href="javascript:;" class="toggle-lock-groups" title="Lock Groups">',
+            '<a href="javascript:;" class="toggle-lock-groups mainmenu-button" title="Lock Groups">',
               '<span class="fa fa-lock fa-lg fa-fw"></span> Lock Groups',
             '</a>',
           '</li>',
         // end lockController
         '{{#if showWorkspaceDownload}}',
           '<li>',
-            '<a href="javascript:;" class="workspace-download" title="Download Workspace">',
+            '<a href="javascript:;" class="workspace-download mainmenu-button" title="Download Workspace">',
               '<span class="fa fa-download fa-lg fa-fw"></span> Download Workspace',
             '</a>',
           '</li>',
           '<li>',
-            '<a href="javascript:;" class="workspace-upload" title="Upload Workspace">',
+            '<a href="javascript:;" class="workspace-upload mainmenu-button" title="Upload Workspace">',
               '<span class="fa fa-upload fa-lg fa-fw"></span> Upload Workspace',
             '</a>',
           '</li>',

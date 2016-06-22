@@ -60,7 +60,7 @@
       console.log(items);
       var out = ''; 
       for(var i=0, l=items.length; i<l; i++) {
-        out = out + "<li class='add-to-lock-group'>" + items[i] + "</li>";
+        out = out + "<li class='lock-options-list-item add-to-lock-group'>" + items[i] + "</li>";
       }   
 
       //return out + "</ul>";
@@ -391,10 +391,13 @@
 
       this.element.find('.add-to-lock-group').on('click', function(event) {
          _this.eventEmitter.publish('addToLockGroup', {viewObj: _this.focusModules[_this.currentImageMode], lockGroup: jQuery(this).text()});
+         jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
+         jQuery(this).addClass('current-lg');
       });
 
       this.element.find('.remove-from-lock-group').on('click', function(event) {
          _this.eventEmitter.publish('removeFromLockGroup', {viewObj: _this.focusModules[_this.currentImageMode]});
+         jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
       });
     },
 
