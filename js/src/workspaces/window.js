@@ -12,6 +12,7 @@
       imagesList:        null,
       annotationsList:   [],
       endpoint:          null,
+      lockController:    null,
       currentImageMode:  'ImageView',
       imageModes:        ['ImageView', 'BookView'],
       originalImageModes:['ImageView', 'BookView'],
@@ -53,6 +54,18 @@
         "ThumbnailsView" : "fa fa-th fa-lg fa-rotate-90 fa-fw"
       }
     }, options);
+
+     Handlebars.registerHelper('list2', function(items) {
+      //var out = "<ul>";
+      console.log(items);
+      var out = ''; 
+      for(var i=0, l=items.length; i<l; i++) {
+        out = out + "<li class='add-to-lock-group'>" + items[i] + "</li>";
+      }   
+
+      //return out + "</ul>";
+      return out;
+    });
 
     this.init();
     this.bindAnnotationEvents();
@@ -139,6 +152,12 @@
       }
       templateData.currentFocusClass = _this.iconClasses[_this.viewType];
       templateData.showFullScreen = _this.fullScreen;
+
+
+
+      // get info about lockGroups
+      templateData.lockGroups = Object.keys(this.lockController.synchronizedWindows.byGroup);
+
       _this.element = jQuery(this.template(templateData)).appendTo(_this.appendTo);
       this.element.find('.manifest-info .mirador-tooltip').each(function() {
         jQuery(this).qtip({
@@ -207,7 +226,6 @@
         default:
           break;
       }
-      console.log(_this.state.slots, '********_this.state');
 
       if (_this.state.getSlots().length <= 1) {
         _this.element.find('.remove-object-option').hide();
@@ -358,6 +376,26 @@
         _this.fullScreen();
       });
 
+      // lockGroup stuff
+      this.element.find('.mirador-icon-lock-window').off('mouseenter').on('mouseenter',
+        function() {
+        _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
+      }).off('mouseleave').on('mouseleave',
+      function() {
+        _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
+      });
+
+      this.element.find('.lock-options-list-item').on('click', function() {
+        console.log('click lock list item');
+      });
+
+      this.element.find('.add-to-lock-group').on('click', function(event) {
+         _this.eventEmitter.publish('addToLockGroup', {viewObj: _this.focusModules[_this.currentImageMode], lockGroup: jQuery(this).text()});
+      });
+
+      this.element.find('.remove-from-lock-group').on('click', function(event) {
+         _this.eventEmitter.publish('removeFromLockGroup', {viewObj: _this.focusModules[_this.currentImageMode]});
+      });
     },
 
     bindAnnotationEvents: function() {
@@ -1067,36 +1105,21 @@
       });
       */
 
-      this.element.find('.mirador-icon-lock-window').on('mouseenter',
-        function() {
-        _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
-      }).on('mouseleave',
-      function() {
-        _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
-      });
-
-      this.element.find('.mirador-icon-add-to-lock-group').on('click', function(event) {
-         _this.eventEmitter.publish('createLockGroup', jQuery('#new-lock-group-name').val());
-      });
-
-      this.element.find('.mirador-icon-remove-from-lock-group').on('click', function(event) {
-         _this.eventEmitter.publish('deleteLockGroup', /**/'REPLACEME');
-      });
     },
 
     // data is a list of lock group names
-    renderLockGroupMenu: function(data) {
-      var renderedGroups = jQuery('.lock-options-list li').map(function() { return this.id; });
-      jQuery('.lock-options-list li').each(function(i, e) {
-        if (!jQuery(e).hasClass('no-lock') && data.indexOf(jQuery(e).attr('class')) === -1) {
-          jQuery(e).remove();
-        }
-      });
-      jQuery.each(data, function(i, e) {
-        if (renderedGroups.indexOf(e) === -1) {
-          jQuery('<li class="'+e+'"><i class="fa fa-ban fa-lg fa-fw"></i></li>').appendTo('.lock-options-list');
-        }
-      });
+    renderLockGroupMenu: function(lockGroupNames) {
+      // each menu in the window should get a dropdown with items in the 'data' array
+      var _this = this,
+      lockGroups = d3.selectAll('.lock-options-list').selectAll('.lock-options-list-item')
+        .data(lockGroupNames, function(d) { return d; });
+      lockGroups.enter().append('li')
+        .classed({'lock-options-list-item': true, 'add-to-lock-group': true})
+        .text(function(d) { return d; });
+      lockGroups.exit().remove();
+
+      // bind lock group click events on all new li's
+      _this.bindEvents();
     },
 
     // template should be based on workspace type
@@ -1144,6 +1167,7 @@
                                  '<hr class="menu-divider"/>',
                                  '{{/if}}',
                                  '{{#if layoutOptions.slotRight}}',
+                                 // lockGroup stuff
                                  '<li class="add-slot-right"><i class="fa fa-arrow-circle-right fa-lg fa-fw"></i> {{t "addSlotRight"}}</li>',
                                  '{{/if}}',
                                  '{{#if layoutOptions.slotLeft}}',
@@ -1173,7 +1197,7 @@
                                  '<li class="ruler-top-left"><i class="fa fa- fa-lg fa-fw"></i> Top Left</li>',
                                  '<li class="ruler-top-middle"><i class="fa fa- fa-lg fa-fw"></i> Top Middle</li>',
                                  '<li class="ruler-top-right"><i class="fa fa- fa-lg fa-fw"></i> Top Right</li>',
-                                 '<li class="ruler-middle-lsd<F6>;47l=[eft"><i class="fa fa- fa-lg fa-fw"></i> Middle Left</li>',
+                                 '<li class="ruler-middle-left"><i class="fa fa- fa-lg fa-fw"></i> Middle Left</li>',
                                  '<li class="ruler-middle-right"><i class="fa fa- fa-lg fa-fw"></i> Middle Right</li>',
                                  '<li class="ruler-bottom-left"><i class="fa fa- fa-lg fa-fw"></i> Bottom Left</li>',
                                  '<li class="ruler-bottom-middle"><i class="fa fa- fa-lg fa-fw"></i> Bottom Middle</li>',
@@ -1185,7 +1209,8 @@
                                  // lockController
                                  '<a href="javascript:;" class="mirador-btn mirador-icon-lock-window" title="lock"><i class="fa fa-lock fa-lg fa-fw"></i>',
                                  '<ul class="dropdown lock-options-list">',
-                                 '<li class="no-lock"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
+                                 '<li class="no-lock remove-from-lock-group"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
+                                 '{{#list2 lockGroups}}{{/list2}}',
                                  '</ul>',
                                  '</a>',
                                  // end lockController

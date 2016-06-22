@@ -18,13 +18,13 @@
       //return out + "</ul>";
       return out;
     });
-    this.init([]);
+    this.init();
   };
 
   $.LockGroupsPanel.prototype = {
-    init: function (data) {
+    init: function () {
 
-      this.element = jQuery(this.template({lockGroups: data})).appendTo(this.appendTo);
+      this.element = jQuery(this.template({lockGroups: []})).appendTo(this.appendTo);
       
       this.bindEvents();
       this.listenForActions();
@@ -38,12 +38,11 @@
         _this.hide();
       });
 
-      _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, data) {
-        // data is a list of the lock group names
-        // remove the old element
-        _this.element.remove();
-        _this.init(data);
-        // add new one
+      _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, lg) {
+        var lockGroups = d3.select('#lock-groups').selectAll('li').data(lg, function(d) { return d; });
+        lockGroups.enter().append('li')
+          .text(function(d) { return d; });
+        lockGroups.exit().remove();
       });
     },
 

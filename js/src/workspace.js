@@ -807,6 +807,10 @@
           mergedConfig.overlayAvailable = mergedConfig.overlay;
           delete mergedConfig.overlay;
         }
+
+        // add lockGroups
+        mergedConfig.lockController = _this.lockController;
+
         newWindow = new $.Window(mergedConfig);
         _this.windows.push(newWindow);
 
