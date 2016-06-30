@@ -184,9 +184,9 @@
           settings: {
             profile: 'dimensionalLockMirror',
             zoompan: true,
-            rotation: true,
-            brightness: true,
-            contrast: true,
+            rotation: false,
+            brightness: false,
+            contrast: false,
             invert: true,
             grayscale: true,
             reset: true
