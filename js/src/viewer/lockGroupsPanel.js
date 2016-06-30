@@ -29,6 +29,8 @@
       
       this.bindEvents();
       this.listenForActions();
+
+      jQuery('#lock-groups').accordion({collapsible: true});
     },
 
     listenForActions: function() {
@@ -40,16 +42,62 @@
       });
 
       _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, lg) {
-        var lockGroups = d3.select('#lock-groups').selectAll('li').data(lg, function(d) { return d; });
-        lockGroups.enter().append('li')
-          .text(function(d) { return d; })
-          .insert('a')
-          .attr('href', 'javascript:;')
-          .classed({'mirador-btn': true, 'mirador-icon-delete-lock-group': true})
-          .insert('i')
-          .classed({'fa': true, 'fa-minus': true, 'fa-lg': true});
-        lockGroups.exit().remove();
+        var keys,
+        lockGroupsLi,
+        lockGroupsLiForm;
+      
+        keys = lg.keys;
+        console.log(keys);
 
+        lockGroupsLi = d3.select('#lock-groups')
+          .selectAll('li')
+          .data(keys, function(d) { return d; });
+
+        lockGroupsLi.enter()
+          .append('li')
+          .append('h4')
+            .text(function(d) { return d; })
+            .select(function() { return this.parentNode; })
+          .append('form')
+          .append('input')
+            .property('type', 'checkbox')
+            .property('name', 'invert')
+            .property('checked', function(d) { return lg.byGroup[d].settings.invert ? 'checked' : '';})
+            .select(function() { return this.parentNode; })
+          .append('label')
+            .text('sync invert')
+            .select(function() { return this.parentNode; })
+          .append('br')
+            .select(function() { return this.parentNode; })
+          .append('input')
+            .property('type', 'checkbox')
+            .property('name', 'grayscale')
+            .property('checked', function(d) { return lg.byGroup[d].settings.grayscale ? 'checked' : '';})
+            .select(function() { return this.parentNode; })
+          .append('label')
+            .text('sync grayscale')
+            .select(function() { return this.parentNode; })
+          .append('br')
+            .select(function() { return this.parentNode; })
+          .append('input')
+            .property('type', 'checkbox')
+            .property('name', 'reset')
+            .property('checked', function(d) { return lg.byGroup[d].settings.reset ? 'checked' : '';})
+            .select(function() { return this.parentNode; })
+          .append('label')
+            .text('sync reset')
+            .select(function() { return this.parentNode; })
+          .append('br')
+            .select(function() { return this.parentNode; })
+          .append('a')
+            .attr('href', 'javascript:;')
+            .classed({'mirador-btn': true, 'mirador-icon-delete-lock-group': true})
+          .append('i')
+            .classed({'fa': true, 'fa-trash-o': true, 'fa-lg': true});
+
+        lockGroupsLi.exit().remove();
+
+        jQuery('#lock-groups').accordion('refresh');
         _this.bindEvents();
       });
     },
@@ -58,12 +106,23 @@
       var _this = this;
 
       _this.element.find('.mirador-icon-create-lock-group').off('click').on('click', function(event) {
-         _this.eventEmitter.publish('createLockGroup', jQuery('#new-lock-group-name').val());
+         var input = jQuery('#new-lock-group-name').val();
+         if (input.length > 0) {
+           jQuery('#new-lock-group-name').val('');
+           _this.eventEmitter.publish('createLockGroup', input);
+         }
+         else {
+           alert('Please choose a name with non-zero length.');
+         }
       });
 
       _this.element.find('.mirador-icon-delete-lock-group').off('click').on('click', function(event) {
-         _this.eventEmitter.publish('deleteLockGroup', jQuery(this).parent().text());
+        _this.eventEmitter.publish('deleteLockGroup', jQuery(this).parent().parent().find('h4').text());
       });
+
+      _this.element.find('#lock-groups form input').change($.debounce(function() {
+        _this.eventEmitter.publish('toggleLockGroupSettings', {groupID: jQuery(this).parent().parent().find('h4').text(), key: jQuery(this).attr('name')});
+      }, 100));
     },
 
     hide: function() {

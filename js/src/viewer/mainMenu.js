@@ -82,56 +82,43 @@
               fullScreenButton.removeClass('fa-compress').addClass('fa-expand');
             }
           });
+          
+          // this will come from the viewer object
+          _this.eventEmitter.subscribe('OVERLAY_STATES_STEADY', function(event, state) {
+            
+            var stateToSelector = {
+              'workspacePanelVisible': '.change-layout',
+              'bookmarkPanelVisible': '.bookmark-workspace',
+              'workspaceUploadPanelVisible': '.workspace-upload',
+              'lockGroupsPanelVisible': '.toggle-lock-groups'
+            };
+            jQuery.each(state, function(k, v) {
+              if (v === true) {
+                jQuery(stateToSelector[k]).addClass('active');
+              } else {
+                jQuery(stateToSelector[k]).removeClass('active');
+              } 
+            });
+          });
         },
 
         bindEvents: function() {
             var _this = this;
 
-            // takes a jQuery selection
-            var toggleActive = function(that) {
-
-              if (that.hasClass('active')) {
-                that.removeClass('active');
-              } else {
-                that.addClass('active');
-              }
-              
-            };
-
-            var panelSelectorEvent = {
-              'change-layout':'TOGGLE_WORKSPACE_PANEL',
-              'bookmark-workspace':'TOGGLE_BOOKMARK_PANEL',
-              'workspace-upload':'TOGGLE_WORKSPACE_UPLOAD_PANEL',
-              'toggle-lock-groups':'TOGGLE_LOCK_GROUPS_PANEL'
-            };
             var selectorEvent = {
-              'fullscreen-viewer':'TOGGLE_FULLSCREEN',
-              'add-flexible-slot':'ADD_FLEXIBLE_SLOT',
-              'add-drag-handle':'ADD_DRAG_HANDLE',
+              '.change-layout': 'TOGGLE_WORKSPACE_PANEL',
+              '.bookmark-workspace': 'TOGGLE_BOOKMARK_PANEL',
+              '.workspace-upload': 'TOGGLE_WORKSPACE_UPLOAD_PANEL',
+              '.toggle-lock-groups': 'TOGGLE_LOCK_GROUPS_PANEL',
+              '.fullscreen-viewer': 'TOGGLE_FULLSCREEN',
+              '.add-flexible-slot': 'ADD_FLEXIBLE_SLOT',
+              '.add-drag-handle': 'ADD_DRAG_HANDLE'
             };
-            var selectorsList = jQuery.map(Object.keys(selectorEvent), function(a) { return '.' + a; }).join(', ');
-            var panelSelectorsList = jQuery.map(Object.keys(panelSelectorEvent), function(a) { return '.' + a; }).join(', ');
 
             jQuery.each(selectorEvent, function(k, v) {
 
-              _this.element.find('.' + k).on('click', function() {
+              _this.element.find(k).on('click', function() {
                 _this.eventEmitter.publish(v);
-              });
-            });
-
-            jQuery.each(panelSelectorEvent, function(k, v) {
-
-              _this.element.find('.' + k).on('click', function() {
-
-                // publish corresponding event
-                _this.eventEmitter.publish(v);
-
-                // change classes around
-                jQuery(panelSelectorsList).filter(function(i, e) {
-                  return !jQuery(e).hasClass(k);
-                }).removeClass('active');
-
-                toggleActive(jQuery(this));
               });
             });
         },

@@ -56,14 +56,10 @@
     }, options);
 
      Handlebars.registerHelper('list2', function(items) {
-      //var out = "<ul>";
-      console.log(items);
       var out = ''; 
       for(var i=0, l=items.length; i<l; i++) {
         out = out + "<li class='lock-options-list-item add-to-lock-group'>" + items[i] + "</li>";
       }   
-
-      //return out + "</ul>";
       return out;
     });
 
@@ -156,7 +152,7 @@
 
 
       // get info about lockGroups
-      templateData.lockGroups = Object.keys(this.lockController.synchronizedWindows.byGroup);
+      templateData.lockGroups = Object.keys(this.lockController.getLockGroupData());
 
       _this.element = jQuery(this.template(templateData)).appendTo(_this.appendTo);
       this.element.find('.manifest-info .mirador-tooltip').each(function() {
@@ -345,7 +341,7 @@
       });
 
       _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, data) {
-        _this.renderLockGroupMenu(data);
+        _this.renderLockGroupMenu(data.keys);
       });
     },
 

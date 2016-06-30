@@ -252,6 +252,9 @@
       });
       var currentState = this.get(state, 'overlayStates');
       this.set(state, !currentState, {parent: 'overlayStates'});
+
+      // let mainMenu know that it can set classes now
+      _this.eventEmitter.publish('OVERLAY_STATES_STEADY', this.overlayStates);
     },
 
     toggleLoadWindow: function() {

@@ -3,8 +3,38 @@
   $.LockController = function(options) {
 
     jQuery.extend(true, this, {
-      lockProfile: 'dimensionalLockMirror', // TODO: pass this in via options
-      synchronizedWindows: { byGroup: {/* groupID -> listOfWindows */}, byWindow: {/* windowID -> groupID */} },
+      /* format of synchronizedWindows:
+       *
+       * {
+       *   keys: [ groupID1, ...],
+       *   byGroup: {
+       *     someGroupId: {
+       *       views: [ ... ],
+       *       settings: {
+       *         profile: 'dimensionalLockMirror' or 'dimensionalLockOffset',
+       *         zoompan: true,
+       *         rotation: true,
+       *         brightness: true,
+       *         contrast: true,
+       *         invert: true,
+       *         grayscale: true,
+       *         reset: true
+       *       },
+       *     },
+       *
+       *     someOtherGroupId: { ... },
+       *
+       *     ...
+       *
+       *   },
+       *
+       *   byWindow: {
+       *     someWindowId: someGroupId,
+       *     ...
+       *   }
+       * }
+       */
+      synchronizedWindows: { keys: [], byGroup: {}, byWindow: {} },
       eventEmitter: null,
     }, options);
 
@@ -15,6 +45,10 @@
     init: function () {
       var _this = this;
       _this.listenForActions();
+    },
+
+    getLockGroupData: function() {
+      return this.synchronizedWindows.byGroup;
     },
 
     lockOptions: {
@@ -89,13 +123,13 @@
       _this.eventEmitter.subscribe('createLockGroup', function(event, name) {
         _this.createLockGroup(name);
         // TODO: update list of lock groups in the dom
-        _this.eventEmitter.publish('updateLockGroupMenus', [Object.keys(_this.synchronizedWindows.byGroup)]);
+        _this.eventEmitter.publish('updateLockGroupMenus', _this.synchronizedWindows);
       });
       
       _this.eventEmitter.subscribe('deleteLockGroup', function(event, name) {
         _this.deleteLockGroup(name);
         // TODO: update list of lock groups in the dom
-        _this.eventEmitter.publish('updateLockGroupMenus', [Object.keys(_this.synchronizedWindows.byGroup)]);
+        _this.eventEmitter.publish('updateLockGroupMenus', _this.synchronizedWindows);
       });
 
       _this.eventEmitter.subscribe('addToLockGroup', function(event, data) {
@@ -109,11 +143,35 @@
       });
 
       _this.eventEmitter.subscribe('synchronizeZoom', function(event, viewObj) {
-        _this.updateFollowers(viewObj);
+        _this.updateFollowers(viewObj, 'zoompan');
       });
 
       _this.eventEmitter.subscribe('synchronizePan', function(event, viewObj) {
-        _this.updateFollowers(viewObj);
+        _this.updateFollowers(viewObj, 'zoompan');
+      });
+
+      _this.eventEmitter.subscribe('synchronizeImgGrayscale', function(event, viewObj) {
+        _this.updateFollowers(viewObj, 'grayscale');
+      });
+
+      _this.eventEmitter.subscribe('synchronizeImgInvert', function(event, viewObj) {
+        _this.updateFollowers(viewObj, 'invert');
+      });
+
+      _this.eventEmitter.subscribe('synchronizeImgReset', function(event, viewObj) {
+        _this.updateFollowers(viewObj, 'reset');
+      });
+
+      _this.eventEmitter.subscribe('synchronizeImgBrightness', function(event, data) {
+        _this.updateFollowers(data.viewObj, 'brightness', data.value);
+      });
+
+      _this.eventEmitter.subscribe('synchronizeImgContrast', function(event, data) {
+        _this.updateFollowers(data.viewObj, 'contrast', data.value);
+      });
+
+      _this.eventEmitter.subscribe('toggleLockGroupSettings', function(event, data) {
+        _this.toggleLockGroupSettings(data.groupID, data.key);
       });
     },
 
@@ -121,7 +179,20 @@
     createLockGroup: function(name) {
       var _this = this;
       if (_this.synchronizedWindows.byGroup[name] === undefined) {
-        _this.synchronizedWindows.byGroup[name] = [];
+        _this.synchronizedWindows.byGroup[name] = {
+          views: [],
+          settings: {
+            profile: 'dimensionalLockMirror',
+            zoompan: true,
+            rotation: true,
+            brightness: true,
+            contrast: true,
+            invert: true,
+            grayscale: true,
+            reset: true
+          }
+        };
+        _this.synchronizedWindows.keys.push(name);
       } else {
         // throw error
         alert("There is already a lock group with that name!");
@@ -139,6 +210,12 @@
           delete _this.synchronizedWindows.byWindow[k];
         }
       });
+
+      // delete from keys
+      var idx = _this.synchronizedWindows.keys.indexOf(name);
+      if (idx !== -1) {
+        _this.synchronizedWindows.keys.splice(idx, 1);
+      }
     },
 
     // assumes that _this.synchronizedWindows.byGroup.lockGroup is an array
@@ -148,7 +225,7 @@
       _this.removeFromLockGroup(viewObj);
 
       // add to lockGroups
-      _this.synchronizedWindows.byGroup[lockGroup].push(viewObj);
+      _this.synchronizedWindows.byGroup[lockGroup].views.push(viewObj);
       _this.synchronizedWindows.byWindow[viewObj.windowId] = lockGroup;
 
     },
@@ -161,7 +238,7 @@
       if (lockGroup !== undefined) {
 
         // remove from byGroup
-        lgArr = _this.synchronizedWindows.byGroup[lockGroup];
+        lgArr = _this.synchronizedWindows.byGroup[lockGroup].views;
         jQuery.each(lgArr, function(i, e) {
           if (e.windowId === viewObj.windowId) {
             idx = i;
@@ -177,28 +254,99 @@
       // remove locked class from the slot, and change the icon from locked to unlocked
     },
 
-    updateFollowers: function(viewObj) {
+    /*
+     * Sets the settings of the lockGroup.
+     * If key is profile, value must be one of the lock profiles
+     * Otherwise, 'value' will be unused.
+     */
+    toggleLockGroupSettings: function(groupID, key, value) {
+
+      var _this = this;
+      var settings = _this.synchronizedWindows.byGroup[groupID].settings,
+      currentSetting = settings[key];
+      
+      switch (key) {
+        case 'profile':
+          settings[key] = value;
+          break;
+        case 'zoompan':
+        case 'rotation':
+        case 'brightness':
+        case 'contrast':
+        case 'invert':
+        case 'grayscale':
+        case 'reset':
+          settings[key] = !settings[key];
+          break;
+        default:
+          // idk
+          break;
+      }
+    },
+
+    updateFollowers: function(viewObj, behavior, value) {
       var _this = this,
       lockGroup = _this.synchronizedWindows.byWindow[viewObj.windowId],
-      lgArr = _this.synchronizedWindows.byGroup[lockGroup];
+      lgData = _this.synchronizedWindows.byGroup[lockGroup],
+      lgViews,
+      lgSettings;
 
-      if (lgArr !== undefined) {
-        jQuery.each(lgArr, function(idx, val) {
-          if (viewObj.windowId === val.windowId) {
+      if (lgData !== undefined) {
+        lgViews = lgData.views;
+        lgSettings = lgData.settings;
+
+        if (lgSettings[behavior] === true)
+        {
+          jQuery.each(lgViews, function(idx, val) {
+            if (viewObj.windowId === val.windowId) {
+    
+              var followers = lgViews.filter(function(elt) {
+                return elt.windowId === viewObj.windowId ? false : true;
+              });
+        
+              // for each follower, update it using the lock profile
+              jQuery.each(followers, function(i, follower) {
+                // call lockOptions
+                //
+                // TODO: get the lock groups lock profile and use that
+                switch (behavior) {
+                  case 'zoompan':
+                    _this.lockOptions[lgSettings.profile](viewObj, follower);
+                    break;
+                  case 'grayscale':
+                    follower.imageManipGrayscale();
+                    break;
+                  case 'invert':
+                    follower.imageManipInvert();
+                    break;
+                  case 'reset':
+                    follower.imageManipReset();
+                    break;
+                  case 'brightness':
+                    // TODO
+                    follower.imageManipBrightness(value);
+                    break;
+                  case 'contrast':
+                    // TODO
+                    follower.imageManipContrast(value);
+                    break;
+                  case 'rotateleft':
+                    // TODO
+                    break;
+                  case 'rotateright':
+                    // TODO
+                    break;
   
-            var followers = lgArr.filter(function(elt) {
-              return elt.windowId === viewObj.windowId ? false : true;
-            });
-      
-            // for each follower, update it using the lock profile
-            jQuery.each(followers, function(i, follower) {
-              // call lockOptions
-              _this.lockOptions[_this.lockProfile](viewObj, follower);
-            });
-  
-            return false;
-          }
-        });
+                  default:
+                    // idk
+                    break;
+                }
+              });
+    
+              return false;
+            }
+          });
+        }
       }
     }
   };
