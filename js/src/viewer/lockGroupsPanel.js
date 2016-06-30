@@ -201,9 +201,9 @@
         _this.eventEmitter.publish('deleteLockGroup', jQuery(this).parent().parent().find('h4').text());
       });
 
-      _this.element.find('#lock-groups form input').change($.debounce(function() {
+      _this.element.find('#lock-groups form input').off('change').change(function() {
         _this.eventEmitter.publish('toggleLockGroupSettings', {groupID: jQuery(this).parent().parent().find('h4').text(), key: jQuery(this).attr('name')});
-      }, 100));
+      });
     },
 
     hide: function() {
