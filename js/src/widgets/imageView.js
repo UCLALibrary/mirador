@@ -317,6 +317,87 @@
       _this.bindImageManipulationEvents();
     },
 
+    imageManipGrayscale: function() {
+      var osd = this.osd;
+      if ( osd.viewport ) {
+        if(osd.viewport.viewer.canvas.className.indexOf('grayscaleEffect') >= 0){
+          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('grayscaleEffect', '');
+        }
+        else{
+          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className + " grayscaleEffect";
+        }
+        osd.viewport.applyConstraints();
+      }
+      else{
+        if(osd.canvas.className.indexOf('grayscaleEffect') >= 0){
+          osd.canvas.className = osd.canvas.className.replace('grayscaleEffect', '');
+        }
+        else{
+          osd.canvas.className = osd.canvas.className + " grayscaleEffect";
+        }
+        osd.applyConstraints();
+      }
+    },
+
+    imageManipInvert: function() {
+
+      var osd = this.osd;
+      if ( osd.viewport ) {
+        if(osd.viewport.viewer.canvas.className.indexOf('invertEffect') >= 0){
+          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('invertEffect', '');
+        }
+        else{
+          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className + " invertEffect";
+        }
+        osd.viewport.applyConstraints();
+      }
+      else{
+        if(osd.canvas.className.indexOf('invertEffect') >= 0){
+          osd.canvas.className = osd.canvas.className.replace('invertEffect', '');
+        }
+        else{
+          osd.canvas.className = osd.canvas.className + " invertEffect";
+        }
+        osd.applyConstraints();
+      }
+    },
+
+    imageManipBrightness: function(val) {
+      this.element.find(".brightnessSlider").slider('option', 'value', val);
+    },
+
+    imageManipContrast: function(val) {
+      this.element.find(".contrastSlider").slider('option', 'value', val);
+    },
+
+    imageManipReset: function() {
+
+      var osd = this.osd;
+      if ( osd.viewport ) {
+        osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('invertEffect', '');
+        osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('grayscaleEffect', '');
+        osd.viewport.viewer.canvas.parentNode.style.webkitFilter = "";
+        osd.viewport.viewer.canvas.parentNode.style.mozFilter = "";
+        osd.viewport.viewer.canvas.parentNode.style.filter = "";
+        osd.viewport.setRotation(0);
+        //osd.viewport.zoomTo(1);
+        jQuery(".brightnessSlider").slider("option","value",100); //reset sliders.
+        jQuery(".contrastSlider").slider("option","value",100); //reset sliders.
+        osd.viewport.applyConstraints();
+      } else {
+        osd.canvas.className = osd.viewport.viewer.canvas.className.replace('invertEffect', '');
+        osd.canvas.className = osd.viewport.viewer.canvas.className.replace('grayscaleEffect', '');
+        osd.canvas.parentNode.style.webkitFilter = "";
+        osd.canvas.parentNode.style.mozFilter = "";
+        osd.canvas.parentNode.style.filter = "";
+        //osd.viewport.setRotation(0);
+        // osd.viewport.zoomTo(0);
+        jQuery(".brightnessSlider").slider("option","value",100); //reset sliders.
+        jQuery(".contrastSlider").slider("option","value",100); //reset sliders.
+        osd.applyConstraints();
+      }
+    },
+
     /**
      * Binds events related to image manipulation. If removing, be sure to remove the call to this function
      * in this.bindEvents
@@ -325,77 +406,29 @@
       var _this = this;
 
       this.element.find('.mirador-osd-toggle-grayscale').on('click', function() {
-        var osd = _this.osd;
-        if ( osd.viewport ) {
-          if(osd.viewport.viewer.canvas.className.indexOf('grayscaleEffect') >= 0){
-            osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('grayscaleEffect', '');
-          }
-          else{
-            osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className + " grayscaleEffect";
-          }
-          osd.viewport.applyConstraints();
-        }
-        else{
-          if(osd.canvas.className.indexOf('grayscaleEffect') >= 0){
-            osd.canvas.className = osd.canvas.className.replace('grayscaleEffect', '');
-          }
-          else{
-            osd.canvas.className = osd.canvas.className + " grayscaleEffect";
-          }
-          osd.applyConstraints();
+        _this.imageManipGrayscale();
+
+        // TODO: sub to this
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeImgGrayscale', _this);
         }
       });
 
       this.element.find('.mirador-osd-toggle-invert').on('click', function() {
-        var osd = _this.osd;
-        if ( osd.viewport ) {
-          if(osd.viewport.viewer.canvas.className.indexOf('invertEffect') >= 0){
-            osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('invertEffect', '');
-          }
-          else{
-            osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className + " invertEffect";
-          }
-          osd.viewport.applyConstraints();
-        }
-        else{
-          if(osd.canvas.className.indexOf('invertEffect') >= 0){
-            osd.canvas.className = osd.canvas.className.replace('invertEffect', '');
-          }
-          else{
-            osd.canvas.className = osd.canvas.className + " invertEffect";
-          }
-          osd.applyConstraints();
+        _this.imageManipInvert();
+
+        // TODO: sub to this
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeImgInvert', _this);
         }
       });
-      /*
-        This removes all filters and zooms so that the user can click it to return to the 'normal' starting position of the image
-      */
 
       this.element.find('.mirador-osd-filters-off').on('click', function(event) {
-        var osd = _this.osd;
-        if ( osd.viewport ) {
-          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('invertEffect', '');
-          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('grayscaleEffect', '');
-          osd.viewport.viewer.canvas.parentNode.style.webkitFilter = "";
-          osd.viewport.viewer.canvas.parentNode.style.mozFilter = "";
-          osd.viewport.viewer.canvas.parentNode.style.filter = "";
-          osd.viewport.setRotation(0);
-          //osd.viewport.zoomTo(1);
-          jQuery(".brightnessSlider").slider("option","value",100); //reset sliders.
-          jQuery(".contrastSlider").slider("option","value",100); //reset sliders.
-          osd.viewport.applyConstraints();
-        }
-        else{
-          osd.canvas.className = osd.viewport.viewer.canvas.className.replace('invertEffect', '');
-          osd.canvas.className = osd.viewport.viewer.canvas.className.replace('grayscaleEffect', '');
-          osd.canvas.parentNode.style.webkitFilter = "";
-          osd.canvas.parentNode.style.mozFilter = "";
-          osd.canvas.parentNode.style.filter = "";
-          //osd.viewport.setRotation(0);
-          // osd.viewport.zoomTo(0);
-          jQuery(".brightnessSlider").slider("option","value",100); //reset sliders.
-          jQuery(".contrastSlider").slider("option","value",100); //reset sliders.
-          osd.applyConstraints();
+        _this.imageManipReset();
+
+        // TODO: sub to this
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeImgReset', _this);
         }
       });
 
@@ -420,6 +453,7 @@
         }
       });
 
+      // TODO: sub to this
       this.element.find(".brightnessSlider").slider({
           orientation: "horizontal",
           range: "min",
@@ -567,9 +601,14 @@
                 osd.canvas.parentNode.setAttribute("style",alteredStyle);
               }
 
+              // TODO: sub to this
+              if (_this.leading) {
+                _this.eventEmitter.publish('synchronizeImgBrightness', {viewObj: _this, value: ui.value});
+              }
             }
       });
 
+      // TODO: sub to this
       this.element.find(".contrastSlider").slider({
          orientation: "horizontal",
           range: "min",
@@ -712,6 +751,11 @@
               else{
                 osd.canvas.parentNode.setAttribute("style",alteredStyle);
               }
+
+              // TODO: sub to this
+              if (_this.leading) {
+                _this.eventEmitter.publish('synchronizeImgContrast', {viewObj: _this, value: ui.value});
+              }
         }
       });
     },
@@ -811,6 +855,11 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
+
+          // tell lock controller to move any synchronized views
+          if (_this.leading) {
+            _this.eventEmitter.publish('synchronizeZoom', _this);
+          }
         }, 30));
 
         _this.osd.addHandler('pan', $.debounce(function(){
@@ -819,7 +868,22 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
+
+          // tell lock controller to move any synchronized views
+          if (_this.leading) {
+            _this.eventEmitter.publish('synchronizePan', _this);
+          }
         }, 30));
+
+        // prevent infinite looping with coordinated zoom
+        _this.element.on({
+          mouseenter: function() {
+            _this.leading = true;
+          },
+          mouseleave: function() {
+            _this.leading = false;
+          }
+        });
 
         if (_this.state.getStateProperty('autoHideControls')) {
           var timeoutID = null,

@@ -45,6 +45,7 @@
 		        showAddSlot : this.state.getStateProperty('flexibleWorkspace'),
 		        showAddDragHandle : this.state.getStateProperty('flexibleWorkspace'),
 		        showWorkspaceDownload: this.state.getStateProperty('workspaceDownload'),
+                // TODO: showLockGroup
                 showOptions: this.state.getStateProperty('mainMenuSettings').buttons.options,
                 showFullScreenViewer : this.state.getStateProperty('mainMenuSettings').buttons.fullScreenViewer,
                 userButtons: this.state.getStateProperty('mainMenuSettings').userButtons,
@@ -81,49 +82,44 @@
               fullScreenButton.removeClass('fa-compress').addClass('fa-expand');
             }
           });
+          
+          // this will come from the viewer object
+          _this.eventEmitter.subscribe('OVERLAY_STATES_STEADY', function(event, state) {
+            
+            var stateToSelector = {
+              'workspacePanelVisible': '.change-layout',
+              'bookmarkPanelVisible': '.bookmark-workspace',
+              'workspaceUploadPanelVisible': '.workspace-upload',
+              'lockGroupsPanelVisible': '.toggle-lock-groups'
+            };
+            jQuery.each(state, function(k, v) {
+              if (v === true) {
+                jQuery(stateToSelector[k]).addClass('active');
+              } else {
+                jQuery(stateToSelector[k]).removeClass('active');
+              } 
+            });
+          });
         },
 
         bindEvents: function() {
             var _this = this;
-            //change 'change-layout' to mouseover events rather than click?
-            this.element.find('.change-layout').on('click', function() { 
-              _this.eventEmitter.publish('TOGGLE_WORKSPACE_PANEL');
-              //remove active class from other buttons
-              _this.element.find('.bookmark-workspace').removeClass('active');
-              if (jQuery(this).hasClass('active')) {
-                jQuery(this).removeClass('active');
-              } else {
-                jQuery(this).addClass('active');
-              }
-            });
 
-            this.element.find('.bookmark-workspace').on('click', function() { 
-              _this.eventEmitter.publish('TOGGLE_BOOKMARK_PANEL');
-              //remove active class from other buttons
-              _this.element.find('.change-layout').removeClass('active');
-              if (jQuery(this).hasClass('active')) {
-                jQuery(this).removeClass('active');
-              } else {
-                jQuery(this).addClass('active');
-              }
-            });
+            var selectorEvent = {
+              '.change-layout': 'TOGGLE_WORKSPACE_PANEL',
+              '.bookmark-workspace': 'TOGGLE_BOOKMARK_PANEL',
+              '.workspace-upload': 'TOGGLE_WORKSPACE_UPLOAD_PANEL',
+              '.toggle-lock-groups': 'TOGGLE_LOCK_GROUPS_PANEL',
+              '.fullscreen-viewer': 'TOGGLE_FULLSCREEN',
+              '.add-flexible-slot': 'ADD_FLEXIBLE_SLOT',
+              '.add-drag-handle': 'ADD_DRAG_HANDLE'
+            };
 
-            // when options are implemented, this will need to do something
-            this.element.find('.window-options').on('click', function() { });
-            this.element.find('.fullscreen-viewer').on('click', function() {
-              _this.eventEmitter.publish('TOGGLE_FULLSCREEN');
-            });
+            jQuery.each(selectorEvent, function(k, v) {
 
-	        this.element.find('.add-flexible-slot').on('click', function() {
-	          _this.eventEmitter.publish('ADD_FLEXIBLE_SLOT');
-	        });
-
-	        this.element.find('.add-drag-handle').on('click', function() {
-	          _this.eventEmitter.publish('ADD_DRAG_HANDLE');
-	        });
-
-            this.element.find('.workspace-upload').on('click', function() { 
-              _this.eventEmitter.publish('TOGGLE_WORKSPACE_UPLOAD_PANEL');
+              _this.element.find(k).on('click', function() {
+                _this.eventEmitter.publish(v);
+              });
             });
         },
 
@@ -157,26 +153,33 @@
         '{{/if}}',
         '{{#if showAddSlot}}',
           '<li>',
-            '<a href="javascript:;" class="add-flexible-slot" title="Add Slot">',
+            '<a href="javascript:;" class="add-flexible-slot mainmenu-button" title="Add Slot">',
               '<span class="fa fa-th-large fa-lg fa-fw"></span> Add Slot',
             '</a>',
           '</li>',
         '{{/if}}',
         '{{#if showAddDragHandle}}',
           '<li>',
-            '<a href="javascript:;" class="add-drag-handle" title="Add Drag Handle">',
+            '<a href="javascript:;" class="add-drag-handle mainmenu-button" title="Add Drag Handle">',
               '<span class="fa fa-suitcase fa-lg fa-fw"></span> Add Drag Handle',
             '</a>',
           '</li>',
         '{{/if}}',
+        // lockController
+          '<li>',
+            '<a href="javascript:;" class="toggle-lock-groups mainmenu-button" title="Lock Groups">',
+              '<span class="fa fa-lock fa-lg fa-fw"></span> Lock Groups',
+            '</a>',
+          '</li>',
+        // end lockController
         '{{#if showWorkspaceDownload}}',
           '<li>',
-            '<a href="javascript:;" class="workspace-download" title="Download Workspace">',
+            '<a href="javascript:;" class="workspace-download mainmenu-button" title="Download Workspace">',
               '<span class="fa fa-download fa-lg fa-fw"></span> Download Workspace',
             '</a>',
           '</li>',
           '<li>',
-            '<a href="javascript:;" class="workspace-upload" title="Upload Workspace">',
+            '<a href="javascript:;" class="workspace-upload mainmenu-button" title="Upload Workspace">',
               '<span class="fa fa-upload fa-lg fa-fw"></span> Upload Workspace',
             '</a>',
           '</li>',
