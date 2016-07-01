@@ -244,23 +244,19 @@
       });
 
       this.element.find('.mirador-osd-positive-rotate').on('click', function() {
-        var osd = _this.osd;
-        if ( osd.viewport ) {
-        var currentRotation = parseInt(osd.viewport.getRotation());
-            osd.viewport.setRotation(
-            currentRotation + 90
-          );
-          osd.viewport.applyConstraints();
+        var rot = 90;
+        _this.imageRotate(rot);
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeImgRotation', {viewObj: _this, value: rot});
         }
       });
       this.element.find('.mirador-osd-negative-rotate').on('click', function() {
-        var osd = _this.osd;
-        if ( osd.viewport ) {
-          var currentRotation = parseInt(osd.viewport.getRotation());
-            osd.viewport.setRotation(
-            currentRotation - 90
-          );
-          osd.viewport.applyConstraints();
+        var rot = -90;
+        _this.imageRotate(rot);
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeImgRotation', {viewObj: _this, value: rot});
         }
       });
 
@@ -315,6 +311,17 @@
       //related the ContextControls
 
       _this.bindImageManipulationEvents();
+    },
+
+    imageRotate: function(degrees) {
+      var osd = this.osd;
+      if ( osd.viewport ) {
+        var currentRotation = parseInt(osd.viewport.getRotation());
+        osd.viewport.setRotation(
+          currentRotation + degrees
+        );
+        osd.viewport.applyConstraints();
+      }
     },
 
     imageManipGrayscale: function() {
