@@ -170,6 +170,10 @@
         _this.updateFollowers(data.viewObj, 'contrast', data.value);
       });
 
+      _this.eventEmitter.subscribe('synchronizeImgRotation', function(event, data) {
+        _this.updateFollowers(data.viewObj, 'rotation', data.value);
+      });
+
       _this.eventEmitter.subscribe('toggleLockGroupSettings', function(event, data) {
         _this.toggleLockGroupSettings(data.groupID, data.key);
       });
@@ -184,7 +188,7 @@
           settings: {
             profile: 'dimensionalLockMirror',
             zoompan: true,
-            rotation: false,
+            rotation: true,
             brightness: false,
             contrast: false,
             invert: true,
@@ -306,9 +310,6 @@
         
               // for each follower, update it using the lock profile
               jQuery.each(followers, function(i, follower) {
-                // call lockOptions
-                //
-                // TODO: get the lock groups lock profile and use that
                 switch (behavior) {
                   case 'zoompan':
                     _this.lockOptions[lgSettings.profile](viewObj, follower);
@@ -330,13 +331,9 @@
                     // TODO
                     follower.imageManipContrast(value);
                     break;
-                  case 'rotateleft':
-                    // TODO
+                  case 'rotation':
+                    follower.imageRotate(value);
                     break;
-                  case 'rotateright':
-                    // TODO
-                    break;
-  
                   default:
                     // idk
                     break;
