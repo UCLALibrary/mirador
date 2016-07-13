@@ -289,6 +289,33 @@
         _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
       });
 
+      _this.eventEmitter.subscribe('lockGroupsStateChanged', function(event, lockGroupState) {
+
+        // remove the views from all groups
+        function replacer(key, value) {
+
+          // determine if this is a byGroup obj
+          if (key === 'views' &&
+              this.hasOwnProperty('settings') &&
+                this.settings.hasOwnProperty('profile') &&
+                this.settings.hasOwnProperty('zoompan') &&
+                this.settings.hasOwnProperty('rotation') &&
+                this.settings.hasOwnProperty('brightness') &&
+                this.settings.hasOwnProperty('contrast') &&
+                this.settings.hasOwnProperty('invert') &&
+                this.settings.hasOwnProperty('grayscale') &&
+                this.settings.hasOwnProperty('reset') ) {
+            // set this to empty array
+            return [];
+          } else {
+            return value;
+          }
+        }
+        
+        var serializedLockGroupState = JSON.stringify(lockGroupState, replacer);
+        _this.set('lockGroupState', serializedLockGroupState, {parent: "currentConfig"});
+      });
+
       _this.eventEmitter.subscribe('etc...', function(junk) {
         // handle adding the property in the appropriate place 
         // in this.currentConfig by passing to the _this.set(), 

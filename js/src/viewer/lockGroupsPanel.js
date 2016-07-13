@@ -31,6 +31,8 @@
       this.listenForActions();
 
       jQuery('#lock-groups').accordion({collapsible: true});
+
+      this.eventEmitter.publish('lockGroupsPanelReady');
     },
 
     listenForActions: function() {

@@ -235,6 +235,10 @@
         this.bottomPanelVisibility(this.bottomPanelVisible);
       }
       this.sidePanelVisibility(this.sidePanelVisible, '0s');
+
+      // restore lock group stuff for this window
+      _this.eventEmitter.publish('restoreWindowToLockController', _this.focusModules[_this.currentImageMode]);
+      // do classes
     },
 
     update: function(options) {
@@ -342,6 +346,17 @@
 
       _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, data) {
         _this.renderLockGroupMenu(data.keys);
+      });
+
+      _this.eventEmitter.subscribe('activateLockGroupMenuItem', function(event, data) {
+        // check if this window has the window id
+        // if so, set the li with the innerHTML that has groupID to data.groupId
+        _this.element.find('.add-to-lock-group').each(function(i, e) {
+          if (e.innerHTML === data.groupId) {
+            jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
+            jQuery(this).addClass('current-lg');
+          }
+        });
       });
     },
 

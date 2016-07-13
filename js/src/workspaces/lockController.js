@@ -34,7 +34,8 @@
        *   }
        * }
        */
-      synchronizedWindows: { keys: [], byGroup: {}, byWindow: {} },
+      synchronizedWindows: null,
+      state: null,
       eventEmitter: null,
     }, options);
 
@@ -44,11 +45,82 @@
   $.LockController.prototype = {
     init: function () {
       var _this = this;
+      var savedSettings = _this.state.getStateProperty('lockGroupState');
+      var parsedSavedSettings;
+      console.log(savedSettings);
+
+      if (savedSettings !== undefined) {
+      
+        /*
+         * format:
+         *
+         * {
+         *   keys: [],
+         *   byGroup: {
+         *     someGroupId: {
+         *       settings: {},
+         *     },
+         *     ...
+         *   },
+         *   byWindow: {
+         *     someWindowId: someGroupId,
+         *     ...
+         *   }
+         * }
+         *
+         */
+
+          /*
+        function reviver(k, v) {
+
+          // determine if this is a byGroup obj
+          if (key === 'views' &&
+              this.hasOwnProperty('settings') &&
+                this.settings.hasOwnProperty('profile') &&
+                this.settings.hasOwnProperty('zoompan') &&
+                this.settings.hasOwnProperty('rotation') &&
+                this.settings.hasOwnProperty('brightness') &&
+                this.settings.hasOwnProperty('contrast') &&
+                this.settings.hasOwnProperty('invert') &&
+                this.settings.hasOwnProperty('grayscale') &&
+                this.settings.hasOwnProperty('reset') ) {
+            // set views to contain
+            return [];
+          }
+        }
+        */
+
+        _this.synchronizedWindows = JSON.parse(savedSettings);
+
+        /*
+        jQuery.each(_this.synchronizedWindows.byGroup, function(k, v) {
+          // create empty array
+          v.views = [];
+        });
+        */
+
+        jQuery.each(_this.synchronizedWindows.byWindow, function(k, v) {
+          // restore the views for each groupId
+          //
+          //
+          console.log(k);
+          console.log(v);
+          console.log('break here');
+          _this.synchronizedWindows.byGroup[v].views.push( /* window with id of k */ );
+        });
+      }
+      else {
+        _this.synchronizedWindows = { keys: [], byGroup: {}, byWindow: {} };
+      }
       _this.listenForActions();
     },
 
     getLockGroupData: function() {
       return this.synchronizedWindows.byGroup;
+    },
+
+    getLockGroupOfWindow: function(viewObj) {
+      return this.synchronizedWindows.byWindow[viewObj.windowId];
     },
 
     lockOptions: {
@@ -102,44 +174,32 @@
 
     listenForActions: function () {
 
-      // subscribe to lockSlot and unlockSlot
       var _this = this;
 
-      /*
-      _this.eventEmitter.subscribe('TOGGLE_LOCK', function(event, viewObj) {
-        var isLocked = false;
-        jQuery.each(_this.lockedWindows, function(idx, val) {
-          if (viewObj.windowId === val.windowId) {
-            isLocked = true;
-          }
-        });
-        if (isLocked) {
-          _this.removeFromLockGroup(viewObj);
-        } else {
-          _this.addToLockGroup(viewObj, );
-        }
-      });
-      */
       _this.eventEmitter.subscribe('createLockGroup', function(event, name) {
         _this.createLockGroup(name);
-        // TODO: update list of lock groups in the dom
+
+        // update DOM
         _this.eventEmitter.publish('updateLockGroupMenus', _this.synchronizedWindows);
+
+        // notify saveController that settings have changed
+        _this.eventEmitter.publish('lockGroupsStateChanged', _this.synchronizedWindows);
       });
       
       _this.eventEmitter.subscribe('deleteLockGroup', function(event, name) {
         _this.deleteLockGroup(name);
-        // TODO: update list of lock groups in the dom
         _this.eventEmitter.publish('updateLockGroupMenus', _this.synchronizedWindows);
+        _this.eventEmitter.publish('lockGroupsStateChanged', _this.synchronizedWindows);
       });
 
       _this.eventEmitter.subscribe('addToLockGroup', function(event, data) {
         _this.addToLockGroup(data.viewObj, data.lockGroup);
-        // TODO: update list of lock groups in the dom
+        _this.eventEmitter.publish('lockGroupsStateChanged', _this.synchronizedWindows);
       });
 
       _this.eventEmitter.subscribe('removeFromLockGroup', function(event, data) {
         _this.removeFromLockGroup(data.viewObj);
-        // TODO: update list of lock groups in the dom
+        _this.eventEmitter.publish('lockGroupsStateChanged', _this.synchronizedWindows);
       });
 
       _this.eventEmitter.subscribe('synchronizeZoom', function(event, viewObj) {
@@ -176,6 +236,23 @@
 
       _this.eventEmitter.subscribe('toggleLockGroupSettings', function(event, data) {
         _this.toggleLockGroupSettings(data.groupID, data.key);
+
+        // notify saveController that settings have changed
+        _this.eventEmitter.publish('lockGroupsStateChanged', _this.synchronizedWindows);
+      });
+
+      _this.eventEmitter.subscribe('lockGroupsPanelReady', function(event) {
+        _this.eventEmitter.publish('updateLockGroupMenus', _this.synchronizedWindows);
+      });
+
+      _this.eventEmitter.subscribe('restoreWindowToLockController', function(event, viewObj) {
+        // check if this window is in a lock group
+        var groupID = _this.getLockGroupOfWindow(viewObj);  
+        if (groupID !== undefined) {
+          _this.synchronizedWindows.byGroup[groupID].views.push(viewObj);
+          // TODO: publish something to be recognized by window
+          _this.eventEmitter.publish('activateLockGroupMenuItem', {windowId: viewObj.windowId, groupId: groupID});
+        }
       });
     },
 

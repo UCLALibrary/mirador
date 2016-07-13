@@ -109,6 +109,7 @@
         appendTo: this.element.find('.mirador-viewer'),
         state: this.state,
         lockController: new $.LockController({
+          state: this.state,
           eventEmitter: this.eventEmitter
         }),
         eventEmitter: this.eventEmitter
@@ -275,6 +276,9 @@
 
     toggleLockGroupsPanel: function() {
       this.toggleOverlay('lockGroupsPanelVisible');
+      // TODO: no need to do this everytime, very hacky since accordion menu is squished when
+      // it is updated when hidden
+      jQuery('#lock-groups').accordion('refresh');
     },
 
     getManifestsData: function() {
