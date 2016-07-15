@@ -248,6 +248,7 @@
         _this.imageRotate(rot);
 
         if (_this.leading) {
+          // received by lockController
           _this.eventEmitter.publish('synchronizeImgRotation', {viewObj: _this, value: rot});
         }
       });
@@ -256,6 +257,7 @@
         _this.imageRotate(rot);
 
         if (_this.leading) {
+          // received by lockController
           _this.eventEmitter.publish('synchronizeImgRotation', {viewObj: _this, value: rot});
         }
       });
@@ -313,6 +315,11 @@
       _this.bindImageManipulationEvents();
     },
 
+    /*
+     * Rotates the current osd canvas.
+     *
+     * @param {int} degrees Magnitude and direction (+/-) of rotation
+     */
     imageRotate: function(degrees) {
       var osd = this.osd;
       if ( osd.viewport ) {
@@ -324,6 +331,9 @@
       }
     },
 
+    /*
+     * Toggles grayscale of current osd canvas.
+     */
     imageManipGrayscale: function() {
       var osd = this.osd;
       if ( osd.viewport ) {
@@ -346,6 +356,9 @@
       }
     },
 
+    /*
+     * Toggles pixel value inversion of current osd canvas.
+     */
     imageManipInvert: function() {
 
       var osd = this.osd;
@@ -369,14 +382,23 @@
       }
     },
 
+    /*
+     * Sets brightness value of current osd canvas.
+     */
     imageManipBrightness: function(val) {
       this.element.find(".brightnessSlider").slider('option', 'value', val);
     },
 
+    /*
+     * Sets contrast value of current osd canvas.
+     */
     imageManipContrast: function(val) {
       this.element.find(".contrastSlider").slider('option', 'value', val);
     },
 
+    /*
+     * Resets grayscale, invert, brightness, and contrast settings.
+     */
     imageManipReset: function() {
 
       var osd = this.osd;
@@ -415,7 +437,6 @@
       this.element.find('.mirador-osd-toggle-grayscale').on('click', function() {
         _this.imageManipGrayscale();
 
-        // TODO: sub to this
         if (_this.leading) {
           _this.eventEmitter.publish('synchronizeImgGrayscale', _this);
         }
@@ -424,7 +445,6 @@
       this.element.find('.mirador-osd-toggle-invert').on('click', function() {
         _this.imageManipInvert();
 
-        // TODO: sub to this
         if (_this.leading) {
           _this.eventEmitter.publish('synchronizeImgInvert', _this);
         }
@@ -433,7 +453,6 @@
       this.element.find('.mirador-osd-filters-off').on('click', function(event) {
         _this.imageManipReset();
 
-        // TODO: sub to this
         if (_this.leading) {
           _this.eventEmitter.publish('synchronizeImgReset', _this);
         }

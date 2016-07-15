@@ -1,6 +1,14 @@
 /*jshint scripturl:true*/
 (function($) {
 
+  /*
+   * Class that responds to actions performed on the DOM element. A member of $.Viewer.
+   *
+   * @param {Object} options Configuration options.
+   *     appendTo: element to append the panel to
+   *     state: global state object
+   *     eventEmitter: event message queue
+   */
   $.LockGroupsPanel = function(options) {
 
     jQuery.extend(true, this, {
@@ -8,53 +16,58 @@
       appendTo: null,
     }, options);
 
-    Handlebars.registerHelper('list', function(items) {
-      //var out = "<ul>";
+    // TODO: remove? handled by D3 automatically I think
+    /*
+    Handlebars.registerHelper('listitems', function(items) {
       console.log(items);
       var out = '';
       for(var i=0, l=items.length; i<l; i++) {
         out = out + "<li>" + items[i] + '<a href="javascript:;" class="mirador-btn mirador-icon-delete-lock-group"><i class="fa fa-minus fa-lg"></i></a>' + '</li>';
       }
 
-      //return out + "</ul>";
       return out;
     });
+    */
     this.init();
   };
 
   $.LockGroupsPanel.prototype = {
     init: function () {
 
-      this.element = jQuery(this.template({lockGroups: []})).appendTo(this.appendTo);
+      // TODO: remove object from call to template
+      this.element = jQuery(this.template(/*{lockGroups: []}*/)).appendTo(this.appendTo);
       
       this.bindEvents();
       this.listenForActions();
 
+      // initialize accordion
       jQuery('#lock-groups').accordion({collapsible: true});
 
+      // tell lockController that the panel is ready to receive info about the lockGroups
       this.eventEmitter.publish('lockGroupsPanelReady');
     },
 
     listenForActions: function() {
       var _this = this;
-      // handle subscribed events
+
       _this.eventEmitter.subscribe('lockGroupsPanelVisible.set', function(_, stateValue) {
         if (stateValue) { _this.show(); return; }
         _this.hide();
       });
 
+      // dynamically add or remove list items to/from the accordion menu
       _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, lg) {
         var keys,
         lockGroupsLi,
         lockGroupsLiForm;
       
         keys = lg.keys;
-        console.log(keys);
 
         lockGroupsLi = d3.select('#lock-groups')
           .selectAll('li')
           .data(keys, function(d) { return d; });
 
+        // TODO: DRY this up
         lockGroupsLi.enter()
           .append('li')
           .append('h4')
@@ -184,9 +197,13 @@
     bindEvents: function() {
       var _this = this;
 
+      // onclick event for adding a lock group
       _this.element.find('.mirador-icon-create-lock-group').off('click').on('click', function(event) {
          var input = jQuery('#new-lock-group-name').val();
+
+         // TODO: do better input validation?
          if (input.length > 0) {
+           // make the text field blank and submit the saved value to the lockController
            jQuery('#new-lock-group-name').val('');
            _this.eventEmitter.publish('createLockGroup', input);
          }
@@ -195,10 +212,12 @@
          }
       });
 
+      // onclick event for deleting a lock group
       _this.element.find('.mirador-icon-delete-lock-group').off('click').on('click', function(event) {
         _this.eventEmitter.publish('deleteLockGroup', jQuery(this).parent().parent().find('h4').text());
       });
 
+      // onchange event for changes to form inputs
       _this.element.find('#lock-groups form input').off('change').change(function() {
         _this.eventEmitter.publish('toggleLockGroupSettings', {groupID: jQuery(this).parent().parent().find('h4').text(), key: jQuery(this).attr('name')});
       });
@@ -222,7 +241,8 @@
            '</a>',
          '</span>',
          '<ul id="lock-groups">',
-           '{{#list lockGroups}}{{/list}}',
+           // TODO: remove?
+           //'{{#listitems lockGroups}}{{/listitems}',
          '</ul>',
        '</div>'
     ].join(''))

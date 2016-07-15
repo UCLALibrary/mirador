@@ -121,6 +121,7 @@
         eventEmitter: this.eventEmitter
       });
 
+      // for managing lock groups
       this.lockGroupsPanel = new $.LockGroupsPanel({
         appendTo: this.element.find('.mirador-viewer'),
         state: this.state,

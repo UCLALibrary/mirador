@@ -55,7 +55,14 @@
       }
     }, options);
 
-     Handlebars.registerHelper('list2', function(items) {
+
+    /*
+     * Creates a string of HTML list items to add to each window menu for the lock groups.
+     *
+     * @param {Array} items An array of names of lock groups
+     */
+    // TODO: is this needed?
+    Handlebars.registerHelper('list2', function(items) {
       var out = ''; 
       for(var i=0, l=items.length; i<l; i++) {
         out = out + "<li class='lock-options-list-item add-to-lock-group'>" + items[i] + "</li>";
@@ -65,7 +72,6 @@
 
     this.init();
     this.bindAnnotationEvents();
-
   };
 
   $.Window.prototype = {
@@ -236,9 +242,11 @@
       }
       this.sidePanelVisibility(this.sidePanelVisible, '0s');
 
-      // restore lock group stuff for this window
-      _this.eventEmitter.publish('restoreWindowToLockController', _this.focusModules[_this.currentImageMode]);
-      // do classes
+      // restore lock group stuff for this window, if we are restoring it
+      // sends message to lockController
+      if (_this.focusModules[_this.currentImageMode] !== null) {
+        _this.eventEmitter.publish('restoreWindowToLockController', _this.focusModules[_this.currentImageMode]);
+      }
     },
 
     update: function(options) {
@@ -344,19 +352,33 @@
         _this.element.find('.mirador-osd-fullscreen').show();        
       });
 
+      /*
+       * Calls the D3 rendering method to dynamically add li's.
+       */
+      // TODO: delete parameter from Handlebars template (not needed)
       _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, data) {
         _this.renderLockGroupMenu(data.keys);
       });
 
+      /*
+       * Activates the li with innerHTML that matches the given lockGroup, inside of the window whose
+       * viewobject has the given windowId
+       *
+       * @param {Object} data Contains:
+       *     windowId {string}
+       *     groupId {string}
+       */
       _this.eventEmitter.subscribe('activateLockGroupMenuItem', function(event, data) {
         // check if this window has the window id
         // if so, set the li with the innerHTML that has groupID to data.groupId
-        _this.element.find('.add-to-lock-group').each(function(i, e) {
-          if (e.innerHTML === data.groupId) {
-            jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
-            jQuery(this).addClass('current-lg');
-          }
-        });
+        if (data.windowId === _this.focusModules[_this.currentImageMode].windowId) { 
+          _this.element.find('.add-to-lock-group').each(function(i, e) {
+            if (e.innerHTML === data.groupId) {
+              jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
+              jQuery(this).addClass('current-lg');
+            }
+          });
+        }
       });
     },
 
@@ -387,7 +409,7 @@
         _this.fullScreen();
       });
 
-      // lockGroup stuff
+      // show/hide lock group menu (window-level)
       this.element.find('.mirador-icon-lock-window').off('mouseenter').on('mouseenter',
         function() {
         _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
@@ -396,16 +418,21 @@
         _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
       });
 
+      /*
       this.element.find('.lock-options-list-item').on('click', function() {
         console.log('click lock list item');
       });
+      */
+      // TODO: remove the above
 
+      // onclick event to add the window to the selected lock group
       this.element.find('.add-to-lock-group').on('click', function(event) {
          _this.eventEmitter.publish('addToLockGroup', {viewObj: _this.focusModules[_this.currentImageMode], lockGroup: jQuery(this).text()});
          jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
          jQuery(this).addClass('current-lg');
       });
 
+      // onclick event to remove the window from its lock group
       this.element.find('.remove-from-lock-group').on('click', function(event) {
          _this.eventEmitter.publish('removeFromLockGroup', {viewObj: _this.focusModules[_this.currentImageMode]});
          jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
@@ -1108,20 +1135,13 @@
       this.element.find('.ruler-bottom-right').on('click', function() {
         _this.setRulerPosition('br');
       });
-
-      /*
-      this.element.find('.mirador-icon-lock').on('click', function() {
-        // toggle the lock status
-        // TODO: create function toggleLock that takes an id, and checks if that slot has a locked class
-        //     if so, publish the unlock event
-        //     else, publish lock event
-        _this.eventEmitter.publish('TOGGLE_LOCK', _this.focusModules[_this.currentImageMode]);
-      });
-      */
-
     },
 
-    // data is a list of lock group names
+    /*
+     * Use D3 to dynamically render the window-level lock group menu.
+     *
+     * @param {Array} lockGroupNames An array of strings that represent the lock group names
+     */
     renderLockGroupMenu: function(lockGroupNames) {
       // each menu in the window should get a dropdown with items in the 'data' array
       var _this = this,
