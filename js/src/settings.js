@@ -34,7 +34,9 @@
     'data' : [],
 
     'flexibleWorkspace': true,
-    'layout': '3',
+
+    // use either a positive int string for flexible workspace, or a layoutString for rigid, e.g. '1x3'
+    'layout': '1',
     'workspaceDownload': true,
 
     'openManifestsPage' : false, //defaults to false, whether or not Mirador should display the manifests page,

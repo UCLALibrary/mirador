@@ -42,7 +42,7 @@
                 mainMenuCls: this.mainMenuCls,
                 showBookmark : this.state.getStateProperty('mainMenuSettings').buttons.bookmark,
                 showLayout : this.state.getStateProperty('mainMenuSettings').buttons.layout && !this.state.getStateProperty('flexibleWorkspace'),
-		        showAddSlot : this.state.getStateProperty('flexibleWorkspace'),
+		        showAddWindow : this.state.getStateProperty('flexibleWorkspace'),
 		        showAddDragHandle : this.state.getStateProperty('flexibleWorkspace'),
 		        showWorkspaceDownload: this.state.getStateProperty('workspaceDownload'),
                 showOptions: this.state.getStateProperty('mainMenuSettings').buttons.options,
@@ -114,7 +114,7 @@
               _this.eventEmitter.publish('TOGGLE_FULLSCREEN');
             });
 
-	        this.element.find('.add-flexible-slot').on('click', function() {
+	        this.element.find('.add-flexible-window').on('click', function() {
 	          _this.eventEmitter.publish('ADD_FLEXIBLE_SLOT');
 	        });
 
@@ -155,10 +155,10 @@
             '</a>',
           '</li>',
         '{{/if}}',
-        '{{#if showAddSlot}}',
+        '{{#if showAddWindow}}',
           '<li>',
-            '<a href="javascript:;" class="add-flexible-slot" title="Add Slot">',
-              '<span class="fa fa-th-large fa-lg fa-fw"></span> Add Slot',
+            '<a href="javascript:;" class="add-flexible-window" title="Add Window">',
+              '<span class="fa fa-th-large fa-lg fa-fw"></span> Add Window',
             '</a>',
           '</li>',
         '{{/if}}',
