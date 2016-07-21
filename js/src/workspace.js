@@ -354,6 +354,26 @@
       child,
       tscKey;
 
+      function saveToSlotCoordinates(child) {
+        // save the coordinates
+        tscKey = child.id;
+          if (child.x && child.y && child.dx && child.dy) {
+            
+          // assume key to be something meaningful
+          if (!_this.slotCoordinates[tscKey]) {
+            _this.slotCoordinates[tscKey] = {};
+          }
+          if (draggedIDs === undefined || draggedIDs.indexOf(tscKey) === -1) {
+            _this.slotCoordinates[tscKey].x = child.x;
+            _this.slotCoordinates[tscKey].y = child.y;
+          }
+          if (resizedIDs === undefined || resizedIDs.indexOf(tscKey) === -1) {
+            _this.slotCoordinates[tscKey].dx = child.dx;
+            _this.slotCoordinates[tscKey].dy = child.dy;
+          }
+        }
+      }
+
       // if flexible layout is enabled, do not use isfahan
       // instead, use flexible layout settings for width, height, and offset
 
@@ -369,26 +389,12 @@
 
         if (_this.layoutDescription.id) { // this means we've initialized the workspace already, and need to save what we've got
           children = _this.layoutDescription.children;
-          for (var i = 0; i < children.length; i++) {
-            // save the coordinates
-            child = children[i];
-            tscKey = child.id;
-
-            if (child.x && child.y && child.dx && child.dy) {
-                
-              // assume key to be something meaningful
-              if (!_this.slotCoordinates[tscKey]) {
-                _this.slotCoordinates[tscKey] = {};
-              }
-              if (draggedIDs === undefined || draggedIDs.indexOf(tscKey) === -1) {
-                _this.slotCoordinates[tscKey].x = child.x;
-                _this.slotCoordinates[tscKey].y = child.y;
-              }
-              if (resizedIDs === undefined || resizedIDs.indexOf(tscKey) === -1) {
-                _this.slotCoordinates[tscKey].dx = child.dx;
-                _this.slotCoordinates[tscKey].dy = child.dy;
-              }
-            }
+          if (children !== undefined) { // then it is array
+            children.forEach(saveToSlotCoordinates);
+          }
+          else {
+            // one window
+            saveToSlotCoordinates(_this.slotCoordinates);
           }
         }
       }
@@ -405,11 +411,9 @@
 
       if ($.DEFAULT_SETTINGS.flexibleWorkspace === true) {
 
-        children = _this.layout[0].children;
-          // restore the saved coordinates
-        for (var j = 0; j < children.length; j++) {
-
-          child = children[j];
+        children = _this.layout[0].children !== undefined ? _this.layout[0].children : _this.layout;
+        // restore the saved coordinates
+        children.forEach(function(child, j) {
           tscKey = child.id;
           // if _this.slotCoordinates doesnt have anything for this children item
           //   add it
@@ -427,7 +431,7 @@
           child.y = _this.slotCoordinates[tscKey].y;
           child.dx = _this.slotCoordinates[tscKey].dx;
           child.dy = _this.slotCoordinates[tscKey].dy;
-        }
+        });
       }
 
       var data = layout.filter( function(d) {
@@ -516,7 +520,8 @@
 
     split: function(targetSlot, direction) {
       var _this = this,
-      node = ($.DEFAULT_SETTINGS.flexibleWorkspace && _this.slots.length === 1) ? jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; })[1] : jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; })[0],
+      nodeList = jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; }),
+      node = ($.DEFAULT_SETTINGS.flexibleWorkspace && _this.slots.length === 1 && nodeList.length === 2) ? nodeList[1] : nodeList[0],
       nodeIndex = node.parent ? node.parent.children.indexOf(node) : 0,
       nodeIsNotRoot = node.parent;
 
