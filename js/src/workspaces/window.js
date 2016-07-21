@@ -427,16 +427,36 @@
 
       // onclick event to add the window to the selected lock group
       this.element.find('.add-to-lock-group').on('click', function(event) {
-         _this.eventEmitter.publish('addToLockGroup', {viewObj: _this.focusModules[_this.currentImageMode], lockGroup: jQuery(this).text()});
-         jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
-         jQuery(this).addClass('current-lg');
+        _this.addToLockGroup(this);
       });
 
       // onclick event to remove the window from its lock group
       this.element.find('.remove-from-lock-group').on('click', function(event) {
-         _this.eventEmitter.publish('removeFromLockGroup', {viewObj: _this.focusModules[_this.currentImageMode]});
-         jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
+        _this.removeFromLockGroup(this);
       });
+    },
+
+    addToLockGroup: function(elt, replacing) {
+      var lg;
+      if (replacing === true) {
+        lg = jQuery(elt).parent().children('.add-to-lock-group.current-lg').text();
+
+        // if no lg, do nothing
+        if (lg === '') {
+          return;
+        }
+      }
+      else {
+        lg = jQuery(elt).text();
+      }
+      this.eventEmitter.publish('addToLockGroup', {viewObj: this.focusModules[this.currentImageMode], lockGroup: lg});
+      jQuery(elt).parent().children('.add-to-lock-group').removeClass('current-lg');
+      jQuery(elt).addClass('current-lg');
+    },
+
+    removeFromLockGroup: function(elt) {
+      this.eventEmitter.publish('removeFromLockGroup', {viewObj: this.focusModules[this.currentImageMode]});
+      jQuery(elt).parent().children('.add-to-lock-group').removeClass('current-lg');
     },
 
     bindAnnotationEvents: function() {

@@ -69,12 +69,19 @@
 
       _this.eventEmitter.subscribe('ADD_ITEM_FROM_WINDOW', function(event, id) {
         if (_this.window && _this.window.id === id) {
+          // remove from lock group
+          _this.window.removeFromLockGroup(_this.window.element.find('.remove-from-lock-group'));
           _this.addItem();
+          // make sure to add new item to the slots lock group
+          // TODO: make lock groups operate on slots instead of windows
+          //_this.window.addToLockGroup(_this.window.element.find('.remove-from-lock-group'), true);
         }
       });
 
       _this.eventEmitter.subscribe('REMOVE_SLOT_FROM_WINDOW', function(event, id) {
         if (_this.window && _this.window.id === id) {
+          // remove from lock group
+          _this.window.removeFromLockGroup(_this.window.element.find('.remove-from-lock-group'));
           _this.eventEmitter.publish('REMOVE_NODE', _this);
         }
       });

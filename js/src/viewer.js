@@ -103,9 +103,14 @@
       }
 
       // add workspace configuration
-      this.layout = typeof this.state.getStateProperty('layout') !== 'string' ? JSON.stringify(this.state.getStateProperty('layout')) : this.state.getStateProperty('layout');
+      this.layout = this.state.getStateProperty('layout');
+
       this.workspace = new $.Workspace({
-        layoutDescription: this.layout.charAt(0) === '{' ? JSON.parse(this.layout) : !isNaN(this.layout) ? $.layoutDescriptionFromGridString('1x' + this.layout) : $.layoutDescriptionFromGridString(this.layout),
+        layoutDescription: this.layout.charAt(0) === '{' ?
+                             JSON.parse(this.layout) :
+                             isNaN(this.layout) ?
+                               $.layoutDescriptionFromGridString(this.layout) :
+                               $.layoutDescriptionFromGridString('1x' + this.layout),
         appendTo: this.element.find('.mirador-viewer'),
         state: this.state,
         lockController: new $.LockController({
