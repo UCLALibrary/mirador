@@ -229,6 +229,7 @@
         jQuery(elem).css({'zIndex' : min+group.length});
       })
       .draggable({
+        handle: '.manifest-info',
         stack: '.layout-slot',
         snap: '.layout-slot, .drag-handle',
         //snapMode: 'outer',
