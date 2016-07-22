@@ -6,7 +6,6 @@
       element:   null,
       windowId:  null,
       annoState: null,
-      showAnnotations: true,
       annoEndpointAvailable: false,
       eventEmitter: null
     }, options);
@@ -16,23 +15,27 @@
 
   $.Hud.prototype = {
 
-    init: function() {   
-      this.createStateMachine();
+    init: function() {
+      this.createStateMachines();
 
+      var showAnno = typeof this.showAnno !== 'undefined' ? this.showAnno : this.canvasControls.annotations.annotationLayer,
+      showImageControls = typeof this.showImageControls !== 'undefined' ? this.showImageControls : this.canvasControls.imageManipulation.manipulationLayer;
       this.element = jQuery(this.template({
-        showNextPrev : this.showNextPrev, 
+        showNextPrev : this.showNextPrev,
         showBottomPanel : typeof this.bottomPanelAvailable === 'undefined' ? true : this.bottomPanelAvailable,
-        showAnno : this.annotationLayerAvailable
+        showAnno : showAnno,
+        showImageControls : showImageControls
       })).appendTo(this.appendTo);
 
-      if (this.annotationLayerAvailable && this.annoEndpointAvailable) {
+      if (showAnno || showImageControls) {
         this.contextControls = new $.ContextControls({
           element: null,
-          container: this.appendTo,
+          container: this.element.find('.mirador-osd-context-controls'),
           mode: 'displayAnnotations',
           windowId: this.windowId,
-          annotationCreationAvailable: this.annotationCreationAvailable,
-          availableTools: this.availableTools,
+          canvasControls: this.canvasControls,
+          annoEndpointAvailable: this.annoEndpointAvailable,
+          availableAnnotationTools: this.availableAnnotationTools,
           eventEmitter: this.eventEmitter
         });
       }
@@ -44,18 +47,19 @@
       var _this = this;
     },
 
-    createStateMachine: function() {
-      //add more to these as AnnoState becomes more complex
+    createStateMachines: function() {
       var _this = this,
       duration = "200";
+
+      //add more to these as AnnoState becomes more complex
       //initial state is 'none'
       this.annoState = StateMachine.create({
         events: [
           { name: 'startup',  from: 'none',  to: 'annoOff' },
           { name: 'displayOn',  from: 'annoOff',  to: 'annoOnCreateOff' },
-          { name: 'refreshCreateOff',  from: 'annoOnCreateOff',  to: 'annoOnCreateOff' },          
+          { name: 'refreshCreateOff',  from: 'annoOnCreateOff',  to: 'annoOnCreateOff' },
           { name: 'createOn', from: ['annoOff','annoOnCreateOff'], to: 'annoOnCreateOn' },
-          { name: 'refreshCreateOn',  from: 'annoOnCreateOn',  to: 'annoOnCreateOn' },          
+          { name: 'refreshCreateOn',  from: 'annoOnCreateOn',  to: 'annoOnCreateOn' },
           { name: 'createOff',  from: 'annoOnCreateOn',    to: 'annoOnCreateOff' },
           { name: 'displayOff', from: ['annoOnCreateOn','annoOnCreateOff'], to: 'annoOff' }
         ],
@@ -66,13 +70,10 @@
               annotationState: to
             });
           },
-          ondisplayOn: function(event, from, to) { 
+          ondisplayOn: function(event, from, to) {
+            _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.mirador-osd-annotations-layer', 'selected']);
             if (_this.annoEndpointAvailable) {
-                _this.eventEmitter.publish('HUD_FADE_OUT.' + _this.windowId, ['.mirador-osd-annotations-layer', duration, function() {      
-                  _this.contextControls.show();
-                }]);
-            } else {
-              _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.mirador-osd-annotations-layer', 'selected']);
+                  _this.contextControls.annotationShow();
             }
             _this.eventEmitter.publish('modeChange.' + _this.windowId, 'displayAnnotations');
             _this.eventEmitter.publish(('windowUpdated'), {
@@ -94,10 +95,8 @@
             }
             if (_this.annoEndpointAvailable) {
               if (from === "annoOff") {
-                _this.eventEmitter.publish('HUD_FADE_OUT.' + _this.windowId, ['.mirador-osd-annotations-layer', duration, function() {      
-                  _this.contextControls.show();
-                  enableEditingAnnotations();
-                }]);
+                _this.contextControls.annotationShow();
+                enableEditingAnnotations();
               } else {
                 enableEditingAnnotations();
               }
@@ -114,7 +113,7 @@
               annotationState: to
             });
           },
-          oncreateOff: function(event, from, to) { 
+          oncreateOff: function(event, from, to) {
             _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-edit-mode', 'selected']);
             _this.eventEmitter.publish('modeChange.' + _this.windowId, 'displayAnnotations');
             _this.eventEmitter.publish(('windowUpdated'), {
@@ -122,15 +121,12 @@
               annotationState: to
             });
           },
-          ondisplayOff: function(event, from, to) { 
+          ondisplayOff: function(event, from, to) {
             if (_this.annoEndpointAvailable) {
               _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-edit-mode', 'selected']);
-              _this.contextControls.hide(function() {
-                _this.eventEmitter.publish('HUD_FADE_IN.' + _this.windowId, ['.mirador-osd-annotations-layer', duration]);
-              });
-            } else {
-              _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-annotations-layer', 'selected']);
+              _this.contextControls.annotationHide();
             }
+            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-annotations-layer', 'selected']);
             _this.eventEmitter.publish('modeChange.' + _this.windowId, 'default');
             _this.eventEmitter.publish(('windowUpdated'), {
               id: _this.windowId,
@@ -139,19 +135,63 @@
           }
         }
       });
+
+      this.manipulationState = StateMachine.create({
+        events: [
+          { name: 'startup',  from: 'none',  to: 'manipulationOff' },
+          { name: 'displayOn',  from: 'manipulationOff',  to: 'manipulationOn' },
+          { name: 'displayOff', from: 'manipulationOn', to: 'manipulationOff' }
+        ],
+        callbacks: {
+          onstartup: function(event, from, to) {
+            _this.eventEmitter.publish(('windowUpdated'), {
+              id: _this.windowId,
+              manipulationState: to
+            });
+          },
+          ondisplayOn: function(event, from, to) {
+            _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.mirador-manipulation-toggle', 'selected']);
+            _this.contextControls.manipulationShow();
+            _this.eventEmitter.publish(('windowUpdated'), {
+              id: _this.windowId,
+              manipulationState: to
+            });
+          },
+          ondisplayOff: function(event, from, to) {
+            _this.contextControls.manipulationHide();
+            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-manipulation-toggle', 'selected']);
+            _this.eventEmitter.publish(('windowUpdated'), {
+              id: _this.windowId,
+              manipulationState: to
+            });
+          }
+        }
+      });
     },
 
     template: Handlebars.compile([
+                                 '<div class="mirador-hud">',
                                  '{{#if showNextPrev}}',
                                  '<a class="mirador-osd-previous hud-control ">',
                                  '<i class="fa fa-3x fa-chevron-left "></i>',
                                  '</a>',
                                  '{{/if}}',
+                                 '<div class="mirador-osd-context-controls hud-container">',
                                  '{{#if showAnno}}',
-                                 '<a class="mirador-osd-annotations-layer hud-control" role="button" aria-label="Toggle annotations">',
-                                 '<i class="fa fa-lg fa-comments"></i>',
-                                 '</a>',
+                                  '<div class="mirador-osd-annotation-controls">',
+                                  '<a class="mirador-osd-annotations-layer hud-control" role="button" aria-label="Toggle annotations">',
+                                  '<i class="fa fa-lg fa-comments"></i>',
+                                  '</a>',
+                                  '</div>',
                                  '{{/if}}',
+                                 '{{#if showImageControls}}',
+                                  '<div class="mirador-manipulation-controls">',
+                                  '<a class="mirador-manipulation-toggle hud-control" role="button" aria-label="Toggle image manipulation">',
+                                  '<i class="material-icons">tune</i>',
+                                  '</a>',
+                                  '</div>',
+                                 '{{/if}}',
+                                 '</div>',
                                  '{{#if showNextPrev}}',
                                  '<a class="mirador-osd-next hud-control ">',
                                  '<i class="fa fa-3x fa-chevron-right"></i>',
@@ -184,40 +224,8 @@
                                  '<a class="mirador-osd-go-home hud-control" role="button" aria-label="Reset image bounds">',
                                  '<i class="fa fa-home"></i>',
                                  '</a>',
-                                 '<a title="Rotate +90 degrees" class="mirador-osd-positive-rotate hud-control">',
-                                 '<i class="fa fa-rotate-right"></i>',
-                                 '</a>',
-                                 '<a title="Rotate -90 degrees" class="mirador-osd-negative-rotate hud-control">',
-                                 '<i class="fa fa-rotate-left"></i>',
-                                 '</a>',
                                  '</div>',
-
-                                 /* image manipulation template */
-                                 '<div title="View Image Manipulation Tools" class="mirador-pan-zoom-toggle hud-control">',
-                                 '<img class="viewImgManip closed" src="http://165.134.241.141/brokenBooks/images/imageadjust.png">',
-                                 '</div>',
-                                 '<div class="mirador-img-manipulation hud-control">',
-                                 '<div title="Change Image Brightness" class="mirador-osd-brightness hud-control">',
-                                 '<span>Brightness</span>',
-                                 '<span class="brightnessSlider"></span>',
-                                 '<img class="imgManipIcon" src="http://165.134.241.141/brokenBooks/images/brightness.png">',
-                                 '</div>',
-                                 '<div title="Change Image Contrast" class="mirador-osd-contrast hud-control">',
-                                 '<span>Contrast</span>',
-                                 '<span class="contrastSlider"></span>',
-                                 '<img class="imgManipIcon" src="http://165.134.241.141/brokenBooks/images/contrast.png">',
-                                 '</div>',
-                                 '<a title="Toggle Grayscale" class="mirador-osd-toggle-grayscale hud-control">',
-                                 '<span>Grayscale</span><img class="imgManipIcon" src="http://165.134.241.141/brokenBooks/images/grayscale.png">',
-                                 '</a>',
-                                 '<a title="Invert Colors" class="mirador-osd-toggle-invert hud-control">',
-                                 '<span>Invert<span><img class="imgManipIcon" src="http://165.134.241.141/brokenBooks/images/invert.png">',
-                                 '</a>',
-                                 '<a title="Remove Tool Effects" class="mirador-osd-filters-off hud-control">',
-                                 '<span>RESET</span>',
-                                 '</a>',
                                  '</div>'
-                                 /* end image manipulation template */
     ].join(''))
 
   };

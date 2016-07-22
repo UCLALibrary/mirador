@@ -49,7 +49,7 @@
     //default window settings, but can be changed in Mirador configuration on initialization
     'windowSettings' : {
       "availableViews" : ['ThumbnailsView', 'ImageView', 'ScrollView', 'BookView'], //any subset removes others
-      "viewType" : 'ThumbnailsView', //one of [_'ThumbnailsView'_, 'ImageView', 'ScrollView', 'BookView'] - if using availableViews, must be in subset
+      "viewType" : 'ImageView', //one of [_'ThumbnailsView'_, 'ImageView', 'ScrollView', 'BookView'] - if using availableViews, must be in subset
       "bottomPanel" : true, //whether or not to make the bottom panel available in this window
       "bottomPanelVisible" : true, //whether or not to make the bottom panel visible in this window on load. This setting is dependent on bottomPanel being true
       "sidePanel" : true, //whether or not to make the side panel available in this window
@@ -60,11 +60,27 @@
       },
       "sidePanelVisible" : true, //whether or not to make the side panel visible in this window on load. This setting is dependent on sidePanel being true
       "overlay" : true, //whether or not to make the metadata overlay available/visible in this window
-      "annotationLayer" : true, //whether or not to make annotation layer available in this window
-      "annotationCreation" : true, /*whether or not to make annotation creation available in this window,
-                             only valid if annotationLayer is set to True and an annotationEndpoint is defined.
-                             This setting does NOT affect whether or not a user can edit an individual annotation that has already been created.*/
-      "annotationState" : 'annoOff', //[_'annoOff'_, 'annoOnCreateOff', 'annoOnCreateOn'] whether or not to turn on the annotation layer on window load
+      "canvasControls": { // The types of controls available to be displayed on a canvas
+        "annotations" : {
+          "annotationLayer" : true, //whether or not to make annotation layer available in this window
+          "annotationCreation" : true, /*whether or not to make annotation creation available in this window,
+                       only valid if annotationLayer is set to True and an annotationEndpoint is defined.
+                       This setting does NOT affect whether or not a user can edit an individual annotation that has already been created.*/
+          "annotationState" : 'annoOff', //[_'annoOff'_, 'annoOnCreateOff', 'annoOnCreateOn'] whether or not to turn on the annotation layer on window load
+          "annotationRefresh" : false, //whether or not to display the refresh icon for annotations
+        },
+        "imageManipulation" : {
+          "manipulationLayer" : true,
+          "controls" : {
+            "rotate" : true,
+            "brightness" : true,
+            "contrast" : true,
+            "saturate" : true,
+            "grayscale" : true,
+            "invert" : true
+          }
+        }
+      },
       "fullScreen" : true, //whether or not to make the window's fullScreen button visible to user
       "displayLayout" : true, //whether or not to display all layout options, removing individual menu options is separate
       //control individual menu items in layout menu. if "displayLayout" is false, these options won't be applied
@@ -104,11 +120,23 @@
     ],
 
     'drawingToolsSettings': {
+      // Additional tool settings.
+      /**
+       *'Pin': {
+       *},
+       **/
       'doubleClickReactionTime': 300,
       'strokeColor': 'deepSkyBlue',
       'fillColor': 'deepSkyBlue',
-      'fillColorAlpha': 0.0
+      'fillColorAlpha': 0.0,
+      'shapeHandleSize':10,
+      'fixedShapeSize':10,
+      'hoverColor':'yellow'
     },
+
+    'availableExternalCommentsPanel': false,
+    'shapeHandleSize':10,
+
 
     'availableCanvasTools': [
 
@@ -119,7 +147,7 @@
     'mainMenuSettings': {
       'show': true,
       'buttons' : {
-        'bookmark' : true,
+        'bookmark' : false,
         'layout' : true,
         'options' : false,
         'fullScreenViewer': true
@@ -162,6 +190,7 @@
      *  }
      **/
     'annotationEndpoint': {},
+
     'annotationBodyEditor': {
       'module': 'TinyMCEAnnotationBodyEditor',
       'options': {}

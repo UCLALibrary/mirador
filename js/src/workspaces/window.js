@@ -103,12 +103,19 @@
       }
 
       this.annoEndpointAvailable = !jQuery.isEmptyObject(_this.state.getStateProperty('annotationEndpoint'));
-      if (!this.annotationLayer) {
-        this.annotationCreation = false;
+      if (!this.canvasControls.annotations.annotationLayer) {
+        this.canvasControls.annotations.annotationCreation = false;
         this.annoEndpointAvailable = false;
-        this.annotationState = 'annoOff';
+        this.canvasControls.annotations.annotationState = 'annoOff';
       }
       _this.getAnnotations();
+
+      // if manipulationLayer is true,  but all individual options are set to false, set manipulationLayer to false
+      if (this.canvasControls.imageManipulation.manipulationLayer) {
+        this.canvasControls.imageManipulation.manipulationLayer = !Object.keys(this.canvasControls.imageManipulation.controls).every(function(element, index, array) {
+          return _this.canvasControls.imageManipulation.controls[element] === false;
+        });
+      }
 
       //for use by SidePanel, which needs to know if the current view can have the annotations tab
       _this.eventEmitter.publish(('windowUpdated'), {
@@ -320,7 +327,7 @@
       });
 
       _this.eventEmitter.subscribe('UPDATE_FOCUS_IMAGES.' + this.id, function(event, images) {
-        _this.updateFocusImages(images.array); 
+        _this.updateFocusImages(images.array);
       });
 
       _this.eventEmitter.subscribe('HIDE_ICON_TOC.' + this.id, function(event) {
@@ -343,13 +350,13 @@
         var visible = !_this.bottomPanelVisible;
         _this.bottomPanelVisibility(visible);
       });
-      
+
       _this.eventEmitter.subscribe('DISABLE_WINDOW_FULLSCREEN', function(event) {
         _this.element.find('.mirador-osd-fullscreen').hide();
       });
 
       _this.eventEmitter.subscribe('ENABLE_WINDOW_FULLSCREEN', function(event) {
-        _this.element.find('.mirador-osd-fullscreen').show();        
+        _this.element.find('.mirador-osd-fullscreen').show();
       });
 
       /*
@@ -406,7 +413,7 @@
       });
 
       jQuery(document).on("webkitfullscreenchange mozfullscreenchange fullscreenchange", function() {
-        _this.fullScreen();
+        _this.toggleFullScreen();
       });
 
       // show/hide lock group menu (window-level)
@@ -610,7 +617,7 @@
         this.sidePanel.update('annotations', annotationsTabAvailable);
       }
     },
- 
+
     get: function(prop, parent) {
       if (parent) {
         return this[parent][prop];
@@ -764,10 +771,9 @@
           imagesList: this.imagesList,
           osdOptions: this.windowOptions,
           bottomPanelAvailable: this.bottomPanelAvailable,
-          annotationLayerAvailable: this.annotationLayer,
-          annotationCreationAvailable: this.annotationCreation,
           annoEndpointAvailable: this.annoEndpointAvailable,
-          annotationState : this.annotationState
+          canvasControls: this.canvasControls,
+          annotationState : this.canvasControls.annotations.annotationState
         });
       } else {
         var view = this.focusModules.ImageView;
@@ -951,7 +957,7 @@
     updateManifestInfo: function() {
       var _this = this;
       _this.element.find('.mirador-icon-view-type > i:first').removeClass().addClass(_this.iconClasses[_this.viewType]);
-      
+
       if (this.focusOverlaysAvailable[this.viewType].overlay.MetadataView) {
         this.element.find('.mirador-icon-metadata-view').addClass('selected');
       }
@@ -1014,7 +1020,7 @@
       }
     },
 
-    fullScreen: function() {
+    toggleFullScreen: function() {
       var _this = this;
       if (!OpenSeadragon.isFullScreen()) {
         this.element.find('.mirador-osd-fullscreen i').removeClass('fa-compress').addClass('fa-expand');

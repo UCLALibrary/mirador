@@ -435,7 +435,8 @@
       lockGroup = _this.synchronizedWindows.byWindow[viewObj.windowId],
       lgData = _this.synchronizedWindows.byGroup[lockGroup],
       lgViews,
-      lgSettings;
+      lgSettings,
+      followerImageManipButton;
 
       // make sure lock group exists for this window
       if (lgData !== undefined) {
@@ -460,10 +461,12 @@
                     _this.lockOptions[lgSettings.profile](viewObj, follower);
                     break;
                   case 'grayscale':
-                    follower.imageManipGrayscale();
+                    followerImageManipButton = follower.element.find('.mirador-osd-grayscale');
+                    follower.imageManipGrayscale(followerImageManipButton);
                     break;
                   case 'invert':
-                    follower.imageManipInvert();
+                    followerImageManipButton = follower.element.find('.mirador-osd-invert');
+                    follower.imageManipInvert(followerImageManipButton);
                     break;
                   case 'reset':
                     follower.imageManipReset();
