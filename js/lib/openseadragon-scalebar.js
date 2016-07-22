@@ -51,8 +51,8 @@
         BOTTOM_LEFT: 4,
         MIDDLE_LEFT: 5,
         MIDDLE_RIGHT: 6,
-	TOP_MIDDLE: 7,
-	BOTTOM_MIDDLE: 8
+        TOP_MIDDLE: 7,
+	    BOTTOM_MIDDLE: 8
     };
 
     $.ScalebarOrientation = {
@@ -135,11 +135,6 @@
         }
         this.setMinLength(options.minWidth || "150px");
 
-        // must come after setting this.orientation and calling this.setMinLength()
-        if (options.type === $.ScalebarType.RULER) {
-            this.createRulerScalebar();
-        }
-
         var self = this;
         this.viewer.addHandler("open", function() {
             self.refresh();
@@ -165,10 +160,6 @@
             }
             if (isDefined(options.color)) {
                 this.color = options.color;
-		if (this.drawScalebar === this.drawRulerScalebar) {
-
-		    this.createRulerScalebar();
-		}
             }
             if (isDefined(options.fontColor)) {
                 this.fontColor = options.fontColor;
@@ -203,10 +194,6 @@
 
             if (isDefined(options.orientation)) {
                 this.orientation = options.orientation;
-		if (this.drawScalebar === this.drawRulerScalebar) {
-
-		    this.createRulerScalebar();
-		}
             }
         },
         setDrawScalebarFunction: function(type) {
@@ -318,32 +305,34 @@
             this.divElt.innerHTML = text;
             this.divElt.style.width = size + "px";
         },
-        createRulerScalebar: function() {
-            this.nMajorGradations = 5;
-            this.nMinorGradationsPerMajorGradation = 10;
+        drawRulerScalebar: function(size, text) {
+            var distance = parseInt(text.replace(/[A-Za-z]| /g, ''));
+            var units = text.replace(/[0-9]|\.| /g, '');
+
+            this.nMajorGradations = distance === 10 ? 2 : distance / 10;
+            this.nMinorGradationsPerMajorGradation = distance === 10 ? 5 : 10;
             this.nMinorGradations = this.nMinorGradationsPerMajorGradation * this.nMajorGradations;
 
             var i,
                 textElt,
                 lineElt,
-                lineEltHeight,
+                lineEltType, // major, semimajor, minor
                 lineEltOffsetPercent = 100 / this.nMinorGradations,
                 axisParallelToRuler,
                 axisPerpendicularToRuler,
+                endpoints,
                 self = this;
 		
-	    // if it exists, delete the current ruler
-	    if (this.svgEltLabels !== undefined) {
+	        // if it exists, delete the current ruler
+	        if (this.svgEltLabels !== undefined) {
                 this.divElt.removeChild(this.svgEltLabels);
             }
-	    if (this.svgElt !== undefined) {
+	        if (this.svgElt !== undefined) {
                 this.divElt.removeChild(this.svgElt);
-	    }
+	        }
 	      
             this.svgEltLabels = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            this.divElt.appendChild(this.svgEltLabels);
             this.svgElt = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            this.divElt.appendChild(this.svgElt);
 
             // are the following lines necessary?
             this.svgElt.setAttribute("version", "1.1");
@@ -351,6 +340,7 @@
             this.svgElt.setAttribute("xmlns", "http://www.w3.org/2000/svg");
             this.svgEltLabels.setAttribute("xmlns", "http://www.w3.org/2000/svg");
 
+            // determine axes
             if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
                 axisParallelToRuler = "x";
                 axisPerpendicularToRuler = "y";
@@ -360,7 +350,67 @@
                 axisPerpendicularToRuler = "x";
             }
 
-	    this.scaleNumbers = [];
+            /**
+             * return an object that specifies the endpoints of each tick
+             * takes as parameters position and orientation
+             * { 'major': [0, 100],
+             *   'semimajor': [25, 100],
+             *   'minor': [50, 100] }
+             */
+            // determine positioning of tick marks
+            endpoints = {
+                major: [0, 100]
+            }
+            switch (this.location) {
+                case $.ScalebarLocation.TOP_LEFT:
+                case $.ScalebarLocation.TOP_MIDDLE:
+                    endpoints.semimajor = [25, 100];
+                    endpoints.minor = [50, 100]; 
+                    this.divElt.appendChild(this.svgEltLabels);
+                    this.divElt.appendChild(this.svgElt);
+                    break;
+                case $.ScalebarLocation.BOTTOM_RIGHT:
+                case $.ScalebarLocation.MIDDLE_RIGHT:
+                    endpoints.semimajor = [0, 75];
+                    endpoints.minor = [0, 50]; 
+                    this.divElt.appendChild(this.svgElt);
+                    this.divElt.appendChild(this.svgEltLabels);
+                    break;
+                case $.ScalebarLocation.MIDDLE_LEFT:
+                case $.ScalebarLocation.BOTTOM_MIDDLE:
+                case $.ScalebarLocation.BOTTOM_LEFT:
+                    if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
+                        endpoints.semimajor = [0, 75];
+                        endpoints.minor = [0, 50]; 
+                        this.divElt.appendChild(this.svgElt);
+                        this.divElt.appendChild(this.svgEltLabels);
+                    }
+                    else {
+                        endpoints.semimajor = [25, 100];
+                        endpoints.minor = [50, 100]; 
+                        this.divElt.appendChild(this.svgEltLabels);
+                        this.divElt.appendChild(this.svgElt);
+                    }
+                    break;
+                        
+                case $.ScalebarLocation.TOP_RIGHT:
+                    if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
+                        endpoints.semimajor = [25, 100];
+                        endpoints.minor = [50, 100]; 
+                        this.divElt.appendChild(this.svgEltLabels);
+                        this.divElt.appendChild(this.svgElt);
+                    }
+                    else {
+                        endpoints.semimajor = [0, 75];
+                        endpoints.minor = [0, 50]; 
+                        this.divElt.appendChild(this.svgElt);
+                        this.divElt.appendChild(this.svgEltLabels);
+                    }
+                    break;
+            }
+
+
+	        this.scaleNumbers = [];
 
             for (i = 1; i < this.nMinorGradations; i++) {
 
@@ -369,11 +419,11 @@
 
                 if (i % this.nMinorGradationsPerMajorGradation === 0) {
                     // draw major gradation
-                    lineEltHeight = 0;
+                    lineEltType = 'major';
 
                     // also draw number next to major grad
                     textElt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-		    this.scaleNumbers.push(textElt);
+		            this.scaleNumbers.push(textElt);
                     this.svgEltLabels.appendChild(textElt);
 
                     if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
@@ -390,52 +440,49 @@
                 }
                 else if (i % (1/2 * this.nMinorGradationsPerMajorGradation) === 0) {
                     // draw semimajor gradation
-                    lineEltHeight = 25;
+                    lineEltType = 'semimajor';
                 }
                 else {
                     // draw minor gradation
-                    lineEltHeight = 50;
+                    lineEltType = 'minor';
                 }
 
                 lineElt.setAttribute(axisParallelToRuler + "1", i * lineEltOffsetPercent + "%");
-                lineElt.setAttribute(axisPerpendicularToRuler + "1", lineEltHeight + "%");
+                lineElt.setAttribute(axisPerpendicularToRuler + "1", endpoints[lineEltType][0] + "%");
                 lineElt.setAttribute(axisParallelToRuler + "2", i * lineEltOffsetPercent + "%");
-                lineElt.setAttribute(axisPerpendicularToRuler + "2", "100%");
+                lineElt.setAttribute(axisPerpendicularToRuler + "2", endpoints[lineEltType][1] + "%");
 
                 lineElt.setAttribute("stroke", self.color);
                 lineElt.setAttribute("stroke-width", "1");
             }
-        },
-        drawRulerScalebar: function(size, text) {
+
+
             var scalebarLength = size + "px",
                 scalebarThicknessPixels = 20;
-		scalebarLabelsThicknessPixels = 20;
+                scalebarLabelsThicknessPixels = 20;
 
             // set style
 
             this.divElt.style.fontSize = this.fontSize;
             this.divElt.style.textAlign = "center";
-	    this.divElt.style.lineHeight = "0";
+            this.divElt.style.lineHeight = "0";
             // this.divElt.style.color = this.fontColor;
             this.divElt.style.border = this.barThickness + "px solid " + this.color;
             this.divElt.style.backgroundColor = this.backgroundColor;
 
-	    // update the labels on the bar
-	    var distance = text.replace(/[A-Za-z]| /g, '');
-	    var units = text.replace(/[0-9]|\.| /g, '');
-	    for (var i = 0; i < this.nMajorGradations - 1; i++) {
+            // update the labels on the bar
+            for (var i = 0; i < this.nMajorGradations - 1; i++) {
                 // change the inner html
-		this.scaleNumbers[i].innerHTML = distance * (i + 1) / this.nMajorGradations + ' ' + units;
-	    }
-	    
+                this.scaleNumbers[i].innerHTML = distance * (i + 1) / this.nMajorGradations + ' ' + units;
+            }
+            
             if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
                 this.divElt.style.width = scalebarLength;
                 this.divElt.style.height = scalebarThicknessPixels + scalebarLabelsThicknessPixels + "px";
-                this.divElt.style.borderTop = "none";
-            this.svgElt.style.width = "100%";
-            this.svgElt.style.height = scalebarThicknessPixels + "px";
-            this.svgEltLabels.style.width = "100%";
-            this.svgEltLabels.style.height = scalebarLabelsThicknessPixels + "px";
+                this.svgElt.style.width = "100%";
+                this.svgElt.style.height = scalebarThicknessPixels + "px";
+                this.svgEltLabels.style.width = "100%";
+                this.svgEltLabels.style.height = scalebarLabelsThicknessPixels + "px";
                 // uncomment to 'flip' ruler, then comment the above line
                 /*
                 if (this.location === $.ScalebarLocation.TOP_LEFT || this.location === $.ScalebarLocation.TOP_RIGHT) {
@@ -447,23 +494,22 @@
                 */
             }
             else {
-	    
-            // set thickness to width of label
-	    this.svgEltLabels.style.display = "";
-	    scalebarLabelsThicknessPixels = 0
-	    himark = this.scaleNumbers;
-	    for (var j = 0; j < this.scaleNumbers.length; j++) {
-		var len = this.scaleNumbers[j].getComputedTextLength();
-	        scalebarLabelsThicknessPixels = (len > scalebarLabelsThicknessPixels) ? len : scalebarLabelsThicknessPixels;
-	    }
-
-            this.svgEltLabels.style.width = scalebarLabelsThicknessPixels + "px";
-            this.svgEltLabels.style.height = "100%";
-            this.svgElt.style.width = scalebarThicknessPixels + "px";
-            this.svgElt.style.height = "100%";
+            
+                // set thickness to width of label
+                this.svgEltLabels.style.display = "";
+                scalebarLabelsThicknessPixels = 0
+                himark = this.scaleNumbers;
+                for (var j = 0; j < this.scaleNumbers.length; j++) {
+                    var len = this.scaleNumbers[j].getComputedTextLength();
+                    scalebarLabelsThicknessPixels = (len > scalebarLabelsThicknessPixels) ? len : scalebarLabelsThicknessPixels;
+                }
+    
+                this.svgEltLabels.style.width = scalebarLabelsThicknessPixels + "px";
+                this.svgEltLabels.style.height = "100%";
+                this.svgElt.style.width = scalebarThicknessPixels + "px";
+                this.svgElt.style.height = "100%";
                 this.divElt.style.width = scalebarThicknessPixels + scalebarLabelsThicknessPixels + "px";
                 this.divElt.style.height = scalebarLength;
-                this.divElt.style.borderLeft = "none";
                 // uncomment to 'flip' ruler, then comment the above line
                 /*
                 if (this.location === $.ScalebarLocation.TOP_RIGHT || this.location === $.ScalebarLocation.BOTTOM_RIGHT) { // or MIDDLE_RIGHT
@@ -474,8 +520,6 @@
                 }
                 */
             }
-
-
         },
         /**
          * Compute the location of the scale bar.
