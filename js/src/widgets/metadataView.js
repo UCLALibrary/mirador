@@ -225,6 +225,10 @@
             '<div class="metadata-item"><div class="metadata-label">{{label}}:</div><div class="metadata-value">{{{value}}}</div></div>',
           '{{/each}}',
         '</div>',
+
+        // rights label disabled per EMEL-168
+
+        /*
         '<div class="sub-title">{{t "rights"}}:</div>',
         '{{#if rights}}',
         '<div class="{{metadataListingCls}}">',
@@ -240,6 +244,8 @@
           '<div class="metadata-item"><div class="metadata-label">{{t "rightsStatus"}}:</div><div class="metadata-value">{{t "unspecified"}}</div></div>',
         '</div>',
         '{{/if}}',
+        */
+
         '{{#if links}}',
         '<div class="sub-title">{{t "links"}}:</div>',
         '<div class="{{metadataListingCls}}">',
