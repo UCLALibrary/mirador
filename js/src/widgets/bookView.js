@@ -688,6 +688,15 @@
 
       this.element.find('.' + this.osdCls).remove();
 
+      _this.element.on({
+        mouseenter: function() {
+          _this.leading = true;
+        },
+        mouseleave: function() {
+          _this.leading = false;
+        }
+      });
+
       jQuery.each(this.stitchList, function(index, image) {
         var imageUrl = $.Iiif.getImageUrl(image),
         infoJsonUrl = imageUrl + '/info.json';
@@ -746,10 +755,20 @@
 
           _this.osd.addHandler('zoom', $.debounce(function(){
             _this.setBounds();
+
+            // tell lock controller to move any synchronized views
+            if (_this.leading) {
+              _this.eventEmitter.publish('synchronizeZoom', _this);
+            }
           }, 300));
 
           _this.osd.addHandler('pan', $.debounce(function(){
             _this.setBounds();
+
+            // tell lock controller to move any synchronized views
+            if (_this.leading) {
+              _this.eventEmitter.publish('synchronizePan', _this);
+            }
           }, 300));
         });
 

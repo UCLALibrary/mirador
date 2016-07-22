@@ -12,6 +12,7 @@
       imagesList:        null,
       annotationsList:   [],
       endpoint:          null,
+      lockController:    null,
       currentImageMode:  'ImageView',
       imageModes:        ['ImageView', 'BookView'],
       originalImageModes:['ImageView', 'BookView'],
@@ -54,9 +55,23 @@
       }
     }, options);
 
+
+    /*
+     * Creates a string of HTML list items to add to each window menu for the lock groups.
+     *
+     * @param {Array} items An array of names of lock groups
+     */
+    // TODO: is this needed?
+    Handlebars.registerHelper('list2', function(items) {
+      var out = ''; 
+      for(var i=0, l=items.length; i<l; i++) {
+        out = out + "<li class='lock-options-list-item add-to-lock-group'>" + items[i] + "</li>";
+      }   
+      return out;
+    });
+
     this.init();
     this.bindAnnotationEvents();
-
   };
 
   $.Window.prototype = {
@@ -139,6 +154,12 @@
       }
       templateData.currentFocusClass = _this.iconClasses[_this.viewType];
       templateData.showFullScreen = _this.fullScreen;
+
+
+
+      // get info about lockGroups
+      templateData.lockGroups = Object.keys(this.lockController.getLockGroupData());
+
       _this.element = jQuery(this.template(templateData)).appendTo(_this.appendTo);
       this.element.find('.manifest-info .mirador-tooltip').each(function() {
         jQuery(this).qtip({
@@ -207,7 +228,6 @@
         default:
           break;
       }
-      console.log(_this.state.slots, '********_this.state');
 
       if (_this.state.getSlots().length <= 1) {
         _this.element.find('.remove-object-option').hide();
@@ -221,6 +241,12 @@
         this.bottomPanelVisibility(this.bottomPanelVisible);
       }
       this.sidePanelVisibility(this.sidePanelVisible, '0s');
+
+      // restore lock group stuff for this window, if we are restoring it
+      // sends message to lockController
+      if (_this.focusModules[_this.currentImageMode] !== null) {
+        _this.eventEmitter.publish('restoreWindowToLockController', _this.focusModules[_this.currentImageMode]);
+      }
     },
 
     update: function(options) {
@@ -325,6 +351,35 @@
       _this.eventEmitter.subscribe('ENABLE_WINDOW_FULLSCREEN', function(event) {
         _this.element.find('.mirador-osd-fullscreen').show();        
       });
+
+      /*
+       * Calls the D3 rendering method to dynamically add li's.
+       */
+      // TODO: delete parameter from Handlebars template (not needed)
+      _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, data) {
+        _this.renderLockGroupMenu(data.keys);
+      });
+
+      /*
+       * Activates the li with innerHTML that matches the given lockGroup, inside of the window whose
+       * viewobject has the given windowId
+       *
+       * @param {Object} data Contains:
+       *     windowId {string}
+       *     groupId {string}
+       */
+      _this.eventEmitter.subscribe('activateLockGroupMenuItem', function(event, data) {
+        // check if this window has the window id
+        // if so, set the li with the innerHTML that has groupID to data.groupId
+        if (data.windowId === _this.focusModules[_this.currentImageMode].windowId) { 
+          _this.element.find('.add-to-lock-group').each(function(i, e) {
+            if (e.innerHTML === data.groupId) {
+              jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
+              jQuery(this).addClass('current-lg');
+            }
+          });
+        }
+      });
     },
 
     bindEvents: function() {
@@ -354,6 +409,54 @@
         _this.fullScreen();
       });
 
+      // show/hide lock group menu (window-level)
+      this.element.find('.mirador-icon-lock-window').off('mouseenter').on('mouseenter',
+        function() {
+        _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
+      }).off('mouseleave').on('mouseleave',
+      function() {
+        _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
+      });
+
+      /*
+      this.element.find('.lock-options-list-item').on('click', function() {
+        console.log('click lock list item');
+      });
+      */
+      // TODO: remove the above
+
+      // onclick event to add the window to the selected lock group
+      this.element.find('.add-to-lock-group').on('click', function(event) {
+        _this.addToLockGroup(this);
+      });
+
+      // onclick event to remove the window from its lock group
+      this.element.find('.remove-from-lock-group').on('click', function(event) {
+        _this.removeFromLockGroup(this);
+      });
+    },
+
+    addToLockGroup: function(elt, replacing) {
+      var lg;
+      if (replacing === true) {
+        lg = jQuery(elt).parent().children('.add-to-lock-group.current-lg').text();
+
+        // if no lg, do nothing
+        if (lg === '') {
+          return;
+        }
+      }
+      else {
+        lg = jQuery(elt).text();
+      }
+      this.eventEmitter.publish('addToLockGroup', {viewObj: this.focusModules[this.currentImageMode], lockGroup: lg});
+      jQuery(elt).parent().children('.add-to-lock-group').removeClass('current-lg');
+      jQuery(elt).addClass('current-lg');
+    },
+
+    removeFromLockGroup: function(elt) {
+      this.eventEmitter.publish('removeFromLockGroup', {viewObj: this.focusModules[this.currentImageMode]});
+      jQuery(elt).parent().children('.add-to-lock-group').removeClass('current-lg');
     },
 
     bindAnnotationEvents: function() {
@@ -1054,6 +1157,25 @@
       });
     },
 
+    /*
+     * Use D3 to dynamically render the window-level lock group menu.
+     *
+     * @param {Array} lockGroupNames An array of strings that represent the lock group names
+     */
+    renderLockGroupMenu: function(lockGroupNames) {
+      // each menu in the window should get a dropdown with items in the 'data' array
+      var _this = this,
+      lockGroups = d3.selectAll('.lock-options-list').selectAll('.lock-options-list-item')
+        .data(lockGroupNames, function(d) { return d; });
+      lockGroups.enter().append('li')
+        .classed({'lock-options-list-item': true, 'add-to-lock-group': true})
+        .text(function(d) { return d; });
+      lockGroups.exit().remove();
+
+      // bind lock group click events on all new li's
+      _this.bindEvents();
+    },
+
     // template should be based on workspace type
     template: Handlebars.compile([
                                  '<div class="window">',
@@ -1099,6 +1221,7 @@
                                  '<hr class="menu-divider"/>',
                                  '{{/if}}',
                                  '{{#if layoutOptions.slotRight}}',
+                                 // lockGroup stuff
                                  '<li class="add-slot-right"><i class="fa fa-arrow-circle-right fa-lg fa-fw"></i> {{t "addSlotRight"}}</li>',
                                  '{{/if}}',
                                  '{{#if layoutOptions.slotLeft}}',
@@ -1128,7 +1251,7 @@
                                  '<li class="ruler-top-left"><i class="fa fa- fa-lg fa-fw"></i> Top Left</li>',
                                  '<li class="ruler-top-middle"><i class="fa fa- fa-lg fa-fw"></i> Top Middle</li>',
                                  '<li class="ruler-top-right"><i class="fa fa- fa-lg fa-fw"></i> Top Right</li>',
-                                 '<li class="ruler-middle-lsd<F6>;47l=[eft"><i class="fa fa- fa-lg fa-fw"></i> Middle Left</li>',
+                                 '<li class="ruler-middle-left"><i class="fa fa- fa-lg fa-fw"></i> Middle Left</li>',
                                  '<li class="ruler-middle-right"><i class="fa fa- fa-lg fa-fw"></i> Middle Right</li>',
                                  '<li class="ruler-bottom-left"><i class="fa fa- fa-lg fa-fw"></i> Bottom Left</li>',
                                  '<li class="ruler-bottom-middle"><i class="fa fa- fa-lg fa-fw"></i> Bottom Middle</li>',
@@ -1136,6 +1259,15 @@
                                  '</ul>',
                                  '</a>',
                                  // end of ruler UI html
+ 
+                                 // lockController
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock-window" title="lock"><i class="fa fa-lock fa-lg fa-fw"></i>',
+                                 '<ul class="dropdown lock-options-list">',
+                                 '<li class="no-lock remove-from-lock-group"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
+                                 '{{#list2 lockGroups}}{{/list2}}',
+                                 '</ul>',
+                                 '</a>',
+                                 // end lockController
 
                                  '<h3 class="window-manifest-title" title="{{title}}" aria-label="{{title}}">{{title}}</h3>',
                                  '</div>',

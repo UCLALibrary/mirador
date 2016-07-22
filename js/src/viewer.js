@@ -21,7 +21,8 @@
         'manifestsPanelVisible': false,
         'optionsPanelVisible': false,
         'bookmarkPanelVisible': false,
-        'workspaceUploadPanelVisible': false
+        'workspaceUploadPanelVisible': false,
+        'lockGroupsPanelVisible': false
       },
       manifests:             []
     }, options);
@@ -112,10 +113,21 @@
                                $.layoutDescriptionFromGridString('1x' + this.layout),
         appendTo: this.element.find('.mirador-viewer'),
         state: this.state,
+        lockController: new $.LockController({
+          state: this.state,
+          eventEmitter: this.eventEmitter
+        }),
         eventEmitter: this.eventEmitter
       });
 
       this.workspacePanel = new $.WorkspacePanel({
+        appendTo: this.element.find('.mirador-viewer'),
+        state: this.state,
+        eventEmitter: this.eventEmitter
+      });
+
+      // for managing lock groups
+      this.lockGroupsPanel = new $.LockGroupsPanel({
         appendTo: this.element.find('.mirador-viewer'),
         state: this.state,
         eventEmitter: this.eventEmitter
@@ -170,6 +182,10 @@
 
       _this.eventEmitter.subscribe('TOGGLE_WORKSPACE_UPLOAD_PANEL', function(event) {
         _this.toggleWorkspaceUploadPanel();
+      });
+
+      _this.eventEmitter.subscribe('TOGGLE_LOCK_GROUPS_PANEL', function(event) {
+        _this.toggleLockGroupsPanel();
       });
 
       _this.eventEmitter.subscribe('TOGGLE_FULLSCREEN', function(event) {
@@ -243,6 +259,9 @@
       });
       var currentState = this.get(state, 'overlayStates');
       this.set(state, !currentState, {parent: 'overlayStates'});
+
+      // let mainMenu know that it can set classes now
+      _this.eventEmitter.publish('OVERLAY_STATES_STEADY', this.overlayStates);
     },
 
     toggleLoadWindow: function() {
@@ -259,6 +278,13 @@
 
     toggleWorkspaceUploadPanel: function() {
       this.toggleOverlay('workspaceUploadPanelVisible');
+    },
+
+    toggleLockGroupsPanel: function() {
+      this.toggleOverlay('lockGroupsPanelVisible');
+      // TODO: no need to do this everytime, very hacky since accordion menu is squished when
+      // it is updated when hidden
+      jQuery('#lock-groups').accordion('refresh');
     },
 
     getManifestsData: function() {
