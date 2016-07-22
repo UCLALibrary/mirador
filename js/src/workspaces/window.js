@@ -55,7 +55,14 @@
       }
     }, options);
 
-     Handlebars.registerHelper('list2', function(items) {
+
+    /*
+     * Creates a string of HTML list items to add to each window menu for the lock groups.
+     *
+     * @param {Array} items An array of names of lock groups
+     */
+    // TODO: is this needed?
+    Handlebars.registerHelper('list2', function(items) {
       var out = ''; 
       for(var i=0, l=items.length; i<l; i++) {
         out = out + "<li class='lock-options-list-item add-to-lock-group'>" + items[i] + "</li>";
@@ -65,7 +72,6 @@
 
     this.init();
     this.bindAnnotationEvents();
-
   };
 
   $.Window.prototype = {
@@ -97,12 +103,19 @@
       }
 
       this.annoEndpointAvailable = !jQuery.isEmptyObject(_this.state.getStateProperty('annotationEndpoint'));
-      if (!this.annotationLayer) {
-        this.annotationCreation = false;
+      if (!this.canvasControls.annotations.annotationLayer) {
+        this.canvasControls.annotations.annotationCreation = false;
         this.annoEndpointAvailable = false;
-        this.annotationState = 'annoOff';
+        this.canvasControls.annotations.annotationState = 'annoOff';
       }
       _this.getAnnotations();
+
+      // if manipulationLayer is true,  but all individual options are set to false, set manipulationLayer to false
+      if (this.canvasControls.imageManipulation.manipulationLayer) {
+        this.canvasControls.imageManipulation.manipulationLayer = !Object.keys(this.canvasControls.imageManipulation.controls).every(function(element, index, array) {
+          return _this.canvasControls.imageManipulation.controls[element] === false;
+        });
+      }
 
       //for use by SidePanel, which needs to know if the current view can have the annotations tab
       _this.eventEmitter.publish(('windowUpdated'), {
@@ -235,6 +248,12 @@
         this.bottomPanelVisibility(this.bottomPanelVisible);
       }
       this.sidePanelVisibility(this.sidePanelVisible, '0s');
+
+      // restore lock group stuff for this window, if we are restoring it
+      // sends message to lockController
+      if (_this.focusModules[_this.currentImageMode] !== null) {
+        _this.eventEmitter.publish('restoreWindowToLockController', _this.focusModules[_this.currentImageMode]);
+      }
     },
 
     update: function(options) {
@@ -308,7 +327,7 @@
       });
 
       _this.eventEmitter.subscribe('UPDATE_FOCUS_IMAGES.' + this.id, function(event, images) {
-        _this.updateFocusImages(images.array); 
+        _this.updateFocusImages(images.array);
       });
 
       _this.eventEmitter.subscribe('HIDE_ICON_TOC.' + this.id, function(event) {
@@ -331,17 +350,42 @@
         var visible = !_this.bottomPanelVisible;
         _this.bottomPanelVisibility(visible);
       });
-      
+
       _this.eventEmitter.subscribe('DISABLE_WINDOW_FULLSCREEN', function(event) {
         _this.element.find('.mirador-osd-fullscreen').hide();
       });
 
       _this.eventEmitter.subscribe('ENABLE_WINDOW_FULLSCREEN', function(event) {
-        _this.element.find('.mirador-osd-fullscreen').show();        
+        _this.element.find('.mirador-osd-fullscreen').show();
       });
 
+      /*
+       * Calls the D3 rendering method to dynamically add li's.
+       */
+      // TODO: delete parameter from Handlebars template (not needed)
       _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, data) {
         _this.renderLockGroupMenu(data.keys);
+      });
+
+      /*
+       * Activates the li with innerHTML that matches the given lockGroup, inside of the window whose
+       * viewobject has the given windowId
+       *
+       * @param {Object} data Contains:
+       *     windowId {string}
+       *     groupId {string}
+       */
+      _this.eventEmitter.subscribe('activateLockGroupMenuItem', function(event, data) {
+        // check if this window has the window id
+        // if so, set the li with the innerHTML that has groupID to data.groupId
+        if (data.windowId === _this.focusModules[_this.currentImageMode].windowId) { 
+          _this.element.find('.add-to-lock-group').each(function(i, e) {
+            if (e.innerHTML === data.groupId) {
+              jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
+              jQuery(this).addClass('current-lg');
+            }
+          });
+        }
       });
     },
 
@@ -369,10 +413,10 @@
       });
 
       jQuery(document).on("webkitfullscreenchange mozfullscreenchange fullscreenchange", function() {
-        _this.fullScreen();
+        _this.toggleFullScreen();
       });
 
-      // lockGroup stuff
+      // show/hide lock group menu (window-level)
       this.element.find('.mirador-icon-lock-window').off('mouseenter').on('mouseenter',
         function() {
         _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
@@ -381,20 +425,45 @@
         _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
       });
 
+      /*
       this.element.find('.lock-options-list-item').on('click', function() {
         console.log('click lock list item');
       });
+      */
+      // TODO: remove the above
 
+      // onclick event to add the window to the selected lock group
       this.element.find('.add-to-lock-group').on('click', function(event) {
-         _this.eventEmitter.publish('addToLockGroup', {viewObj: _this.focusModules[_this.currentImageMode], lockGroup: jQuery(this).text()});
-         jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
-         jQuery(this).addClass('current-lg');
+        _this.addToLockGroup(this);
       });
 
+      // onclick event to remove the window from its lock group
       this.element.find('.remove-from-lock-group').on('click', function(event) {
-         _this.eventEmitter.publish('removeFromLockGroup', {viewObj: _this.focusModules[_this.currentImageMode]});
-         jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
+        _this.removeFromLockGroup(this);
       });
+    },
+
+    addToLockGroup: function(elt, replacing) {
+      var lg;
+      if (replacing === true) {
+        lg = jQuery(elt).parent().children('.add-to-lock-group.current-lg').text();
+
+        // if no lg, do nothing
+        if (lg === '') {
+          return;
+        }
+      }
+      else {
+        lg = jQuery(elt).text();
+      }
+      this.eventEmitter.publish('addToLockGroup', {viewObj: this.focusModules[this.currentImageMode], lockGroup: lg});
+      jQuery(elt).parent().children('.add-to-lock-group').removeClass('current-lg');
+      jQuery(elt).addClass('current-lg');
+    },
+
+    removeFromLockGroup: function(elt) {
+      this.eventEmitter.publish('removeFromLockGroup', {viewObj: this.focusModules[this.currentImageMode]});
+      jQuery(elt).parent().children('.add-to-lock-group').removeClass('current-lg');
     },
 
     bindAnnotationEvents: function() {
@@ -548,7 +617,7 @@
         this.sidePanel.update('annotations', annotationsTabAvailable);
       }
     },
- 
+
     get: function(prop, parent) {
       if (parent) {
         return this[parent][prop];
@@ -702,10 +771,9 @@
           imagesList: this.imagesList,
           osdOptions: this.windowOptions,
           bottomPanelAvailable: this.bottomPanelAvailable,
-          annotationLayerAvailable: this.annotationLayer,
-          annotationCreationAvailable: this.annotationCreation,
           annoEndpointAvailable: this.annoEndpointAvailable,
-          annotationState : this.annotationState
+          canvasControls: this.canvasControls,
+          annotationState : this.canvasControls.annotations.annotationState
         });
       } else {
         var view = this.focusModules.ImageView;
@@ -889,7 +957,7 @@
     updateManifestInfo: function() {
       var _this = this;
       _this.element.find('.mirador-icon-view-type > i:first').removeClass().addClass(_this.iconClasses[_this.viewType]);
-      
+
       if (this.focusOverlaysAvailable[this.viewType].overlay.MetadataView) {
         this.element.find('.mirador-icon-metadata-view').addClass('selected');
       }
@@ -952,7 +1020,7 @@
       }
     },
 
-    fullScreen: function() {
+    toggleFullScreen: function() {
       var _this = this;
       if (!OpenSeadragon.isFullScreen()) {
         this.element.find('.mirador-osd-fullscreen i').removeClass('fa-compress').addClass('fa-expand');
@@ -1093,20 +1161,13 @@
       this.element.find('.ruler-bottom-right').on('click', function() {
         _this.setRulerPosition('br');
       });
-
-      /*
-      this.element.find('.mirador-icon-lock').on('click', function() {
-        // toggle the lock status
-        // TODO: create function toggleLock that takes an id, and checks if that slot has a locked class
-        //     if so, publish the unlock event
-        //     else, publish lock event
-        _this.eventEmitter.publish('TOGGLE_LOCK', _this.focusModules[_this.currentImageMode]);
-      });
-      */
-
     },
 
-    // data is a list of lock group names
+    /*
+     * Use D3 to dynamically render the window-level lock group menu.
+     *
+     * @param {Array} lockGroupNames An array of strings that represent the lock group names
+     */
     renderLockGroupMenu: function(lockGroupNames) {
       // each menu in the window should get a dropdown with items in the 'data' array
       var _this = this,

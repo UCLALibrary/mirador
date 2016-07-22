@@ -69,12 +69,19 @@
 
       _this.eventEmitter.subscribe('ADD_ITEM_FROM_WINDOW', function(event, id) {
         if (_this.window && _this.window.id === id) {
+          // remove from lock group
+          _this.window.removeFromLockGroup(_this.window.element.find('.remove-from-lock-group'));
           _this.addItem();
+          // make sure to add new item to the slots lock group
+          // TODO: make lock groups operate on slots instead of windows
+          //_this.window.addToLockGroup(_this.window.element.find('.remove-from-lock-group'), true);
         }
       });
 
       _this.eventEmitter.subscribe('REMOVE_SLOT_FROM_WINDOW', function(event, id) {
         if (_this.window && _this.window.id === id) {
+          // remove from lock group
+          _this.window.removeFromLockGroup(_this.window.element.find('.remove-from-lock-group'));
           _this.eventEmitter.publish('REMOVE_NODE', _this);
         }
       });
@@ -148,7 +155,8 @@
         var _this = this;
 
         url = url || text_url;
-        var manifestUrl = $.getQueryParams(url).manifest,
+        var manifestUrl = $.getQueryParams(url).manifest || url,
+            collectionUrl = $.getQueryParams(url).collection,
             canvasId = $.getQueryParams(url).canvas,
             imageInfoUrl = $.getQueryParams(url).image,
             windowConfig;
@@ -171,11 +179,31 @@
 
           _this.eventEmitter.publish('ADD_WINDOW', windowConfig);
 
-        } else if (typeof imageInfoUrl !== 'undefined') {
+        } 
+        
+        else if (typeof imageInfoUrl !== 'undefined') {
           if (!_this.state.getStateProperty('manifests')[imageInfoUrl]) {
             _this.eventEmitter.publish('ADD_MANIFEST_FROM_URL', imageInfoUrl, "(Added from URL)");
           }
-        } else {
+        } 
+        else if (typeof collectionUrl !== 'undefined'){
+          jQuery.getJSON(collectionUrl).done(function (data, status, jqXHR) {
+            if (data.hasOwnProperty('manifests')){
+              jQuery.each(data.manifests, function (ci, mfst) {
+                if (!_this.state.getStateProperty('manifests')[imageInfoUrl]) {
+                  _this.eventEmitter.publish('ADD_MANIFEST_FROM_URL', mfst['@id'], "(Added from URL)");
+                }
+              });
+            }
+          });
+
+          //TODO: 
+          //this works;
+          //but you might want to check if some "publish" action would be better
+          _this.addItem();
+          
+        }
+        else {
           if (!_this.state.getStateProperty('manifests')[imageInfoUrl]) {
             _this.eventEmitter.publish('ADD_MANIFEST_FROM_URL', manifestUrl, "(Added from URL)");
           }

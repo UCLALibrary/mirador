@@ -19,7 +19,6 @@
       osdCls: 'mirador-osd',
       elemAnno:         null,
       annoCls:          'annotation-canvas',
-      annotationLayerAvailable: null,
       annotationsLayer: null,
       forceShowControls: false,
       eventEmitter:     null
@@ -53,12 +52,15 @@
       this.createOpenSeadragonInstance($.Iiif.getImageUrl(this.currentImg));
       _this.eventEmitter.publish('UPDATE_FOCUS_IMAGES.' + this.windowId, {array: [this.canvasID]});
 
-      var allTools = $.getTools();
-      this.availableTools = [];
+      var allTools = $.getTools(this.state.getStateProperty('drawingToolsSettings'));
+      this.availableAnnotationTools = [];
       for ( var i = 0; i < this.state.getStateProperty('availableAnnotationDrawingTools').length; i++) {
         for ( var j = 0; j < allTools.length; j++) {
           if (this.state.getStateProperty('availableAnnotationDrawingTools')[i] == allTools[j].name) {
-            this.availableTools.push(allTools[j].logoClass);
+            var values = {};
+            values.logoClass = allTools[j].logoClass;
+            values.tooltip = allTools[j].tooltip;
+            this.availableAnnotationTools.push(values);
           }
         }
       }
@@ -68,11 +70,10 @@
         appendTo: this.element,
         bottomPanelAvailable: this.bottomPanelAvailable,
         windowId: this.windowId,
-        annotationLayerAvailable: this.annotationLayerAvailable,
-        annotationCreationAvailable: this.annotationCreationAvailable,
+        canvasControls: this.canvasControls,
         annoEndpointAvailable: this.annoEndpointAvailable,
         showNextPrev : this.imagesList.length !== 1,
-        availableTools: this.availableTools,
+        availableAnnotationTools: this.availableAnnotationTools,
         eventEmitter: this.eventEmitter
       });
 
@@ -98,7 +99,7 @@
 
       _this.eventEmitter.subscribe('bottomPanelSet.' + _this.windowId, function(event, visible) {
         // TODO: mirror this in bookview
-        var dodgers = _this.element.find('.mirador-osd-toggle-bottom-panel, .mirador-pan-zoom-controls, .mirador-img-manipulation, .mirador-pan-zoom-toggle'); // added last two classes to support image manipulation
+        var dodgers = _this.element.find('.mirador-osd-toggle-bottom-panel, .mirador-pan-zoom-controls');
         var arrows = _this.element.find('.mirador-osd-next, .mirador-osd-previous');
         if (visible === true) {
           dodgers.css({transform: 'translateY(-130px)'});
@@ -188,16 +189,29 @@
         _this.previous();
       });
 
-      this.element.find('.mirador-osd-annotations-layer').on('click', $.debounce(function() {
+      this.element.find('.mirador-osd-annotations-layer').on('click', function() {
         if (_this.hud.annoState.current === 'none') {
           _this.hud.annoState.startup(this);
         }
         if (_this.hud.annoState.current === 'annoOff') {
           _this.hud.annoState.displayOn(this);
         } else {
+          //make sure to force the controls back to auto fade
+          _this.forceShowControls = false;
           _this.hud.annoState.displayOff(this);
         }
-      },300));
+      });
+
+      this.element.find('.mirador-manipulation-toggle').on('click', function() {
+        if (_this.hud.manipulationState.current === 'none') {
+          _this.hud.manipulationState.startup(this);
+        }
+        if (_this.hud.manipulationState.current === 'manipulationOff') {
+          _this.hud.manipulationState.displayOn(this);
+        } else {
+          _this.hud.manipulationState.displayOff(this);
+        }
+      });
 
       this.element.find('.mirador-osd-go-home').on('click', function() {
         _this.osd.viewport.goHome();
@@ -243,32 +257,11 @@
         }
       });
 
-      this.element.find('.mirador-osd-positive-rotate').on('click', function() {
-        var rot = 90;
-        _this.imageRotate(rot);
-
-        if (_this.leading) {
-          _this.eventEmitter.publish('synchronizeImgRotation', {viewObj: _this, value: rot});
-        }
-      });
-      this.element.find('.mirador-osd-negative-rotate').on('click', function() {
-        var rot = -90;
-        _this.imageRotate(rot);
-
-        if (_this.leading) {
-          _this.eventEmitter.publish('synchronizeImgRotation', {viewObj: _this, value: rot});
-        }
-      });
-
       this.element.find('.mirador-osd-toggle-bottom-panel').on('click', function() {
         _this.eventEmitter.publish('TOGGLE_BOTTOM_PANEL_VISIBILITY.' + _this.windowId);
       });
 
-      //related the ContextControls
-      this.element.find('.mirador-osd-close').on('click', $.debounce(function() {
-        _this.hud.annoState.displayOff();
-      },300));
-
+      //Annotation specific controls
       this.element.find('.mirador-osd-edit-mode').on('click', function() {
         if (_this.hud.annoState.current === 'annoOnCreateOff') {
           _this.hud.annoState.createOn();
@@ -293,9 +286,6 @@
       this.element.find('.mirador-osd-save-mode').on('click', function() {
         _this.eventEmitter.publish('updateEditedShape.'+_this.windowId, '');
       });
-      this.element.find('.mirador-osd-close').on('click', function() {
-        _this.eventEmitter.publish('toggleDefaultDrawingTool.'+_this.windowId);
-      });
       this.element.find('.mirador-osd-edit-mode').on('click', function() {
         _this.eventEmitter.publish('toggleDefaultDrawingTool.'+_this.windowId);
       });
@@ -305,104 +295,130 @@
           _this.eventEmitter.publish('toggleDrawingTool.'+_this.windowId, shapeMode);
         };
       }
-      for (var value in _this.availableTools) {
-        this.element.find('.material-icons:contains(\'' + _this.availableTools[value] + '\')').on('click', make_handler(_this.availableTools[value]));
-      }
+      jQuery.each(_this.availableAnnotationTools, function(index, value) {
+        var shape = value.logoClass;
+        _this.element.find('.material-icons:contains(\'' + shape + '\')').on('click', make_handler(shape));
+      });
+      //Annotation specific controls
+
+      //Image manipulation controls
+
       //related the ContextControls
 
       _this.bindImageManipulationEvents();
     },
 
+    //set the original values for all of the CSS filter options
+    filterValues: {
+      "brightness" : "brightness(100%)",
+      "contrast" : "contrast(100%)",
+      "saturate" : "saturate(100%)",
+      "grayscale" : "grayscale(0%)",
+      "invert" : "invert(0%)"
+    },
+
+    setFilterCSS: function() {
+      var filterCSS = jQuery.map(this.filterValues, function(value, key) { return value; }).join(" "),
+      osdCanvas = jQuery(this.osd.canvas);
+      osdCanvas.css({
+        'filter'         : filterCSS,
+        '-webkit-filter' : filterCSS,
+        '-moz-filter'    : filterCSS,
+        '-o-filter'      : filterCSS,
+        '-ms-filter'     : filterCSS
+      });
+    },
+
+    /*
+     * Rotates the current osd canvas.
+     *
+     * @param {int} degrees Magnitude and direction (+/-) of rotation
+     */
     imageRotate: function(degrees) {
       var osd = this.osd;
-      if ( osd.viewport ) {
-        var currentRotation = parseInt(osd.viewport.getRotation());
-        osd.viewport.setRotation(
-          currentRotation + degrees
-        );
-        osd.viewport.applyConstraints();
+      if (osd) {
+        var currentRotation = osd.viewport.getRotation();
+        osd.viewport.setRotation(currentRotation + degrees);
       }
     },
 
-    imageManipGrayscale: function() {
-      var osd = this.osd;
-      if ( osd.viewport ) {
-        if(osd.viewport.viewer.canvas.className.indexOf('grayscaleEffect') >= 0){
-          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('grayscaleEffect', '');
-        }
-        else{
-          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className + " grayscaleEffect";
-        }
-        osd.viewport.applyConstraints();
-      }
-      else{
-        if(osd.canvas.className.indexOf('grayscaleEffect') >= 0){
-          osd.canvas.className = osd.canvas.className.replace('grayscaleEffect', '');
-        }
-        else{
-          osd.canvas.className = osd.canvas.className + " grayscaleEffect";
-        }
-        osd.applyConstraints();
-      }
-    },
-
-    imageManipInvert: function() {
-
-      var osd = this.osd;
-      if ( osd.viewport ) {
-        if(osd.viewport.viewer.canvas.className.indexOf('invertEffect') >= 0){
-          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('invertEffect', '');
-        }
-        else{
-          osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className + " invertEffect";
-        }
-        osd.viewport.applyConstraints();
-      }
-      else{
-        if(osd.canvas.className.indexOf('invertEffect') >= 0){
-          osd.canvas.className = osd.canvas.className.replace('invertEffect', '');
-        }
-        else{
-          osd.canvas.className = osd.canvas.className + " invertEffect";
-        }
-        osd.applyConstraints();
-      }
-    },
-
-    imageManipBrightness: function(val) {
-      this.element.find(".brightnessSlider").slider('option', 'value', val);
-    },
-
-    imageManipContrast: function(val) {
-      this.element.find(".contrastSlider").slider('option', 'value', val);
-    },
-
-    imageManipReset: function() {
-
-      var osd = this.osd;
-      if ( osd.viewport ) {
-        osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('invertEffect', '');
-        osd.viewport.viewer.canvas.className = osd.viewport.viewer.canvas.className.replace('grayscaleEffect', '');
-        osd.viewport.viewer.canvas.parentNode.style.webkitFilter = "";
-        osd.viewport.viewer.canvas.parentNode.style.mozFilter = "";
-        osd.viewport.viewer.canvas.parentNode.style.filter = "";
-        osd.viewport.setRotation(0);
-        //osd.viewport.zoomTo(1);
-        jQuery(".brightnessSlider").slider("option","value",100); //reset sliders.
-        jQuery(".contrastSlider").slider("option","value",100); //reset sliders.
-        osd.viewport.applyConstraints();
+    /*
+     * Toggles grayscale of current osd canvas.
+     */
+    imageManipGrayscale: function(elt) {
+      if (jQuery(elt).hasClass('selected')) {
+        this.filterValues.grayscale = "grayscale(0%)";
+        jQuery(elt).removeClass('selected');
       } else {
-        osd.canvas.className = osd.viewport.viewer.canvas.className.replace('invertEffect', '');
-        osd.canvas.className = osd.viewport.viewer.canvas.className.replace('grayscaleEffect', '');
-        osd.canvas.parentNode.style.webkitFilter = "";
-        osd.canvas.parentNode.style.mozFilter = "";
-        osd.canvas.parentNode.style.filter = "";
-        //osd.viewport.setRotation(0);
-        // osd.viewport.zoomTo(0);
-        jQuery(".brightnessSlider").slider("option","value",100); //reset sliders.
-        jQuery(".contrastSlider").slider("option","value",100); //reset sliders.
-        osd.applyConstraints();
+        this.filterValues.grayscale = "grayscale(100%)";
+        jQuery(elt).addClass('selected');
       }
+      this.setFilterCSS();
+    },
+
+    /*
+     * Toggles pixel value inversion of current osd canvas.
+     */
+    imageManipInvert: function(elt) {
+      if (jQuery(elt).hasClass('selected')) {
+        this.filterValues.invert = "invert(0%)";
+        jQuery(elt).removeClass('selected');
+      } else {
+        this.filterValues.invert = "invert(100%)";
+        jQuery(elt).addClass('selected');
+      }
+      this.setFilterCSS();
+    },
+
+    /*
+     * Sets brightness value of current osd canvas.
+     */
+    imageManipBrightness: function(val) {
+      // TODO: doesnt work if hidden
+    },
+
+    /*
+     * Sets contrast value of current osd canvas.
+     */
+    imageManipContrast: function(val) {
+      // TODO: doesnt work if hidden
+    },
+
+    /*
+     * Resets grayscale, invert, brightness, and contrast settings.
+     */
+    imageManipReset: function() {
+      var osd = this.osd;
+
+      //reset rotation
+      if (osd) {
+        osd.viewport.setRotation(0);
+      }
+
+      //reset brightness
+      this.filterValues.brightness = "brightness(100%)";
+      this.element.find('.mirador-osd-brightness-slider').slider('option','value',100);
+      this.element.find('.mirador-osd-brightness-slider').find('.percent').text(100 + '%');
+
+      //reset contrast
+      this.filterValues.contrast = "contrast(100%)";
+      this.element.find('.mirador-osd-contrast-slider').slider('option','value',100);
+      this.element.find('.mirador-osd-contrast-slider').find('.percent').text(100 + '%');
+
+      //reset saturation
+      this.filterValues.saturate = "saturate(100%)";
+      this.element.find('.mirador-osd-saturation-slider').slider('option','value',100);
+      this.element.find('.mirador-osd-saturation-slider').find('.percent').text(100 + '%');
+
+      //reset grayscale
+      this.filterValues.grayscale = "grayscale(0%)";
+      this.element.find('.mirador-osd-grayscale').removeClass('selected');
+
+      //reset color inversion
+      this.filterValues.invert = "invert(0%)";
+      this.element.find('.mirador-osd-invert').removeClass('selected');
+
+      this.setFilterCSS();
     },
 
     /**
@@ -412,357 +428,130 @@
     bindImageManipulationEvents: function() {
       var _this = this;
 
-      this.element.find('.mirador-osd-toggle-grayscale').on('click', function() {
-        _this.imageManipGrayscale();
+      this.element.find('.mirador-osd-rotate-right').on('click', function() {
+        var rot = 90;
+        _this.imageRotate(rot);
 
-        // TODO: sub to this
         if (_this.leading) {
-          _this.eventEmitter.publish('synchronizeImgGrayscale', _this);
+          // received by lockController
+          _this.eventEmitter.publish('synchronizeImgRotation', {viewObj: _this, value: rot});
+        }
+
+      });
+
+      this.element.find('.mirador-osd-rotate-left').on('click', function() {
+        var rot = -90;
+        _this.imageRotate(rot);
+
+        if (_this.leading) {
+          // received by lockController
+          _this.eventEmitter.publish('synchronizeImgRotation', {viewObj: _this, value: rot});
         }
       });
 
-      this.element.find('.mirador-osd-toggle-invert').on('click', function() {
-        _this.imageManipInvert();
+      this.element.find('.mirador-osd-brightness-slider').slider({
+        orientation: "vertical",
+        range: "min",
+        min: 0,
+        max: 200,
+        value: 100,
+        create: function(event, ui) {
+          var v = jQuery(this).slider('value'),
+              span = jQuery('<span class="percent">').text(v + '%');
 
-        // TODO: sub to this
+          jQuery(this).find('.ui-slider-handle').append(span);
+        },
+        slide: function(event, ui) {
+          _this.filterValues.brightness = "brightness("+ui.value+"%)";
+          _this.setFilterCSS();
+          jQuery(this).find('.percent').text(ui.value + '%');
+        }
+      }).hide();
+
+      this.element.find('.mirador-osd-brightness').on('mouseenter',
+        function() {
+          _this.element.find('.mirador-osd-brightness-slider').stop(true, true).show();
+        }).on('mouseleave',
+        function() {
+          _this.element.find('.mirador-osd-brightness-slider').stop(true, true).hide();
+      });
+
+      this.element.find('.mirador-osd-contrast-slider').slider({
+        orientation: "vertical",
+        range: "min",
+        min: 0,
+        max: 200,
+        value: 100,
+        create: function(event, ui) {
+          var v = jQuery(this).slider('value'),
+              span = jQuery('<span class="percent">').text(v + '%');
+
+          jQuery(this).find('.ui-slider-handle').append(span);
+        },
+        slide: function(event, ui) {
+          _this.filterValues.contrast = "contrast("+ui.value+"%)";
+          _this.setFilterCSS();
+          jQuery(this).find('.percent').text(ui.value + '%');
+        }
+      }).hide();
+
+      this.element.find('.mirador-osd-contrast').on('mouseenter',
+        function() {
+          _this.element.find('.mirador-osd-contrast-slider').stop(true, true).show();
+        }).on('mouseleave',
+        function() {
+          _this.element.find('.mirador-osd-contrast-slider').stop(true, true).hide();
+      });
+
+      this.element.find('.mirador-osd-saturation-slider').slider({
+        orientation: "vertical",
+        range: "min",
+        min: 0,
+        max: 200,
+        value: 100,
+        create: function(event, ui) {
+          var v = jQuery(this).slider('value'),
+              span = jQuery('<span class="percent">').text(v + '%');
+
+          jQuery(this).find('.ui-slider-handle').append(span);
+        },
+        slide: function(event, ui) {
+          _this.filterValues.saturate = "saturate("+ui.value+"%)";
+          _this.setFilterCSS();
+          jQuery(this).find('.percent').text(ui.value + '%');
+        }
+      }).hide();
+
+      this.element.find('.mirador-osd-saturation').on('mouseenter',
+        function() {
+          _this.element.find('.mirador-osd-saturation-slider').stop(true, true).show();
+        }).on('mouseleave',
+        function() {
+          _this.element.find('.mirador-osd-saturation-slider').stop(true, true).hide();
+      });
+
+      this.element.find('.mirador-osd-grayscale').on('click', function() {
+        _this.imageManipGrayscale(this);
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeImgGrayscale', _this);
+        }
+
+      });
+
+      this.element.find('.mirador-osd-invert').on('click', function() {
+        _this.imageManipInvert(this);
+
         if (_this.leading) {
           _this.eventEmitter.publish('synchronizeImgInvert', _this);
         }
       });
 
-      this.element.find('.mirador-osd-filters-off').on('click', function(event) {
+      this.element.find('.mirador-osd-reset').on('click', function() {
         _this.imageManipReset();
 
-        // TODO: sub to this
         if (_this.leading) {
           _this.eventEmitter.publish('synchronizeImgReset', _this);
-        }
-      });
-
-      this.element.find('.mirador-pan-zoom-toggle').on('click', function(event){
-        event = event || window.event;
-        if(event.target.className.indexOf("opened") > -1 ){
-          event.target.className = "viewImgManip closed";
-          event.target.parentNode.style.right = "0px";
-          event.target.parentNode.nextSibling.style.right = "-350px";
-          event.target.parentNode.previousSibling.style.right = "0px";
-          event.target.parentNode.setAttribute("title", "View Image Manipulation Tools");
-        }
-        else if (event.target.className.indexOf("closed") > -1){
-          event.target.className = "viewImgManip opened";
-          event.target.parentNode.nextSibling.style.right = "0px";
-          event.target.parentNode.previousSibling.style.right = "194px";
-          event.target.parentNode.style.right = "206px";
-          event.target.parentNode.setAttribute("title", "Hide Image Manipulation Tools");
-        }
-        else{
-          //You hit an odd target.
-        }
-      });
-
-      // TODO: sub to this
-      this.element.find(".brightnessSlider").slider({
-          orientation: "horizontal",
-          range: "min",
-          min: 0,
-          max: 200,
-          value:100,
-          slide: function( event, ui ) {
-            var osd = _this.osd;
-            var newFilter = "";
-            var moz = false;
-              //Need to be able to tell which vendor preifxes I need.  Order is always brightness then contrast, so I can put brightness in right away here.
-              if( navigator.userAgent.indexOf("Chrome") != -1 ) {
-                newFilter = "-webkit-filter: brightness("+ui.value+"%)";
-              }
-              else if( navigator.userAgent.indexOf("Opera") != -1 ) {
-                newFilter = "-o-filter: brightness("+ui.value+"%)";
-              }
-              else if( navigator.userAgent.indexOf("MSIE") != -1 ) {
-                newFilter="filter: brightness("+ui.value+"%)";
-              }
-              else if( navigator.userAgent.indexOf("Firefox") != -1 ) {
-                //The latst version of firefox does not use the -moz- prefix
-                newFilter = "filter: brightness("+ui.value+"%)";
-                moz = true;
-              }
-              else {
-                //Not a browser we accounted for so filter will not work
-              }
-              var currentContrast = "100%";
-              var currentStyle = "";
-              if ( osd.viewport ) {
-                currentStyle  = osd.viewport.viewer.canvas.parentNode.getAttribute("style");
-              }
-              else{
-                currentStyle  = osd.canvas.parentNode.getAttribute("style");
-              }
-
-              var alteredStyle = "";
-              var pieceToRemove = "";
-              var filterString = "";
-              var contrastPiece = "";
-              //Account for the different ways filter can be represented and alter it accordingly
-              if(currentStyle.indexOf("-webkit-filter") >= 0){
-                //get current contrast to preserve its value as it will not change.
-                if ( osd.viewport ) {
-                  filterString = osd.viewport.viewer.canvas.parentNode.style.webkitFilter;
-                }
-                else{
-                  filterString = osd.canvas.parentNode.style.webkitFilter;
-                }
-
-
-                //Break the contrast piece off so that we can play with the brightness piece
-                contrastPiece = filterString.substring(filterString.lastIndexOf(" "), filterString.lastIndexOf(")") + 1);
-                filterString.replace(contrastPiece, "");
-
-                //Get the current contrast
-                currentContrast = contrastPiece.substring(contrastPiece.indexOf("(")+1, contrastPiece.lastIndexOf(")"));
-
-                //Remove the existing filter in the style string.
-                pieceToRemove = currentStyle.substring(currentStyle.indexOf("-webkit-filter"), currentStyle.lastIndexOf(";") + 1);
-
-                //Add the second half of the filter
-                newFilter += " contrast("+currentContrast+");";
-
-                //Piece the style string back together
-                alteredStyle = currentStyle.replace(pieceToRemove, "") + newFilter;
-              }
-              else if(currentStyle.indexOf("-moz-filter") >= 0){
-                //The current version of firefox uses filter without the -moz- prefix
-
-              }
-               else if(currentStyle.indexOf("-o-filter") >= 0){
-                //get current contrast to preserve its value as it will not change.
-                if ( osd.viewport ) {
-                  filterString = osd.viewport.viewer.canvas.parentNode.style.webkitFilter;
-                }
-                else{
-                  filterString = osd.canvas.parentNode.style.webkitFilter;
-                }
-
-                //Break the contrast piece off so that we can play with the brightness piece
-                contrastPiece = filterString.substring(filterString.lastIndexOf(" "), filterString.lastIndexOf(")") + 1);
-                filterString.replace(contrastPiece, "");
-
-                //Get the current contrast
-                currentContrast = contrastPiece.substring(contrastPiece.indexOf("(")+1, contrastPiece.lastIndexOf(")"));
-
-                //Remove the existing filter in the style string.
-                pieceToRemove = currentStyle.substring(currentStyle.indexOf("-o-filter"), currentStyle.lastIndexOf(";") + 1);
-
-                //Add the second half of the filter
-                newFilter += " contrast("+currentContrast+");";
-
-                //Piece the style string back together
-                alteredStyle = currentStyle.replace(pieceToRemove, "") + newFilter;
-              }
-              else if(currentStyle.indexOf("filter") >= 0){
-                //get current contrast to preserve its value as it will not change.
-                if ( osd.viewport ) {
-                  if(moz){
-                    filterString = osd.viewport.viewer.canvas.parentNode.style.filter;
-                  }
-                  else{
-                    filterString = osd.viewport.viewer.canvas.parentNode.style.webkitFilter;
-                  }
-
-                }
-                else{
-                  if(moz){
-                    filterString = osd.canvas.parentNode.style.filter;
-                  }
-                  else{
-                    filterString = osd.canvas.parentNode.style.webkitFilter;
-                  }
-
-                }
-
-
-                //Break the contrast piece off so that we can play with the brightness piece
-                contrastPiece = filterString.substring(filterString.lastIndexOf(" "), filterString.lastIndexOf(")") + 1);
-                filterString.replace(contrastPiece, "");
-
-                //Get the current contrast
-                currentContrast = contrastPiece.substring(contrastPiece.indexOf("(")+1, contrastPiece.lastIndexOf(")"));
-
-                //Remove the existing filter in the style string.
-                pieceToRemove = currentStyle.substring(currentStyle.indexOf("filter"), currentStyle.lastIndexOf(";") + 1);
-
-                //Add the second half of the filter
-                newFilter += " contrast("+currentContrast+");";
-
-                //Piece the style string back together
-                alteredStyle = currentStyle.replace(pieceToRemove, "") + newFilter;
-              }
-              else{
-                //There was no filter found, so we have to contruct it for the first time.
-                newFilter += " contrast(100%);";
-                alteredStyle = currentStyle + " "+newFilter;
-              }
-              if ( osd.viewport ) {
-                  osd.viewport.viewer.canvas.parentNode.setAttribute("style",alteredStyle);
-              }
-              else{
-                osd.canvas.parentNode.setAttribute("style",alteredStyle);
-              }
-
-              // TODO: sub to this
-              if (_this.leading) {
-                _this.eventEmitter.publish('synchronizeImgBrightness', {viewObj: _this, value: ui.value});
-              }
-            }
-      });
-
-      // TODO: sub to this
-      this.element.find(".contrastSlider").slider({
-         orientation: "horizontal",
-          range: "min",
-          min: 0,
-          max: 200,
-          value:100,
-          slide: function( event, ui ) {
-            var osd = _this.osd;
-            var newFilter = "-webkit-filter: ";
-            var moz = false;
-            //First find any existing filter for brightness and remove it.
-
-              //Need to be able to tell which vendor preifxes I need if any.
-              if( navigator.userAgent.indexOf("Chrome") != -1 ) {
-                newFilter = "-webkit-filter: ";
-              }
-              else if( navigator.userAgent.indexOf("Opera") != -1 ) {
-                newFilter = "-o-filter: ";
-              }
-              else if( navigator.userAgent.indexOf("MSIE") != -1 ) {
-                newFilter="filter: ";
-              }
-              else if( navigator.userAgent.indexOf("Firefox") != -1 ) {
-                //newFilter = "-moz-filter: "  as of the latest version of firefox, it works without the prefix.
-                newFilter = "filter: ";
-                moz = true;
-              }
-              else {
-                //unsupported
-              }
-              var currentBrightness = "100%";
-              var currentStyle = "";
-              if ( osd.viewport ) {
-                  currentStyle = osd.viewport.viewer.canvas.parentNode.getAttribute("style");
-              }
-              else{
-                currentStyle = osd.canvas.parentNode.getAttribute("style");
-              }
-              var alteredStyle = "";
-              var pieceToRemove = "";
-              var filterString = "";
-              var brightnessPiece = "";
-              var contrastPiece = "";
-              //Account for the different ways filter can be represented and alter it accordingly
-              if(currentStyle.indexOf("-webkit-filter") >= 0){
-                //get current brightness to preserve its value as it will not change.
-                if ( osd.viewport ) {
-                  filterString = osd.viewport.viewer.canvas.parentNode.style.webkitFilter;
-                }
-                else{
-                  filterString = osd.canvas.parentNode.style.webkitFilter;
-                }
-
-
-                //break contrast piece from the string so we can play with brightness and contrast separately
-                contrastPiece = filterString.substring(filterString.lastIndexOf(" "), filterString.lastIndexOf(")") + 1);
-                brightnessPiece = filterString.replace(contrastPiece, "");
-
-                //Get the current brightness value
-                currentBrightness = brightnessPiece.substring(brightnessPiece.indexOf("(")+1, brightnessPiece.lastIndexOf(")"));
-
-                //Remove current filter string from the style attribute
-                pieceToRemove = currentStyle.substring(currentStyle.indexOf("-webkit-filter"), currentStyle.lastIndexOf(";") + 1);
-
-                //Put the pieces of the filter together
-                newFilter += "brightness("+currentBrightness+") contrast("+ui.value+"%);";
-                alteredStyle = currentStyle.replace(pieceToRemove, "") + newFilter;
-              }
-              else if(currentStyle.indexOf("-moz-filter") >= 0){
-                //The latest version of firefox works without the -moz- prefix
-
-              }
-              else if(currentStyle.indexOf("-o-filter") >= 0){
-                //get current contrast to preserve its value as it will not change.
-                if ( osd.viewport ) {
-                  filterString = osd.viewport.viewer.canvas.parentNode.style.webkitFilter;
-                }
-                else{
-                  filterString = osd.canvas.parentNode.style.webkitFilter;
-                }
-
-                //Break the contrast piece off so that we can play with the brightness piece
-                contrastPiece = filterString.substring(filterString.lastIndexOf(" "), filterString.lastIndexOf(")") + 1);
-                filterString.replace(contrastPiece, "");
-
-                //Get the current contrast
-                currentContrast = contrastPiece.substring(contrastPiece.indexOf("(")+1, contrastPiece.lastIndexOf(")"));
-
-                //Remove the existing filter in the style string.
-                pieceToRemove = currentStyle.substring(currentStyle.indexOf("-o-filter"), currentStyle.lastIndexOf(";") + 1);
-
-                //Add the second half of the filter
-                newFilter += " contrast("+currentContrast+");";
-
-                //Piece the style string back together
-                alteredStyle = currentStyle.replace(pieceToRemove, "") + newFilter;
-              }
-              else if(currentStyle.indexOf("filter") >= 0){
-                //get current brightness to preserve its value as it will not change.
-                if ( osd.viewport ) {
-                  if(moz){
-                    filterString = osd.viewport.viewer.canvas.parentNode.style.filter;
-                  }
-                  else{
-                    filterString = osd.viewport.viewer.canvas.parentNode.style.webkitFilter;
-                  }
-
-                }
-                else{
-                  if(moz){
-                    filterString = osd.canvas.parentNode.style.filter;
-                  }
-                  else{
-                    filterString = osd.canvas.parentNode.style.webkitFilter;
-                  }
-
-                }
-
-                //break contrast piece from the string so we can play with brightness and contrast separately
-                contrastPiece = filterString.substring(filterString.lastIndexOf(" "), filterString.lastIndexOf(")") + 1);
-                brightnessPiece = filterString.replace(contrastPiece, "");
-
-                //Get the current brightness value
-                currentBrightness = brightnessPiece.substring(brightnessPiece.indexOf("(")+1, brightnessPiece.lastIndexOf(")"));
-
-                //Remove current filter string from the style attribute
-                pieceToRemove = currentStyle.substring(currentStyle.indexOf("filter"), currentStyle.lastIndexOf(";") + 1);
-
-                //Put the pieces of the filter together
-                newFilter += "brightness("+currentBrightness+") contrast("+ui.value+"%);";
-                alteredStyle = currentStyle.replace(pieceToRemove, "") + newFilter;
-              }
-              else{
-                newFilter += "brightness(100%) contrast("+ui.value+"%);";
-                alteredStyle = currentStyle + " "+newFilter;
-              }
-              if ( osd.viewport ) {
-                  osd.viewport.viewer.canvas.parentNode.setAttribute("style",alteredStyle);
-              }
-              else{
-                osd.canvas.parentNode.setAttribute("style",alteredStyle);
-              }
-
-              // TODO: sub to this
-              if (_this.leading) {
-                _this.eventEmitter.publish('synchronizeImgContrast', {viewObj: _this, value: ui.value});
-              }
         }
       });
     },
@@ -814,7 +603,13 @@
     },
 
     show: function() {
-      jQuery(this.element).show({effect: "fade", duration: 300, easing: "easeInCubic"});
+      jQuery(this.element).show({
+        effect: "fade", duration: 300, easing: "easeInCubic", complete: function () {
+          // Under firefox $.show() used under display:none iframe does not change the display.
+          // This is workaround for https://github.com/IIIF/mirador/issues/929
+          jQuery(this).css('display', 'block');
+        }
+      });
     },
 
     adjustWidth: function(className, hasClass) {
@@ -914,6 +709,29 @@
             }
           });
         }
+
+//        if (_this.state.getStateProperty('autoHideControls')) {
+//          var timeoutID = null,
+//          fadeDuration = _this.state.getStateProperty('fadeDuration'),
+//          timeoutDuration = _this.state.getStateProperty('timeoutDuration');
+//          var hideHUD = function() {
+//            _this.element.find(".hud-control").stop(true, true).addClass('hidden', fadeDuration);
+//          };
+//          hideHUD();
+//          jQuery(_this.element).on('mousemove', function() {
+//            window.clearTimeout(timeoutID);
+//            _this.element.find(".hud-control").stop(true, true).removeClass('hidden', fadeDuration);
+//            // When a user is in annotation create mode, force show the controls so they don't disappear when in a qtip, so check for that
+//            if (!_this.forceShowControls) {
+//              timeoutID = window.setTimeout(hideHUD, timeoutDuration);
+//            }
+//          }).on('mouseleave', function() {
+//            if (!_this.forceShowControls) {
+//              window.clearTimeout(timeoutID);
+//              hideHUD();
+//            }
+//          });
+//        }
 
         _this.osd.addHandler('open', function(){
           _this.eventEmitter.publish('osdOpen.'+_this.windowId);

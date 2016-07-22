@@ -5,7 +5,7 @@
     jQuery.extend(true, this, {
       currentConfig: null,
       originalConfig: null, // Don't know if we really need this.
-      shareEndpoint: null, // the place where POST requests for new saved sessions will go 
+      shareEndpoint: null, // the place where POST requests for new saved sessions will go
       historySize: null, // wishful thinking for later.
       sessionID: null,
       slots: [],
@@ -31,16 +31,16 @@
 
     init: function(config) {
       var _this = this;
-      
+
       this.eventEmitter = config.eventEmitter;
-      
+
       // Don't want to save session
       if (config.saveSession === false) {
         this.currentConfig = config;
         this.bindEvents();
         return false;
       }
-      
+
       saveModule = config.jsonStorageEndpoint.module,
       saveOptions = config.jsonStorageEndpoint.options;
       _this.storageModule = new $[saveModule](saveOptions);
@@ -170,8 +170,8 @@
 
     bindEvents: function() {
       var _this = this;
-      // listen to existing events and use the 
-      // available data to update the appropriate 
+      // listen to existing events and use the
+      // available data to update the appropriate
       // field in the stored config.
 
       _this.eventEmitter.subscribe('windowUpdated', function(event, options) {
@@ -188,19 +188,19 @@
         _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
       });
 
-      _this.eventEmitter.subscribe("imageBoundsUpdated", function(event, options) {   
-        var windowObjects = _this.currentConfig.windowObjects;   
-        if (windowObjects && windowObjects.length > 0) {   
-          jQuery.each(windowObjects, function(index, window){    
-            if (window.id === options.id) {    
-              if (!windowObjects[index].windowOptions) {   
-                windowObjects[index].windowOptions = {};   
-              }    
-              windowObjects[index].windowOptions.osdBounds = options.osdBounds;    
-            }    
-          });    
-        }    
-        _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );   
+      _this.eventEmitter.subscribe("imageBoundsUpdated", function(event, options) {
+        var windowObjects = _this.currentConfig.windowObjects;
+        if (windowObjects && windowObjects.length > 0) {
+          jQuery.each(windowObjects, function(index, window){
+            if (window.id === options.id) {
+              if (!windowObjects[index].windowOptions) {
+                windowObjects[index].windowOptions = {};
+              }
+              windowObjects[index].windowOptions.osdBounds = options.osdBounds;
+            }
+          });
+        }
+        _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
       });
 
       _this.eventEmitter.subscribe('ANNOTATIONS_LIST_UPDATED', function(event, options) {
@@ -289,9 +289,56 @@
         _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
       });
 
+      /*
+       * Saves the lock groups state to the saveController when the lockController state changes.
+       *
+       * @param {Object} lockGroupState Object that represents the lock group state (structure
+       *     described in workspaces/lockController.js)
+       */
+      _this.eventEmitter.subscribe('lockGroupsStateChanged', function(event, lockGroupState) {
+
+        /*
+         * Strips out the views array from each value in the byGroups property value, so that
+         * we don't try to store a cyclical object. That array will be restored dynamically when 
+         * it is reloaded from localStorage.
+         *
+         * @param {string} k Current key
+         * @param {*} v The value of that key
+         * @return {*} The value that we want to correspond to k in the final serialized object.
+         */
+        function replacer(k, v) {
+          // determine if this is a byGroup obj
+          if (k === 'views' &&
+              this.hasOwnProperty('settings') &&
+                this.settings.hasOwnProperty('profile') &&
+                this.settings.hasOwnProperty('zoompan') &&
+                this.settings.hasOwnProperty('rotation') &&
+                this.settings.hasOwnProperty('brightness') &&
+                this.settings.hasOwnProperty('contrast') &&
+                this.settings.hasOwnProperty('invert') &&
+                this.settings.hasOwnProperty('grayscale') &&
+                this.settings.hasOwnProperty('reset') ) {
+            // set this to empty array
+            return [];
+          } else {
+            return v;
+          }
+        }
+        
+        var serializedLockGroupState = JSON.stringify(lockGroupState, replacer);
+        _this.set('lockGroupState', serializedLockGroupState, {parent: "currentConfig"});
+      });
+
+      _this.eventEmitter.subscribe('DELETE_FROM_CONFIG', function(event, options) {
+        var windowObjects = jQuery.grep(_this.currentConfig.windowObjects, function(window, index) {
+          return window.loadedManifest !== options.loadedManifest || window.id;
+        });
+        _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
+      });
+
       _this.eventEmitter.subscribe('etc...', function(junk) {
-        // handle adding the property in the appropriate place 
-        // in this.currentConfig by passing to the _this.set(), 
+        // handle adding the property in the appropriate place
+        // in this.currentConfig by passing to the _this.set(),
         // which "saves" to localstore as a side effect.
 
       });
@@ -300,21 +347,21 @@
       // would have been emitted by objects when their models were
       // updated and sent the results to a parser function that
       // would extract the calling object's properties in the config
-      // and updated them if they were different, but we can't 
-      // currently do that the way the app is written, since we 
-      // didn't actually follow that patttern almost anywhere. 
-      // 
+      // and updated them if they were different, but we can't
+      // currently do that the way the app is written, since we
+      // didn't actually follow that patttern almost anywhere.
+      //
       // _this.eventEmitter.subscribe('set', function(junk) {
       //  // 1.) send the junk to a parser function
       //  // 2.) use this.set(parsedJunk) to update
       //  // this.currentConfig, with the side effect of
-      //  // saving to localStorage. 
+      //  // saving to localStorage.
       //
       // });
 
       // you may need to bind another event here that responds to the
-      // user navigating history, for the purpose of popping the 
-      // history entry back off. 
+      // user navigating history, for the purpose of popping the
+      // history entry back off.
 
     },
 

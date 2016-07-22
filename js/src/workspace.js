@@ -16,7 +16,8 @@
       eventEmitter:     null
     }, options);
 
-    this.element  = this.element || jQuery('<div class="workspace-container" id="workspace">');
+    var uid = $.genUUID();
+    this.element  = this.element || jQuery('<div class="workspace-container" id="workspace-'+uid+'">');
     this.init();
 
   };
@@ -103,12 +104,19 @@
         _this.resetLayout(options.layoutDescription);
       });
 
+      /*
+       * Adds a flexible slot to the workspace when flexible desktop is enabled.
+       */
       _this.eventEmitter.subscribe('ADD_FLEXIBLE_SLOT', function(event) {
         // splitRight on the rigthtmost slot
         _this.splitRight(_this.slots[_this.slots.length - 1]);
         _this.bindEvents();
       });
 
+      /*
+       * Adds a draghandle DOM element (for moving multiple snapped windows) to the workspace,
+       * and a new snapgroup under the covers.
+       */
       _this.eventEmitter.subscribe('ADD_DRAG_HANDLE', function(event) {
         // create new snap group
         _this.snapGroups.push('snap-group-' + $.genUUID());
@@ -118,6 +126,9 @@
         _this.bindEvents();
       });
 
+      /*
+       * Removes a draghandle DOM element (and associated snapgroup) from the workspace.
+       */
       _this.eventEmitter.subscribe('REMOVE_DRAG_HANDLE', function(event, id) {
         // remove the snap group given by id
         _this.snapGroups = _this.snapGroups.filter(function(e, i, a) {
@@ -130,6 +141,9 @@
         jQuery('.layout-slot.' + id).removeClass(id);
       });
 
+      /*
+       * Called when the user stops dragging a window.
+       */
       _this.eventEmitter.subscribe('flex-slot-dragstop', $.debounce(function(event, ui) {
         // publish "flex-slot-drag" event
         var id = ui.helper[0].attributes['data-layout-slot-id'].value;
@@ -148,6 +162,9 @@
 
       }, 100));
 
+      /*
+       * Called when the user stops resizing a window.
+       */
       _this.eventEmitter.subscribe('flex-slot-resizestop', $.debounce(function(event, ui) {
         // publish "flex-slot-resize" event
         var id = ui.helper[0].attributes['data-layout-slot-id'].value;
@@ -162,6 +179,9 @@
 
       }, 100));
 
+      /*
+       * Called when the user stops dragging a draghandle.
+       */
       _this.eventEmitter.subscribe('drag-handle-dragstop', $.debounce(function(event, ui) {
         var id = ui.helper[0].id;
         var slotIDs = [];
@@ -185,6 +205,10 @@
     bindEvents: function() {
       var _this = this;
 
+      /*
+       * When slots are clicked, stack them.
+       * Enable dragging of slots.
+       */
       jQuery('.layout-slot')
       .click(function() {
         // Bring clicked window to the top
@@ -207,6 +231,7 @@
         jQuery(elem).css({'zIndex' : min+group.length});
       })
       .draggable({
+        handle: '.manifest-info',
         stack: '.layout-slot',
         snap: '.layout-slot, .drag-handle',
         //snapMode: 'outer',
@@ -218,6 +243,9 @@
         _this.eventEmitter.publish('flex-slot-resizestop', ui);
       }));
 
+      /*
+       * Enable dragging and deleting of draghandles.
+       */
       jQuery('.drag-handle').each(function(index) {
         var __this = this; // __this and _this are different, be careful!
         jQuery(__this).draggable({
@@ -311,9 +339,10 @@
      * Use d3 to render the dragHandles.
      */
     renderDragHandles: function() {
+        // TODO: change the d3.select to use '#workspace-XXX-XX-XXXX'
       var _this = this,
       n = _this.snapGroups.length,
-      handles = d3.select('#workspace').selectAll('.drag-handle').data(_this.snapGroups, function(d) { 
+      handles = d3.select('.workspace-container').selectAll('.drag-handle').data(_this.snapGroups, function(d) { 
         // binds data to element by id, so that when an item is removed from _this.snapGroups,
         // the DOM element with corresponding #id is removed, instead of the most recently added element
         return d;
@@ -343,78 +372,91 @@
       handles.exit().remove('div');
     },
 
+    /*
+     * Calculates the and sets the layout of the workspace.
+     *
+     * @param {boolean} resetting Passed in from Workspace.resetLayout (not used with flex workspace)
+     * @param {Array} draggedIDs List of slot IDs that have just finished dragging
+     * @param {Array} resizedIDs List of slot IDs that have just finished resizing
+     */
     calculateLayout: function(resetting, draggedIDs, resizedIDs) {
       var _this = this,
       layout,
       divs,
+
+      // default slot window dimensions
       slotX = 50,
       slotY = 50,
       slotDX = 500,
       slotDY = 500,
+
       children,
       child,
       tscKey;
 
-      // if flexible layout is enabled, do not use isfahan
-      // instead, use flexible layout settings for width, height, and offset
-
-      // save layout description
-      if ($.DEFAULT_SETTINGS.flexibleWorkspace === true && typeof _this.layoutDescription === 'object') {
-        // if layoutdescription children have id attributes, then store them in slotCoordinates
-        //if (_this.slotCoordinates || (!_this.slotCoordinates && _this.layoutDescription.id)) {
-        //
-        if (!_this.slotCoordinates) {// && _this.layoutDescription.id) {
-            // need to initialize in case we are restoring a saved workspace
-          _this.slotCoordinates = {};
-        }
-
-        if (_this.layoutDescription.id) { // this means we've initialized the workspace already, and need to save what we've got
-          children = _this.layoutDescription.children;
-          for (var i = 0; i < children.length; i++) {
-            // save the coordinates
-            child = children[i];
-            tscKey = child.id;
-
-            if (child.x && child.y && child.dx && child.dy) {
-                
-              // assume key to be something meaningful
-              if (!_this.slotCoordinates[tscKey]) {
-                _this.slotCoordinates[tscKey] = {};
-              }
-              if (draggedIDs === undefined || draggedIDs.indexOf(tscKey) === -1) {
-                _this.slotCoordinates[tscKey].x = child.x;
-                _this.slotCoordinates[tscKey].y = child.y;
-              }
-              if (resizedIDs === undefined || resizedIDs.indexOf(tscKey) === -1) {
-                _this.slotCoordinates[tscKey].dx = child.dx;
-                _this.slotCoordinates[tscKey].dy = child.dy;
-              }
-            }
+      /*
+       * Saves the slotCoordinates from the given layout node,
+       * called before Isfahan resets everything.
+       *
+       * @param {Object} node A layout node to save the settings of.
+       */
+      function saveToSlotCoordinates(node) {
+        // save the coordinates
+        tscKey = node.id;
+          if (node.x && node.y && node.dx && node.dy) {
+            
+          // assume key to be something meaningful
+          if (!_this.slotCoordinates[tscKey]) {
+            _this.slotCoordinates[tscKey] = {};
+          }
+          if (draggedIDs === undefined || draggedIDs.indexOf(tscKey) === -1) {
+            _this.slotCoordinates[tscKey].x = node.x;
+            _this.slotCoordinates[tscKey].y = node.y;
+          }
+          if (resizedIDs === undefined || resizedIDs.indexOf(tscKey) === -1) {
+            _this.slotCoordinates[tscKey].dx = node.dx;
+            _this.slotCoordinates[tscKey].dy = node.dy;
           }
         }
       }
 
+      // if we have already generated a layout, either restoring from localStorage or using the one from
+      // this sessionq
+      if ($.DEFAULT_SETTINGS.flexibleWorkspace === true && typeof _this.layoutDescription === 'object') {
+        if (!_this.slotCoordinates) {
+          // need to initialize in case we are restoring a saved workspace
+          _this.slotCoordinates = {};
+        }
+
+        // this means we've initialized the workspace already, and need to save what we've got
+        if (_this.layoutDescription.id) { 
+          children = _this.layoutDescription.children;
+          if (children !== undefined) { // then it is array
+            children.forEach(saveToSlotCoordinates);
+          }
+          else {
+            // one window
+            saveToSlotCoordinates(_this.layoutDescription);
+          }
+        }
+      }
+
+      // use Isfahan for everything but the slot window dimensions. Will restore them from _this.slotCoordinates
       _this.layout = layout = new Isfahan({
         containerId: _this.element.attr('id'),
         layoutDescription: _this.layoutDescription,
         configuration: null,
-        padding: 3 
+        padding: 3
       });
 
-      // if flex workspace is enabled
-      //   go thru _this.layout and load the coords into the children attr
-
+      // if flex workspace is enabled, go through the layout obj and restore the saved coordinates
       if ($.DEFAULT_SETTINGS.flexibleWorkspace === true) {
 
-        children = _this.layout[0].children;
-          // restore the saved coordinates
-        for (var j = 0; j < children.length; j++) {
-
-          child = children[j];
+        children = _this.layout[0].children !== undefined ? _this.layout[0].children : _this.layout;
+        children.forEach(function(child, j) {
           tscKey = child.id;
-          // if _this.slotCoordinates doesnt have anything for this children item
-          //   add it
-          //   
+
+          // if _this.slotCoordinates doesnt have anything for this children item, new window
           if (!_this.slotCoordinates[tscKey]) {
             _this.slotCoordinates[tscKey] = {};
             _this.slotCoordinates[tscKey].x = slotX * (j + 1);
@@ -423,12 +465,12 @@
             _this.slotCoordinates[tscKey].dy = slotDY;
           }
 
-          // restore it
+          // restore the layout object
           child.x = _this.slotCoordinates[tscKey].x;
           child.y = _this.slotCoordinates[tscKey].y;
           child.dx = _this.slotCoordinates[tscKey].dx;
           child.dy = _this.slotCoordinates[tscKey].dy;
-        }
+        });
       }
 
       var data = layout.filter( function(d) {
@@ -466,13 +508,10 @@
         }));
       });
 
-      // add draggable/resizable events to new div
-      // _this.bindEvents();
-
       // Exit
       divs.exit()
       .remove("div")
-      .each(function(d) { 
+      .each(function(d) {
         var slotMap = _this.slots.reduce(function(map, temp_slot) {
           if (d.id === temp_slot.slotID) {
             map[d.id] = temp_slot;
@@ -484,7 +523,7 @@
         if (slot && slot.window && !resetting) {
           _this.eventEmitter.publish("windowRemoved", slot.window.id);
         }
-        
+
         // nullify the window parameter of old slots
         slot.window = null;
         _this.slots.splice(_this.slots.indexOf(slot), 1);
@@ -517,7 +556,8 @@
 
     split: function(targetSlot, direction) {
       var _this = this,
-      node = ($.DEFAULT_SETTINGS.flexibleWorkspace && _this.slots.length === 1) ? jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; })[1] : jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; })[0],
+      nodeList = jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; }),
+      node = ($.DEFAULT_SETTINGS.flexibleWorkspace && _this.slots.length === 1 && nodeList.length === 2) ? nodeList[1] : nodeList[0],
       nodeIndex = node.parent ? node.parent.children.indexOf(node) : 0,
       nodeIsNotRoot = node.parent;
 
@@ -537,7 +577,7 @@
       }
 
       function mutateAndAdd(node, indexDifference) {
-        // Locally mutate the tree to accomodate a 
+        // Locally mutate the tree to accomodate a
         // sibling of another kind, transforming
         // both the target node and its parent.
         var newParent = _this.newNode(node.type, node.parent);
@@ -567,17 +607,17 @@
 
       if (node.type === 'column') {
         // Since it is a column:
-        // 
+        //
         // If adding to a side, simply
         // add a sibling.
         // Left means before, right means after.
         if (direction === 'r' || direction === 'l') {
           indexDifference = direction === 'r' ? 1 : 0;
           addSibling(node, indexDifference);
-        } 
+        }
         // If adding above or below, the
         // operation must be changed to mutating
-        // the structure. 
+        // the structure.
         // Up means before, Down means after.
         else {
           indexDifference = direction === 'd' ? 1 : 0;
@@ -586,16 +626,16 @@
       } else {
         // Since it is a row:
         //
-        // If adding to a side, mutate the 
+        // If adding to a side, mutate the
         // structure.
         // Left means before, right means after.
         if (direction === 'r' || direction === 'l') {
           indexDifference = direction === 'r' ? 1 : 0;
           mutateAndAdd(node, indexDifference);
-        } 
+        }
         // If adding above or below, the
         // operations must be switched to adding
-        // a sibling. 
+        // a sibling.
         // Up means before, Down means after.
         else {
           indexDifference = direction === 'd' ? 1 : 0;
@@ -605,9 +645,9 @@
 
       // Recalculate the layout.
       // The original hierarchical structure is
-      // accessible from the root node. Passing 
-      // it back through the layout code will 
-      // recalculate everything else needed for 
+      // accessible from the root node. Passing
+      // it back through the layout code will
+      // recalculate everything else needed for
       // the redraw.
       var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
       _this.layoutDescription = root;
@@ -647,7 +687,7 @@
 
       if (node.parent.children.length === 2) {
         // de-mutate the tree without destroying
-        // the children of the remaining node, 
+        // the children of the remaining node,
         // which in this case means changing their
         // IDs.
         node.parent.children.splice(nodeIndex,1);
@@ -655,10 +695,10 @@
 
         remainingNode.parent.id = remainingNode.id;
         delete node.parent;
-      } else if (node.parent.children.length === 1) { 
-      } else { 
+      } else if (node.parent.children.length === 1) {
+      } else {
         // If the node is one of more than 2 siblings,
-        // simply splice it out of the parent's children 
+        // simply splice it out of the parent's children
         // array.
         node.parent.children.splice(nodeIndex, 1);
       }
@@ -698,15 +738,15 @@
 
     placeWindows: function() {
       // take the windows array and place
-      // as many windows into places as can 
+      // as many windows into places as can
       // fit.
       var _this = this,
       deletedWindows;
 
       if (_this.windows.length > _this.slots.length) {
-        // splice modifies the original array and 
-        // returns the deleted items, 
-        // so we can just perform a forEach on the 
+        // splice modifies the original array and
+        // returns the deleted items,
+        // so we can just perform a forEach on the
         // return value, and have the saveController
         // remove these windows in response to the event
         // (which otherwise it would not do).
@@ -718,14 +758,14 @@
           _this.eventEmitter.publish('windowRemoved', removedWindow.id);
         });
       }
-      
+
       _this.windows.forEach(function(window) {
         var slot = _this.getAvailableSlot();
         slot.window = window;
 
         window.update({
-          id: window.id, 
-          slotAddress: slot.layoutAddress, 
+          id: window.id,
+          slotAddress: slot.layoutAddress,
           state: _this.state,
           appendTo: slot.element,
           canvasID: window.canvasID,
@@ -741,7 +781,7 @@
     },
 
     clearSlot: function(slotId) {
-      if (this.slots[slotId].windowElement) { 
+      if (this.slots[slotId].windowElement) {
         this.slots[slotId].windowElement.remove();
       }
       this.slots[slotId].window = null;
@@ -787,7 +827,7 @@
         //extend the windowConfig with the default settings
         var mergedConfig = jQuery.extend(true, {}, _this.state.getStateProperty('windowSettings'), windowConfig);
 
-        //"rename" some keys in the merged object to align settings parameters with window parameters        
+        //"rename" some keys in the merged object to align settings parameters with window parameters
         if (mergedConfig.loadedManifest) {
           mergedConfig.manifest = _this.state.getStateProperty('manifests')[mergedConfig.loadedManifest];
           delete mergedConfig.loadedManifest;

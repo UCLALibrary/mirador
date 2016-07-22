@@ -42,7 +42,7 @@
                 mainMenuCls: this.mainMenuCls,
                 showBookmark : this.state.getStateProperty('mainMenuSettings').buttons.bookmark,
                 showLayout : this.state.getStateProperty('mainMenuSettings').buttons.layout && !this.state.getStateProperty('flexibleWorkspace'),
-		        showAddSlot : this.state.getStateProperty('flexibleWorkspace'),
+		        showAddWindow : this.state.getStateProperty('flexibleWorkspace'),
 		        showAddDragHandle : this.state.getStateProperty('flexibleWorkspace'),
 		        showWorkspaceDownload: this.state.getStateProperty('workspaceDownload'),
                 // TODO: showLockGroup
@@ -83,15 +83,23 @@
             }
           });
           
-          // this will come from the viewer object
+          /*
+           * Receives the current overlay state object from the viewer object and sets and unsets the
+           * active class.
+           *
+           * @param {Object} state The overlay state object.
+           */
           _this.eventEmitter.subscribe('OVERLAY_STATES_STEADY', function(event, state) {
             
+            // map from state-key to class of mainmenu button
             var stateToSelector = {
               'workspacePanelVisible': '.change-layout',
               'bookmarkPanelVisible': '.bookmark-workspace',
               'workspaceUploadPanelVisible': '.workspace-upload',
               'lockGroupsPanelVisible': '.toggle-lock-groups'
             };
+
+            // set the class of each panel. only one will be active at any given time
             jQuery.each(state, function(k, v) {
               if (v === true) {
                 jQuery(stateToSelector[k]).addClass('active');
@@ -105,6 +113,7 @@
         bindEvents: function() {
             var _this = this;
 
+            // map from class of mainmenu button to eventEmitter-event
             var selectorEvent = {
               '.change-layout': 'TOGGLE_WORKSPACE_PANEL',
               '.bookmark-workspace': 'TOGGLE_BOOKMARK_PANEL',
@@ -115,6 +124,7 @@
               '.add-drag-handle': 'ADD_DRAG_HANDLE'
             };
 
+            // set onclick events that publish to eventEmitter, according to selectorEvent
             jQuery.each(selectorEvent, function(k, v) {
 
               _this.element.find(k).on('click', function() {
@@ -151,10 +161,10 @@
             '</a>',
           '</li>',
         '{{/if}}',
-        '{{#if showAddSlot}}',
+        '{{#if showAddWindow}}',
           '<li>',
-            '<a href="javascript:;" class="add-flexible-slot mainmenu-button" title="Add Slot">',
-              '<span class="fa fa-th-large fa-lg fa-fw"></span> Add Slot',
+            '<a href="javascript:;" class="add-flexible-slot mainmenu button" title="Add Window">',
+              '<span class="fa fa-th-large fa-lg fa-fw"></span> Add Window',
             '</a>',
           '</li>',
         '{{/if}}',
