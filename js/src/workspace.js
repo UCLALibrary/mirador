@@ -432,7 +432,7 @@
           }
           else {
             // one window
-            saveToSlotCoordinates(_this.slotCoordinates);
+            saveToSlotCoordinates(_this.layoutDescription);
           }
         }
       }
