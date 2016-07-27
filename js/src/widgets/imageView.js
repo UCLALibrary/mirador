@@ -346,8 +346,11 @@
      * Applies a CSS filter according to specified behavior of current osd canvas.
      */
     applyCSSFilter: function(elt, behavior, val) {
+      // in this code we call it saturation, but CSS calls it saturate
       var key = behavior === 'saturation' ? 'saturate' : behavior;
       switch(key) {
+
+        // toggle button controls
         case 'grayscale':
         case 'invert':
           if (jQuery(elt).hasClass('selected')) {
@@ -357,42 +360,22 @@
             this.filterValues[key] = key+"(100%)";
             jQuery(elt).addClass('selected');
           }
-      //    this.setFilterCSS();
           break;
+
+        // slider controls
         case 'brightness':
         case 'contrast':
         case 'saturate':
           this.filterValues[key] = key+"("+val+"%)";
-     //     this.setFilterCSS();
           jQuery(elt).find('.percent').text(val + '%');
+          break;
+
+        default:
+          // should never get here
           break;
       }
       this.setFilterCSS();
     },
-
-    /*
-    imageManipGrayscale: function(elt) {
-    },
-    */
-
-    /*
-    imageManipInvert: function(elt) {
-    },
-    */
-
-    /*
-    imageManipBrightness: function(elt, val) {
-    },
-     */
-    /*
-    imageManipContrast: function(elt, val) {
-    },
-     */
-
-    /*
-    imageManipSaturation: function(elt, val) {
-    },
-     */
 
     /*
      * Resets grayscale, invert, brightness, and contrast settings.
