@@ -16,6 +16,7 @@
    *         rotation: true,
    *         brightness: true,
    *         contrast: true,
+   *         saturation: true,
    *         invert: true,
    *         grayscale: true,
    *         reset: true
@@ -53,15 +54,18 @@
         // eventEmitter message
       }
       else {
+        // new settings object
         _this.synchronizedWindows = { keys: [], byGroup: {}, byWindow: {} };
       }
       _this.listenForActions();
     },
 
+    // TODO: remove after refactor
     getLockGroupData: function() {
       return this.synchronizedWindows.byGroup;
     },
 
+    // TODO: remove after refactor
     getLockGroupOfWindow: function(viewObj) {
       return this.synchronizedWindows.byWindow[viewObj.windowId];
     },
@@ -138,14 +142,15 @@
       var _this = this;
 
       /*
-       * Creates a new lock group. Sent from lockGroupsPanel.
+       * Creates a new lock group. Published by lockGroupsPanel.
        *
        * @param {string} name Name of new lock group.
        */
       _this.eventEmitter.subscribe('createLockGroup', function(event, name) {
+        // update data model
         _this.createLockGroup(name);
 
-        // update DOM
+        // notify windows and lockGroupMenu that data model is updated, so they can update DOM
         _this.eventEmitter.publish('updateLockGroupMenus', _this.synchronizedWindows);
 
         // notify saveController that settings have changed
@@ -245,6 +250,15 @@
       });
 
       /*
+       * Sync the saturation of any followers of the viewobject
+       *
+       * @param {Object} viewObj The leader.
+       */
+      _this.eventEmitter.subscribe('synchronizeImgSaturation', function(event, data) {
+        _this.updateFollowers(data.viewObj, 'saturation', data.value);
+      });
+
+      /*
        * Sync the rotation of any followers of the viewobject
        *
        * @param {Object} viewObj The leader.
@@ -268,7 +282,7 @@
       });
 
       /*
-       * Sends lockGroup data to the DOM.
+       * Sends lockGroup data to the DOM. Received upon initialization of the lockGroupPanel
        */
       _this.eventEmitter.subscribe('lockGroupsPanelReady', function(event) {
         _this.eventEmitter.publish('updateLockGroupMenus', _this.synchronizedWindows);
@@ -285,7 +299,6 @@
         var groupID = _this.getLockGroupOfWindow(viewObj);  
         if (groupID !== undefined) {
           _this.synchronizedWindows.byGroup[groupID].views.push(viewObj);
-          // TODO: publish something to be recognized by window
           _this.eventEmitter.publish('activateLockGroupMenuItem', {windowId: viewObj.windowId, groupId: groupID});
         }
       });
@@ -305,8 +318,9 @@
             profile: 'dimensionalLockMirror',
             zoompan: true,
             rotation: true,
-            brightness: false,
-            contrast: false,
+            brightness: true,
+            saturation: true,
+            contrast: true,
             invert: true,
             grayscale: true,
             reset: true
@@ -389,8 +403,8 @@
 
     /*
      * Sets the settings of the lockGroup.
-     * If key is profile, value must be one of the lock profiles
-     * Otherwise, 'value' will be unused.
+     * If key is 'profile', value must be one of the lock profiles
+     * Otherwise, param value will be unused.
      *
      * @param {string} groupID The lock group id
      * @param {string} key The name of the setting to toggle
@@ -410,6 +424,7 @@
         case 'rotation':
         case 'brightness':
         case 'contrast':
+        case 'saturation':
         case 'invert':
         case 'grayscale':
         case 'reset':
@@ -436,7 +451,7 @@
       lgData = _this.synchronizedWindows.byGroup[lockGroup],
       lgViews,
       lgSettings,
-      followerImageManipButton;
+      uiElt;
 
       // make sure lock group exists for this window
       if (lgData !== undefined) {
@@ -461,23 +476,23 @@
                     _this.lockOptions[lgSettings.profile](viewObj, follower);
                     break;
                   case 'grayscale':
-                    followerImageManipButton = follower.element.find('.mirador-osd-grayscale');
-                    follower.imageManipGrayscale(followerImageManipButton);
-                    break;
                   case 'invert':
-                    followerImageManipButton = follower.element.find('.mirador-osd-invert');
-                    follower.imageManipInvert(followerImageManipButton);
+                    uiElt = follower.element.find('.mirador-osd-' + behavior);
+
+                    // just apply the proper filter
+                    follower.applyCSSFilter(uiElt, behavior);
                     break;
                   case 'reset':
                     follower.imageManipReset();
                     break;
                   case 'brightness':
-                    // TODO
-                    follower.imageManipBrightness(value);
-                    break;
                   case 'contrast':
-                    // TODO
-                    follower.imageManipContrast(value);
+                  case 'saturation':
+                    uiElt = follower.element.find('.mirador-osd-' + behavior + '-slider');
+
+                    // set the position of the slider handle to correct value, then apply the filter
+                    uiElt.slider('option', 'value', value);
+                    follower.applyCSSFilter(uiElt, behavior, value);
                     break;
                   case 'rotation':
                     follower.imageRotate(value);
