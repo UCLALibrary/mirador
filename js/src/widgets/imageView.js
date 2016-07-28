@@ -343,45 +343,38 @@
     },
 
     /*
-     * Toggles grayscale of current osd canvas.
+     * Applies a CSS filter according to specified behavior of current osd canvas.
      */
-    imageManipGrayscale: function(elt) {
-      if (jQuery(elt).hasClass('selected')) {
-        this.filterValues.grayscale = "grayscale(0%)";
-        jQuery(elt).removeClass('selected');
-      } else {
-        this.filterValues.grayscale = "grayscale(100%)";
-        jQuery(elt).addClass('selected');
+    applyCSSFilter: function(elt, behavior, val) {
+      // in this code we call it saturation, but CSS calls it saturate
+      var key = behavior === 'saturation' ? 'saturate' : behavior;
+      switch(key) {
+
+        // toggle button controls
+        case 'grayscale':
+        case 'invert':
+          if (jQuery(elt).hasClass('selected')) {
+            this.filterValues[key] = key+"(0%)";
+            jQuery(elt).removeClass('selected');
+          } else {
+            this.filterValues[key] = key+"(100%)";
+            jQuery(elt).addClass('selected');
+          }
+          break;
+
+        // slider controls
+        case 'brightness':
+        case 'contrast':
+        case 'saturate':
+          this.filterValues[key] = key+"("+val+"%)";
+          jQuery(elt).find('.percent').text(val + '%');
+          break;
+
+        default:
+          // should never get here
+          break;
       }
       this.setFilterCSS();
-    },
-
-    /*
-     * Toggles pixel value inversion of current osd canvas.
-     */
-    imageManipInvert: function(elt) {
-      if (jQuery(elt).hasClass('selected')) {
-        this.filterValues.invert = "invert(0%)";
-        jQuery(elt).removeClass('selected');
-      } else {
-        this.filterValues.invert = "invert(100%)";
-        jQuery(elt).addClass('selected');
-      }
-      this.setFilterCSS();
-    },
-
-    /*
-     * Sets brightness value of current osd canvas.
-     */
-    imageManipBrightness: function(val) {
-      // TODO: doesnt work if hidden
-    },
-
-    /*
-     * Sets contrast value of current osd canvas.
-     */
-    imageManipContrast: function(val) {
-      // TODO: doesnt work if hidden
     },
 
     /*
@@ -462,9 +455,11 @@
           jQuery(this).find('.ui-slider-handle').append(span);
         },
         slide: function(event, ui) {
-          _this.filterValues.brightness = "brightness("+ui.value+"%)";
-          _this.setFilterCSS();
-          jQuery(this).find('.percent').text(ui.value + '%');
+          _this.applyCSSFilter(this, 'brightness', ui.value);
+
+          if (_this.leading) {
+            _this.eventEmitter.publish('synchronizeImgBrightness', {viewObj: _this, value: ui.value});
+          }
         }
       }).hide();
 
@@ -489,9 +484,11 @@
           jQuery(this).find('.ui-slider-handle').append(span);
         },
         slide: function(event, ui) {
-          _this.filterValues.contrast = "contrast("+ui.value+"%)";
-          _this.setFilterCSS();
-          jQuery(this).find('.percent').text(ui.value + '%');
+          _this.applyCSSFilter(this, 'contrast', ui.value);
+
+          if (_this.leading) {
+            _this.eventEmitter.publish('synchronizeImgContrast', {viewObj: _this, value: ui.value});
+          }
         }
       }).hide();
 
@@ -516,9 +513,11 @@
           jQuery(this).find('.ui-slider-handle').append(span);
         },
         slide: function(event, ui) {
-          _this.filterValues.saturate = "saturate("+ui.value+"%)";
-          _this.setFilterCSS();
-          jQuery(this).find('.percent').text(ui.value + '%');
+          _this.applyCSSFilter(this, 'saturation', ui.value);
+
+          if (_this.leading) {
+            _this.eventEmitter.publish('synchronizeImgSaturation', {viewObj: _this, value: ui.value});
+          }
         }
       }).hide();
 
@@ -531,7 +530,7 @@
       });
 
       this.element.find('.mirador-osd-grayscale').on('click', function() {
-        _this.imageManipGrayscale(this);
+        _this.applyCSSFilter(this, 'grayscale');
 
         if (_this.leading) {
           _this.eventEmitter.publish('synchronizeImgGrayscale', _this);
@@ -540,7 +539,7 @@
       });
 
       this.element.find('.mirador-osd-invert').on('click', function() {
-        _this.imageManipInvert(this);
+        _this.applyCSSFilter(this, 'invert');
 
         if (_this.leading) {
           _this.eventEmitter.publish('synchronizeImgInvert', _this);
