@@ -329,6 +329,16 @@
         _this.set('lockGroupState', serializedLockGroupState, {parent: "currentConfig"});
       });
 
+      /*
+       * Saves the snapGroup state to the saveController whenever it changes.
+       * Published by Workspace.
+       *
+       * @param {Object} snapGroupState The state object for snapGroups
+       */
+      _this.eventEmitter.subscribe('snapGroupStateChanged', function(event, snapGroupState) {
+        _this.set('snapGroupState', JSON.stringify(snapGroupState), {parent: "currentConfig"});
+      });
+
       _this.eventEmitter.subscribe('DELETE_FROM_CONFIG', function(event, options) {
         var windowObjects = jQuery.grep(_this.currentConfig.windowObjects, function(window, index) {
           return window.loadedManifest !== options.loadedManifest || window.id;
