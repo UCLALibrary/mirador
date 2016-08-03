@@ -44,12 +44,19 @@
         };
       }
       this.currentImg = this.imagesList[this.currentImgIndex];
+
       this.element = jQuery(this.template()).appendTo(this.appendTo);
       this.elemAnno = jQuery('<div/>')
       .addClass(this.annoCls)
       .appendTo(this.element);
 
-      this.createOpenSeadragonInstance($.Iiif.getImageUrl(this.currentImg));
+      // if currentImg has choice, then display the menu in the Window obj (eventEmit)
+      // TODO: get labels and label the dropdown menu accordingly
+      if ($.Iiif.imageHasAlternateResources(this.currentImg)) {
+        this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsAndUrls(this.currentImg));
+      } else {
+        this.createOpenSeadragonInstance($.Iiif.getImageUrl(this.currentImg));
+      }
       _this.eventEmitter.publish('UPDATE_FOCUS_IMAGES.' + this.windowId, {array: [this.canvasID]});
 
       var allTools = $.getTools(this.state.getStateProperty('drawingToolsSettings'));
@@ -176,6 +183,10 @@
         _this.element.find('.draw-tool').hide();
       });
       //Related to Annotations HUD
+      //
+      _this.eventEmitter.subscribe('showChoiceImage', function(event, id) {
+        _this.showChoiceImage(id);
+      });
     },
 
     bindEvents: function() {
@@ -628,16 +639,57 @@
       }
     },
 
-    createOpenSeadragonInstance: function(imageUrl) {
-      var infoJsonUrl = imageUrl + '/info.json',
+    // imageUrl can either be a string or object
+    createOpenSeadragonInstance: function(imageUrlData) {
+      var infoJsonUrl,
+      infoJsonUrlList,
       uniqueID = $.genUUID(),
       osdID = 'mirador-osd-' + uniqueID,
-      infoJson,
-      _this = this;
+      _this = this,
+      defaultImgObj,
+      alternateImgObjList = [];
+
+      if (typeof imageUrlData === 'string') {
+        imageUrlData += '/info.json';
+
+        jQuery.when.apply(this, [
+          jQuery.getJSON(imageUrlData, function(data) { 
+            defaultImgObj = data;
+          })]
+        ).then(function() {
+          initOSD(defaultImgObj, false);
+        });
+
+      } else if (typeof imageUrlData === 'object') {
+        imageUrlData['default'].url += '/info.json';
+        imageUrlData.item.forEach(function(v) { v.url += '/info.json';});
+
+        jQuery.when.apply(this, [
+          jQuery.getJSON(imageUrlData['default'].url, function(data) { 
+            imageUrlData['default'].data = data;
+          })]
+          .concat(imageUrlData.item.map(function(v) {
+            return jQuery.getJSON(v.url, function(data) {
+              v.data = data;
+            });
+          }))
+        ).then(function() {
+          initOSD(imageUrlData, true);
+          _this.imageChoice = imageUrlData;
+        });
+      }
+
+
 
       this.element.find('.' + this.osdCls).remove();
 
-      jQuery.getJSON(infoJsonUrl).done(function (infoJson, status, jqXHR) {
+      /*
+       * @param {Object} defaultImg An object that is the contents of info.json.
+       * @param {Array} alternateImgs An array that contains objects of the same structure as defaultImg.
+       */
+      var initOSD = function(defaultImg, isMultiImage) {
+        // check if defaultImg 
+
         _this.elemOsd =
           jQuery('<div/>')
         .addClass(_this.osdCls)
@@ -646,7 +698,7 @@
 
         _this.osd = $.OpenSeadragon({
           'id':           osdID,
-          'tileSources':  infoJson,
+          //'tileSources':  alternateImgs.length === 0 ? defaultImg : [defaultImg].concat(alternateImgs),
           'uniqueID' : uniqueID
         });
 
@@ -733,14 +785,22 @@
 //        }
 
         _this.osd.addHandler('open', function(){
+          // TODO: do we need the following line?
+          var keyy = defaultImg['default'].label;
           _this.eventEmitter.publish('osdOpen.'+_this.windowId);
-          if (_this.osdOptions.osdBounds) {
-            var rect = new OpenSeadragon.Rect(_this.osdOptions.osdBounds.x, _this.osdOptions.osdBounds.y, _this.osdOptions.osdBounds.width, _this.osdOptions.osdBounds.height);
-            _this.osd.viewport.fitBounds(rect, true);
-          } else {
-            //else reset bounds for this image
-            _this.setBounds();
-          }
+
+
+          var addItemHandler = function( event ) {
+            _this.osd.world.removeHandler( "add-item", addItemHandler );
+            if (_this.osdOptions.osdBounds) {
+              var rect = new OpenSeadragon.Rect(_this.osdOptions.osdBounds.x, _this.osdOptions.osdBounds.y, _this.osdOptions.osdBounds.width, _this.osdOptions.osdBounds.height);
+              _this.osd.viewport.fitBounds(rect, true);
+            } else {
+              _this.setBounds();
+            }
+          };
+
+          _this.osd.world.addHandler( "add-item", addItemHandler );
 
           _this.addAnnotationsLayer(_this.elemAnno);
 
@@ -774,8 +834,52 @@
           _this.osd.addHandler('pan', $.debounce(function(){
             _this.setBounds();
           }, 500));
+
+          // send message to window so that it can render dropdown menu and register events on it
+          if (isMultiImage) {
+            _this.eventEmitter.publish('imageChoiceReady', {data: [defaultImg['default'].label].concat(defaultImg.item.map(function(v) { return v.label; }))});
+          }
         });
+
+        if (isMultiImage) {
+          _this.osd.open(defaultImg['default'].data, {opacity:1, x:0, y:0, width:1});
+        } else {
+          _this.osd.open(defaultImg, {opacity:1, x:0, y:0, width:1});
+        }
+      }; 
+    },
+
+    // adds another layer to the osd 
+    addAlternateImages: function(tileSources) {
+      var _this = this;
+      jQuery.each(tileSources, function(index, value) {
+        var options = {
+          tileSource: value,
+          opacity: 1,
+          x: 0,
+          y: 0,
+          width: value.width
+        };
+        _this.osd.addTiledImage(options);
       });
+    },
+
+    // shows the image with the corresponding id (label)
+    showChoiceImage: function(id) {
+      // get reference to osd
+      var _this = this;
+
+      var tileSource;
+      if (_this.imageChoice['default'].label === id) {
+        _this.addAlternateImages([_this.imageChoice['default'].data]);
+      }
+      else
+      {
+        _this.addAlternateImages(_this.imageChoice.item.filter(function(e) { return e.label === id ? true : false; }).map(function(v) { return v.data; }));
+      }
+
+      _this.osd.world.removeItem(_this.osd.world.getItemAt(0));
+      //_this.osd.world.setItemIndex(_this.osd.world.getItemAt(1), 0);
     },
 
     addAnnotationsLayer: function(element) {

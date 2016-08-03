@@ -98,6 +98,8 @@
       });
 
       _this.imagesList = _this.manifest.getCanvases();
+
+      // if no canvasID, use the first canvas
       if (!_this.canvasID) {
         _this.canvasID = _this.imagesList[0]['@id'];
       }
@@ -387,6 +389,10 @@
           });
         }
       });
+
+      _this.eventEmitter.subscribe('imageChoiceReady', function(event, data) {
+        _this.renderImageChoiceMenu(data.data);
+      });
     },
 
     bindEvents: function() {
@@ -423,6 +429,15 @@
       }).off('mouseleave').on('mouseleave',
       function() {
         _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
+      });
+
+      // show/hide lock group menu (window-level)
+      this.element.find('.mirador-icon-multi-image').off('mouseenter').on('mouseenter',
+        function() {
+        _this.element.find('.multi-image-list').stop().slideFadeToggle(300);
+      }).off('mouseleave').on('mouseleave',
+      function() {
+        _this.element.find('.multi-image-list').stop().slideFadeToggle(300);
       });
 
       /*
@@ -780,6 +795,25 @@
         view.updateImage(canvasID);
       }
       this.toggleFocus('ImageView', 'ImageView');
+    },
+
+    renderImageChoiceMenu: function(data) {
+
+      // get d3 selection of ul
+      var _this = this;
+      var lis = d3.select('.multi-image-list').selectAll('li').data(data, function(d) { return d; });
+      lis.enter().append('li')
+        .text(function(d) { return d; })
+        .classed({'multi-image-list-item': true})
+        .call(function(curSel) {
+          jQuery(curSel[0]).first().addClass('current-choice-img');
+        })
+        .on('click', function(d) {
+          _this.eventEmitter.publish('showChoiceImage', d);
+          jQuery(this).parent().children('li').removeClass('current-choice-img');
+          jQuery(this).addClass('current-choice-img');
+        });
+      lis.exit().remove();
     },
 
     toggleBookView: function(canvasID) {
@@ -1274,6 +1308,13 @@
                                  '</ul>',
                                  '</a>',
                                  // end lockController
+
+                                 //'{{#if isMultiImageView}}',
+                                 // dropdown list for multi
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-multi-image" title="multi-image"><i class="fa fa-copy fa-lg fa-fw"></i>',
+                                 '<ul class="dropdown multi-image-list"></ul>',
+                                 '</a>',
+                                 //'{{/#if}}',
 
                                  '<h3 class="window-manifest-title" title="{{title}}" aria-label="{{title}}">{{title}}</h3>',
                                  '</div>',

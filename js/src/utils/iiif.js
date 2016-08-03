@@ -16,6 +16,34 @@
       return id;
     },
 
+    /*
+     * Returns true if image has alternate resources, false otherwise.
+     *
+     * @param {Object} image JSON representation of image data from manifest
+     * @return {Boolean}
+     */
+    imageHasAlternateResources: function(image) {
+
+      if (image.images[0].resource['@type'] === 'oa:Choice') {
+        return true;
+      } else { return false; }
+    },
+
+    /*
+     * Gets labels and URLs for all the alternate resources of an image.
+     *
+     * @param {Object} image JSON representation of image
+     * @return {Object}
+     */
+    getImageResourceLabelsAndUrls: function(image) {
+      var d = image.images[0].resource['default'];
+      var i = image.images[0].resource.item;
+      return {
+        'default': {'label': d.label, 'url': d.service['@id'].replace(/\/$/, "")},
+        'item': i.map(function(v) { return {'label': v.label, 'url': v.service['@id'].replace(/\/$/, "")}; })
+      };
+    },
+
     getVersionFromContext: function(context) {
       if (context == "http://iiif.io/api/image/2/context.json") {
         return "2.0";
