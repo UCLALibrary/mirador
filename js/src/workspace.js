@@ -7,7 +7,7 @@
       workspaceSlotCls: 'slot',
       focusedSlot:      null,
       slots:            [],
-      snapGroups:       [],
+      snapGroups:       { groups: [], byWindow: {} },
       windows:          [],
       appendTo:         null,
       layoutDescription:    null,
@@ -33,7 +33,9 @@
 
       this.calculateLayout();
 
-      this.bindEvents();
+      this.restoreSnapGroups();
+      this.renderDragHandles();
+
       this.listenForActions();
     },
 
@@ -110,7 +112,6 @@
       _this.eventEmitter.subscribe('ADD_FLEXIBLE_SLOT', function(event) {
         // splitRight on the rigthtmost slot
         _this.splitRight(_this.slots[_this.slots.length - 1]);
-        _this.bindEvents();
       });
 
       /*
@@ -118,155 +119,9 @@
        * and a new snapgroup under the covers.
        */
       _this.eventEmitter.subscribe('ADD_DRAG_HANDLE', function(event) {
-        // create new snap group
-        _this.snapGroups.push('snap-group-' + $.genUUID());
-
-        // call d3 function
+        _this.createSnapGroup();
         _this.renderDragHandles();
-        _this.bindEvents();
-      });
-
-      /*
-       * Removes a draghandle DOM element (and associated snapgroup) from the workspace.
-       */
-      _this.eventEmitter.subscribe('REMOVE_DRAG_HANDLE', function(event, id) {
-        // remove the snap group given by id
-        _this.snapGroups = _this.snapGroups.filter(function(e, i, a) {
-          return e === id ? false : true;
-        });
-
-        // call d3 function
-        // then un-register the removed drag-handle's layout-slots
-        _this.renderDragHandles();
-        jQuery('.layout-slot.' + id).removeClass(id);
-      });
-
-      /*
-       * Called when the user stops dragging a window.
-       */
-      _this.eventEmitter.subscribe('flex-slot-dragstop', $.debounce(function(event, ui) {
-        // publish "flex-slot-drag" event
-        var id = ui.helper[0].attributes['data-layout-slot-id'].value;
-        _this.slotCoordinates[id].x = ui.position.left;
-        _this.slotCoordinates[id].y = ui.position.top;
-
-        // get all id's in the snap-group
-        // TODO: pass calculateLayout a single id instead of a list
-        var slotIDs = [id];
-
-        // pass to calculateLayout
-        _this.calculateLayout(undefined, slotIDs, undefined);
-
-        var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
-        _this.eventEmitter.publish('layoutChanged', root);
-
-      }, 100));
-
-      /*
-       * Called when the user stops resizing a window.
-       */
-      _this.eventEmitter.subscribe('flex-slot-resizestop', $.debounce(function(event, ui) {
-        // publish "flex-slot-resize" event
-        var id = ui.helper[0].attributes['data-layout-slot-id'].value;
-        _this.slotCoordinates[id].dx = ui.size.width;
-        _this.slotCoordinates[id].dy = ui.size.height;
-
-        var slotIDs = [id];
-        _this.calculateLayout(undefined, undefined, slotIDs);
-
-        var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
-        _this.eventEmitter.publish('layoutChanged', root);
-
-      }, 100));
-
-      /*
-       * Called when the user stops dragging a draghandle.
-       */
-      _this.eventEmitter.subscribe('drag-handle-dragstop', $.debounce(function(event, ui) {
-        var id = ui.helper[0].id;
-        var slotIDs = [];
-        jQuery('.' + id).each(function(i, val) {
-          var dlsi = val.attributes['data-layout-slot-id'].value;
-          if (slotIDs.indexOf(dlsi) === -1) {
-            slotIDs.push(dlsi);
-            // write to slotCoordinates
-            _this.slotCoordinates[dlsi].x = val.offsetLeft;
-            _this.slotCoordinates[dlsi].y = val.offsetTop;
-          }
-        });
-        _this.calculateLayout(undefined, slotIDs, undefined);
-
-        var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
-        _this.eventEmitter.publish('layoutChanged', root);
-
-      }, 100));
-    },
-
-    bindEvents: function() {
-      var _this = this;
-
-      /*
-       * When slots are clicked, stack them.
-       * Enable dragging of slots.
-       */
-      jQuery('.layout-slot')
-      .click(function() {
-        // Bring clicked window to the top
-        var elem = this,
-        stack = '.layout-slot',
-        min,
-        group = jQuery.makeArray(jQuery(stack)).sort(function(a, b) {
-          return (parseInt(jQuery(a).css("zIndex"), 10) || 0) - (parseInt(jQuery(b).css("zIndex"), 10) || 0);
-        });
-        if (group.length < 1) {
-          return;
-        }
-        min = parseInt(group[0].style.zIndex, 10) || 0;
-        jQuery(group).each(function(i) {
-          this.style.zIndex = min+i;
-        });
-        if (elem === undefined) {
-          return;
-        }
-        jQuery(elem).css({'zIndex' : min+group.length});
-      })
-      .draggable({
-        handle: '.manifest-info',
-        stack: '.layout-slot',
-        snap: '.layout-slot, .drag-handle',
-        //snapMode: 'outer',
-        stop: _this.createSnapGroup 
-      }).on('dragstop', $.debounce(function(event, ui) {
-        _this.eventEmitter.publish('flex-slot-dragstop', ui);
-      }))
-      .resizable().on('resizestop', $.debounce(function(event, ui) {
-        _this.eventEmitter.publish('flex-slot-resizestop', ui);
-      }));
-
-      /*
-       * Enable dragging and deleting of draghandles.
-       */
-      jQuery('.drag-handle').each(function(index) {
-        var __this = this; // __this and _this are different, be careful!
-        jQuery(__this).draggable({
-          multiple: {
-            items: function getSelectedItems() {
-              return jQuery('.ui-draggable.' + jQuery(__this).attr('id'));
-            },
-            beforeStart: jQuery.noop,
-          },
-          snap: '.layout-slot',
-          snapMode: 'outer',
-          stop: _this.createSnapGroup
-        }).on('dragstop', $.debounce(function(event, ui) {
-          _this.eventEmitter.publish('drag-handle-dragstop', ui);
-        }));
-      });
-
-      jQuery('.drag-handle-remove')
-      .click(function(event) {
-        var id = event.currentTarget.__data__;
-        _this.eventEmitter.publish('REMOVE_DRAG_HANDLE', id);
+        _this.saveSnapGroupState();
       });
     },
 
@@ -287,11 +142,147 @@
       _this.eventEmitter.publish(prop + '.set', value);
     },
 
-    /**
-     * Add the classes required to create a snap-group with the dragged element.
+    /*
+     * Get the number of snapgroups.
+     */
+    countSnapGroups: function() {
+      return this.snapGroups.groups.length;
+    },
+
+    /*
+     * Creates a new snapGroup and returns its UUID.
      */
     createSnapGroup: function() {
+      var id = $.genUUID();
+      this.snapGroups.groups.push({
+        'name': 'snap-group-' + id,
+        'windows': [],
+        'left': undefined,
+        'top': undefined
+      });
+      return id;
+    },
 
+    /*
+     * Deletes the snapGroup with the given name.
+     *
+     * @param {string} sgname Name of the snapGroup to remove.
+     */
+    deleteSnapGroup: function(sgname) {
+      var _this = this;
+      
+      // remove from byWindow all key-value pairs that have sgname
+      jQuery.each(_this.snapGroups.byWindow, function(k, v) {
+        if (v === sgname) {
+          delete _this.snapGroups.byWindow[k];
+        }
+      });
+
+      // remove from groups
+      this.snapGroups.groups = this.snapGroups.groups.filter(function(e) {
+        return e.name === sgname ? false : true;
+      });
+    },
+
+    /*
+     * Add a window to the snapGroup.
+     *
+     * @param {string} windowName The data-layout-slot-id of the window to add
+     * @param {string} sgname Name of snapGroup
+     */
+    addToSnapGroup: function(windowName, sgname) {
+      // add to windows array of the snapGroup object
+      this.getSnapGroupObject(sgname).windows.push(windowName);
+
+      // add to byWindow
+      this.snapGroups.byWindow[windowName] = sgname;
+    },
+
+    /* 
+     * Remove a window from its snapGroup.
+     *
+     * @param {string} windowName The data-layout-slot-id of the window to remove
+     */
+    removeFromSnapGroup: function(windowName) {
+      // remove from windows array of the snapGroup object
+      var sg = this.getSnapGroupObject(this.getSnapGroupNameOfWindow(windowName));
+      sg.windows = sg.windows.filter(function(e) {
+        return e !== windowName;
+      });
+
+      // remove from byWindow
+      delete this.snapGroups.byWindow[windowName];
+    },
+
+    /*
+     * Get the name of the snapGroup that the window with given name belongs to.
+     *
+     * @param {string} windowName The data-layout-slot-id of the window to find the snapGroup of
+     * @return {string}
+     */
+    getSnapGroupNameOfWindow: function(windowName) {
+      return this.snapGroups.byWindow[windowName];
+    },
+
+    /*
+     * Gets the snapGroup object that has the given name, or undefined if there is none.
+     *
+     * @param {string} sgname Name of snapGroup to find.
+     * @return {Array | undefined}
+     */
+    getSnapGroupObject: function(sgname) {
+      var sglist = this.snapGroups.groups.filter(function(elt) {
+        return elt.name === sgname;
+      });
+      if (sglist.length === 1) {
+        return sglist[0];
+      }
+      else {
+        return undefined;
+      }
+    },
+
+    /*
+     * Saves the snapGroup state to localStorage.
+     */
+    saveSnapGroupState: function() {
+      this.eventEmitter.publish('snapGroupStateChanged', this.snapGroups);
+    },
+
+    /*
+     * Restores the snapGroup state from localStorage.
+     */
+    restoreSnapGroups: function() {
+      var savedSettings = this.state.getStateProperty('snapGroupState');
+      if (savedSettings !== undefined) {
+        this.snapGroups = JSON.parse(savedSettings);
+        jQuery.each(this.snapGroups.byWindow, function(k, v) {
+          jQuery('[data-layout-slot-id="'+ k +'"]').addClass(v);
+        });
+      }
+    },
+
+    isInSnapGroup: function(windowName, sgname) {
+      return this.snapGroups.byWindow[windowName] === sgname;
+    },
+
+    updateDragHandlePosition: function(sgname, pos) {
+      var sg = this.getSnapGroupObject(sgname);
+      sg.left = pos.left + 'px';
+      sg.top = pos.top + 'px';
+    },
+
+    /**
+     * Updates the snap-group classes on the DOM elements,
+     * and updates the data model to reflect the DOM state.
+     *
+     * Called by the drag-stop events on elements with classes drag-handle and layout-slot.
+     *
+     * @param {Object} that Reference to a Workspace object
+     * NOTE: this function is called so that {this} refers to the DOM element that has stopped dragging
+     */
+    updateSnapGroups: function(that) {
+      
       /**
        * Get the name of the snap group that corresponds to a give jQuery selection.
        *
@@ -299,10 +290,10 @@
        *     and drag-handles.
        * @return {false | Array} This returns either false or a one-element array.
        */
-      function getSnapGroup(selection) {
+      function extractSnapGroupName(selection) {
         var re = '^snap-group-',
         reObj = new RegExp(re);
-
+  
         function getDragHandleId(selection) {
           var id;
           if (selection.length > 0) {
@@ -313,7 +304,7 @@
         }
         return selection.filter('.layout-slot').hasClassRegEx(re) || getDragHandleId(selection.filter('.drag-handle'));
       }
-
+  
       // Get the possible snap targets, then pull out only the snap targets that are "snapping"
       // thisSnapGroup and targetSnapGroup will either be single-element lists, or false
       var snapTargets = jQuery(this).data('ui-draggable').snapElements,
@@ -321,17 +312,38 @@
         return element.snapping ? element.item : null;
       }),
       thisElt = jQuery(this),
-      thisSnapGroup = getSnapGroup(thisElt),
+      thisSnapGroup = extractSnapGroupName(thisElt),
       targetElts = jQuery(snappedTargets),
-      targetSnapGroup = getSnapGroup(targetElts);
-
+      targetSnapGroup = extractSnapGroupName(targetElts);
+  
+      // thisElt is a slot
       if (thisElt.filter('.layout-slot').length > 0) {
-        thisElt.removeClass(thisSnapGroup[0]);
+        // remove old snap group first
+        if (thisSnapGroup) {
+          thisElt.removeClass(thisSnapGroup[0]);
+
+          // update data model
+          that.removeFromSnapGroup(thisElt.attr('data-layout-slot-id'));
+        }
+        // target elt has a snapGroup
         if (targetSnapGroup) {
           thisElt.addClass(targetSnapGroup[0]);
+
+          // update data model
+          that.addToSnapGroup(thisElt.attr('data-layout-slot-id'), targetSnapGroup[0]);
         }
-      } else { // 'thisElt' is a dragHandle
-        targetElts.filter('.layout-slot').removeClass(targetSnapGroup[0]).addClass(thisSnapGroup[0]);
+
+      // thisElt is a dragHandle
+      } else { 
+        targetElts.filter('.layout-slot')
+          .removeClass(targetSnapGroup[0])
+          .addClass(thisSnapGroup[0])
+          .each(function(i, e) {
+            // add window to snapGroup if it isn't already 
+            if (!that.isInSnapGroup(jQuery(e).attr('data-layout-slot-id'), thisSnapGroup[0])) {
+              that.addToSnapGroup(jQuery(e).attr('data-layout-slot-id'), thisSnapGroup[0]);
+            }
+          });
       }
     },
 
@@ -339,37 +351,90 @@
      * Use d3 to render the dragHandles.
      */
     renderDragHandles: function() {
-        // TODO: change the d3.select to use '#workspace-XXX-XX-XXXX'
+      // TODO: change the d3.select to use '#workspace-XXX-XX-XXXX'
       var _this = this,
-      n = _this.snapGroups.length,
-      handles = d3.select('.workspace-container').selectAll('.drag-handle').data(_this.snapGroups, function(d) { 
+      n = _this.countSnapGroups(),
+      assocSnapGroup;
+
+      handles = d3.select('.workspace-container').selectAll('.drag-handle').data(_this.snapGroups.groups, function(d) { 
         // binds data to element by id, so that when an item is removed from _this.snapGroups,
         // the DOM element with corresponding #id is removed, instead of the most recently added element
-        return d;
+        return d.name;
       }),
       handlesDiv = handles.enter().append('div')
-        .attr('id', function(d) { return d; })
+        .attr('id', function(d) { return d.name; })
         .classed({'drag-handle': true})
         .style({
           'background-color': 'red',
           'border-top-left-radius': '8px',
           'border-top-right-radius': '8px',
           'height': '25px',
-          'left': 75*n + 'px',
           'position': 'absolute',
-          'top': '50px',
           'width': '50px'
+        })
+        .each(function(d) {
+          // make this a draggable element that can drag multiple other draggable elements
+          jQuery(this).draggable({
+            multiple: {
+              items: function getSelectedItems() {
+                return jQuery('.ui-draggable.' + d.name);
+              },
+              beforeStart: jQuery.noop,
+            },
+            snap: '.layout-slot',
+            snapMode: 'outer',
+            stop: function(event, ui) {
+              // save coordinates of associated slots before calculating layout
+              var dragHandle = ui.helper[0];
+              var slotIDs = [];
+              jQuery('.' + dragHandle.id).each(function(i, val) {
+                var dlsi = val.attributes['data-layout-slot-id'].value;
+                slotIDs.push(dlsi);
+                // write to slotCoordinates
+                _this.slotCoordinates[dlsi].x = val.offsetLeft;
+                _this.slotCoordinates[dlsi].y = val.offsetTop;
+              });
+
+              _this.calculateLayout(undefined, slotIDs, undefined);
+      
+              _this.updateSnapGroups.call(this, _this);
+              _this.updateDragHandlePosition(dragHandle.id, jQuery(dragHandle).position());
+              _this.saveSnapGroupState();
+            }
+          });
+
+          // set the position of the new dragHandle
+          assocSnapGroup = _this.getSnapGroupObject(d.name);
+          if (assocSnapGroup.left === undefined && assocSnapGroup.top === undefined) {
+            // new dragHandle, so give it the defaults and update the data model
+            d3.select(this).style({'left': 75*n + 'px', 'top': '50px'});
+            _this.updateDragHandlePosition(d.name, {'left': 75*n, 'top': 50});
+          }
+          else {
+            // restoring a dragHandle, so set only the style
+            d3.select(this).style({'left': assocSnapGroup.left, 'top': assocSnapGroup.top});
+          }
         }),
       handlesDivA = handlesDiv.append('a')
         .attr('href', 'javascript:;')
-        .classed({'drag-handle-remove': true});
+        .classed({'drag-handle-remove': true})
+        .on('click', function(d) {
+          _this.deleteSnapGroup(d.name);
+          _this.renderDragHandles();
+          _this.saveSnapGroupState();
+          d3.event.stopPropagation();
+        });
 
       handlesDivA.append('i')
         .attr('float', 'left')
         .classed({'fa fa-times': true})
         .style('padding', '4px');
 
-      handles.exit().remove('div');
+      handles.exit().remove('div')
+        .each(function(d) {
+          // de-register the removed dragHandle's layout-slots
+          jQuery('.layout-slot.' + d.name).removeClass(d.name);
+        });
     },
 
     /*
@@ -410,10 +475,12 @@
             _this.slotCoordinates[tscKey] = {};
           }
           if (draggedIDs === undefined || draggedIDs.indexOf(tscKey) === -1) {
+            // hasn't been written to slotCoordinates by the caller, so write it
             _this.slotCoordinates[tscKey].x = node.x;
             _this.slotCoordinates[tscKey].y = node.y;
           }
           if (resizedIDs === undefined || resizedIDs.indexOf(tscKey) === -1) {
+            // hasn't been written to slotCoordinates by the caller, so write it
             _this.slotCoordinates[tscKey].dx = node.dx;
             _this.slotCoordinates[tscKey].dy = node.dy;
           }
@@ -506,6 +573,64 @@
           state: _this.state,
           eventEmitter: _this.eventEmitter
         }));
+
+
+      })
+      .on('click', function() {
+        // Bring clicked window to the top
+        var elem = this,
+        stack = '.layout-slot',
+        min,
+        group = jQuery.makeArray(jQuery(stack)).sort(function(a, b) {
+          return (parseInt(jQuery(a).css("zIndex"), 10) || 0) - (parseInt(jQuery(b).css("zIndex"), 10) || 0);
+        });
+        if (group.length < 1) {
+          return;
+        }
+        min = parseInt(group[0].style.zIndex, 10) || 0;
+        jQuery(group).each(function(i) {
+          this.style.zIndex = min+i;
+        });
+        /* // why do we need the following check
+        if (elem === undefined) {
+          return;
+        }
+        */
+        jQuery(elem).css({'zIndex' : min+group.length});
+
+        d3.event.stopPropagation();
+      })
+      .each(function() {
+        jQuery(this)
+        .draggable({
+          handle: '.manifest-info',
+          stack: '.layout-slot',
+          snap: '.layout-slot, .drag-handle',
+          //snapMode: 'outer',
+          stop: function(event, ui) {
+            // save slot left/top to localstorage, so that they aren't overwritten by calculateLayout
+            var id = ui.helper[0].attributes['data-layout-slot-id'].value;
+            _this.slotCoordinates[id].x = ui.position.left;
+            _this.slotCoordinates[id].y = ui.position.top;
+    
+            var slotIDs = [id];
+            _this.calculateLayout(undefined, slotIDs, undefined);
+    
+            _this.updateSnapGroups.call(this, _this);
+            _this.saveSnapGroupState();
+          }
+        })
+        .resizable().on('resizestop', function(event, ui) {
+          // save slot height/width to localstorage, so that they aren't overwritten by calculateLayout
+          var id = ui.helper[0].attributes['data-layout-slot-id'].value;
+          _this.slotCoordinates[id].dx = ui.size.width;
+          _this.slotCoordinates[id].dy = ui.size.height;
+  
+          var slotIDs = [id];
+          _this.calculateLayout(undefined, undefined, slotIDs);
+
+          // TODO: remove from snapGroup if we resize so that slot disconnects
+        });
       });
 
       // Exit
@@ -532,6 +657,8 @@
         if (_this.slotCoordinates[d.id]) {
           delete _this.slotCoordinates[d.id];
         }
+
+        _this.removeFromSnapGroup(d.id);
       });
 
       function cell() {
