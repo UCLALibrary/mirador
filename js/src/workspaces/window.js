@@ -477,8 +477,11 @@
     },
 
     removeFromLockGroup: function(elt) {
-      this.eventEmitter.publish('removeFromLockGroup', {viewObj: this.focusModules[this.currentImageMode]});
-      jQuery(elt).parent().children('.add-to-lock-group').removeClass('current-lg');
+      var viewObj = this.focusModules[this.currentImageMode];
+      if (viewObj !== null) {
+        this.eventEmitter.publish('removeFromLockGroup', {'viewObj': viewObj});
+        jQuery(elt).parent().children('.add-to-lock-group').removeClass('current-lg');
+      }
     },
 
     bindAnnotationEvents: function() {
