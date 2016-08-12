@@ -1821,9 +1821,13 @@ a.mirador-icon-annotations [class^="icon-"] {
   position: absolute;
   padding:0;
   margin-top:10px;
-  height: auto;
+  //height: auto;
   box-shadow: 0px 2px 4px #B1B1B1;
   border: 1px solid #B1B1B1;
+}
+
+.mirador-viewer ul.dropdown.multi-image-list {
+  overflow-y: scroll;
 }
 
 .mirador-viewer .dropdown li {

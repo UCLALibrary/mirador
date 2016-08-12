@@ -7,6 +7,8 @@
       windowId:         null,
       currentImgIndex:  0,
       canvasID:          null,
+      // key-value map of canvasIDs to choiceImageIDs
+      choiceImageIDs:   {},
       imagesList:       [],
       element:          null,
       elemOsd:          null,
@@ -183,9 +185,20 @@
         _this.element.find('.draw-tool').hide();
       });
       //Related to Annotations HUD
-      //
-      _this.eventEmitter.subscribe('showChoiceImage', function(event, id) {
-        _this.showChoiceImage(id);
+      
+      /*
+       * Switches the given window to the given choiceImageID, and updates the viewer state.
+       *
+       * @param {Object} data Contains the id of the window to update, and the choiceImageID to switch to
+       */
+      _this.eventEmitter.subscribe('showChoiceImage', function(event, data) {
+        _this.selectChoiceImage(data.choiceImageID);
+
+        // goes to SaveController
+        _this.eventEmitter.publish('windowUpdated', {
+          id: data.id,
+          choiceImageIDs: _this.choiceImageIDs
+        });
       });
     },
 
@@ -639,7 +652,11 @@
       }
     },
 
-    // imageUrl can either be a string or object
+    /*
+     * Instantiates an OSD object.
+     *
+     * @param {String | Object} imageUrlData If {String}, no image choice. If {Object}, image choice.
+     */
     createOpenSeadragonInstance: function(imageUrlData) {
       var infoJsonUrl,
       infoJsonUrlList,
@@ -657,7 +674,7 @@
             defaultImgObj = data;
           })]
         ).then(function() {
-          initOSD(defaultImgObj, false);
+          initOSD(defaultImgObj);
         });
 
       } else if (typeof imageUrlData === 'object') {
@@ -674,8 +691,8 @@
             });
           }))
         ).then(function() {
-          initOSD(imageUrlData, true);
           _this.imageChoice = imageUrlData;
+          initOSD(imageUrlData);
         });
       }
 
@@ -684,11 +701,11 @@
       this.element.find('.' + this.osdCls).remove();
 
       /*
-       * @param {Object} defaultImg An object that is the contents of info.json.
-       * @param {Array} alternateImgs An array that contains objects of the same structure as defaultImg.
+       * @param {Object} infoJson An object that is the contents of info.json.
+       * @param {Array} alternateImgs An array that contains objects of the same structure as infoJson.
        */
-      var initOSD = function(defaultImg, isMultiImage) {
-        // check if defaultImg 
+      var initOSD = function(infoJson) {
+        var isMultiImage = infoJson.hasOwnProperty('default') && infoJson.hasOwnProperty('item');
 
         _this.elemOsd =
           jQuery('<div/>')
@@ -698,7 +715,6 @@
 
         _this.osd = $.OpenSeadragon({
           'id':           osdID,
-          //'tileSources':  alternateImgs.length === 0 ? defaultImg : [defaultImg].concat(alternateImgs),
           'uniqueID' : uniqueID
         });
 
@@ -786,7 +802,6 @@
 
         _this.osd.addHandler('open', function(){
           // TODO: do we need the following line?
-          var keyy = defaultImg['default'].label;
           _this.eventEmitter.publish('osdOpen.'+_this.windowId);
 
 
@@ -837,49 +852,68 @@
 
           // send message to window so that it can render dropdown menu and register events on it
           if (isMultiImage) {
-            _this.eventEmitter.publish('imageChoiceReady', {data: [defaultImg['default'].label].concat(defaultImg.item.map(function(v) { return v.label; }))});
+            var choiceImgId = _this.choiceImageIDs[_this.canvasID];
+            if (choiceImgId) {
+              _this.selectChoiceImage(choiceImgId);
+            }
+
+            // tell window to render the dropdown menu
+            _this.eventEmitter.publish('imageChoiceReady', {data: [infoJson['default'].label].concat(infoJson.item.map(function(v) { return v.label; }))});
+          }
+          else {
+            // tell window to render the dropdown menu
+            _this.eventEmitter.publish('noImageChoice');
           }
         });
 
         if (isMultiImage) {
-          _this.osd.open(defaultImg['default'].data, {opacity:1, x:0, y:0, width:1});
+          _this.osd.open(infoJson['default'].data, {opacity:1, x:0, y:0, width:1});
         } else {
-          _this.osd.open(defaultImg, {opacity:1, x:0, y:0, width:1});
+          _this.osd.open(infoJson, {opacity:1, x:0, y:0, width:1});
         }
       }; 
     },
 
-    // adds another layer to the osd 
-    addAlternateImages: function(tileSources) {
-      var _this = this;
-      jQuery.each(tileSources, function(index, value) {
-        var options = {
-          tileSource: value,
-          opacity: 1,
-          x: 0,
-          y: 0,
-          width: value.width
-        };
-        _this.osd.addTiledImage(options);
-      });
-    },
 
-    // shows the image with the corresponding id (label)
-    showChoiceImage: function(id) {
-      // get reference to osd
+    /*
+     * Displays the choice image whose label matches the given id.
+     *
+     * @param {String} id Label of the image to select.
+     */
+    selectChoiceImage: function(id) {
       var _this = this;
 
-      var tileSource;
+      /*
+       * Adds a new tiled image to OSD.
+       *
+       * @param {Array} tileSources Single-element array containing a tileSource object.
+       */
+      var addAlternateImages = function(tileSources) {
+        jQuery.each(tileSources, function(index, value) {
+          var options = {
+            tileSource: value,
+            opacity: 1,
+            x: 0,
+            y: 0,
+            width: value.width
+          };
+          _this.osd.addTiledImage(options);
+        });
+      };
+
       if (_this.imageChoice['default'].label === id) {
-        _this.addAlternateImages([_this.imageChoice['default'].data]);
+        addAlternateImages([_this.imageChoice['default'].data]);
       }
       else
       {
-        _this.addAlternateImages(_this.imageChoice.item.filter(function(e) { return e.label === id ? true : false; }).map(function(v) { return v.data; }));
+        addAlternateImages(_this.imageChoice.item.filter(function(e) { return e.label === id ? true : false; }).map(function(v) { return v.data; }));
       }
 
+      // remove the old canvas
       _this.osd.world.removeItem(_this.osd.world.getItemAt(0));
-      //_this.osd.world.setItemIndex(_this.osd.world.getItemAt(1), 0);
+
+      // update data model
+      _this.choiceImageIDs[_this.canvasID] = id;
     },
 
     addAnnotationsLayer: function(element) {
@@ -905,7 +939,12 @@
           zoomLevel:        null
         };
         this.osd.close();
-        this.createOpenSeadragonInstance($.Iiif.getImageUrl(this.currentImg));
+
+        if ($.Iiif.imageHasAlternateResources(this.currentImg)) {
+          this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsAndUrls(this.currentImg));
+        } else {
+          this.createOpenSeadragonInstance($.Iiif.getImageUrl(this.currentImg));
+        }
         _this.eventEmitter.publish('UPDATE_FOCUS_IMAGES.' + this.windowId, {array: [canvasID]});
       } else {
         _this.eventEmitter.publish('UPDATE_FOCUS_IMAGES.' + this.windowId, {array: [canvasID]});

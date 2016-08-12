@@ -629,7 +629,8 @@
           var slotIDs = [id];
           _this.calculateLayout(undefined, undefined, slotIDs);
 
-          // TODO: remove from snapGroup if we resize so that slot disconnects
+          // fit image choice menu to the new window size
+          _this.eventEmitter.publish('fitImageChoiceMenu');
         });
       });
 
@@ -956,7 +957,8 @@
 
         //"rename" some keys in the merged object to align settings parameters with window parameters
         if (mergedConfig.loadedManifest) {
-          mergedConfig.manifest = _this.state.getStateProperty('manifests')[mergedConfig.loadedManifest];
+          // TODO: remove the second || operand, after our manifests are not named with a trailing .json
+          mergedConfig.manifest = _this.state.getStateProperty('manifests')[mergedConfig.loadedManifest] || _this.state.getStateProperty('manifests')[mergedConfig.loadedManifest + '.json'];
           delete mergedConfig.loadedManifest;
         }
 

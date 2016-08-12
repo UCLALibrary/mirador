@@ -8,6 +8,8 @@
       element:           null,
       scrollImageRatio:  0.9,
       canvasID:          null,
+      // key-value store of canvasIDs to choiceImageIDs
+      choiceImageIDs:    {},
       focusImages:       [],
       imagesList:        null,
       annotationsList:   [],
@@ -390,8 +392,24 @@
         }
       });
 
+      /*
+       * From ImageView.createOpenSeadragon.
+       *
+       * @param {Object} data
+       */
       _this.eventEmitter.subscribe('imageChoiceReady', function(event, data) {
         _this.renderImageChoiceMenu(data.data);
+      });
+
+      _this.eventEmitter.subscribe('noImageChoice', function(event) {
+        _this.renderImageChoiceMenu([]);
+      });
+
+      /*
+       * Fits the image choice menu vertically to the window. Called during resizestop.
+       */
+      _this.eventEmitter.subscribe('fitImageChoiceMenu', function(event) {
+        _this.fitImageChoiceMenu();
       });
     },
 
@@ -431,7 +449,7 @@
         _this.element.find('.lock-options-list').stop().slideFadeToggle(300);
       });
 
-      // show/hide lock group menu (window-level)
+      // show/hide multi-image menu (window-level)
       this.element.find('.mirador-icon-multi-image').off('mouseenter').on('mouseenter',
         function() {
         _this.element.find('.multi-image-list').stop().slideFadeToggle(300);
@@ -786,6 +804,7 @@
           state:  this.state,
           eventEmitter: this.eventEmitter,
           canvasID: canvasID,
+          choiceImageIDs: this.choiceImageIDs,
           imagesList: this.imagesList,
           osdOptions: this.windowOptions,
           bottomPanelAvailable: this.bottomPanelAvailable,
@@ -802,21 +821,53 @@
 
     renderImageChoiceMenu: function(data) {
 
+      // first remove inline style attr
+      this.element.find('.multi-image-list').css('height', '');
+      
       // get d3 selection of ul
       var _this = this;
-      var lis = d3.select('.multi-image-list').selectAll('li').data(data, function(d) { return d; });
+      var lis;
+      
+      lis = d3.select('.multi-image-list').selectAll('li').data(data, function(d) { return d; });
       lis.enter().append('li')
         .text(function(d) { return d; })
         .classed({'multi-image-list-item': true})
         .call(function(curSel) {
-          jQuery(curSel[0]).first().addClass('current-choice-img');
+          // get label of choice image for this selection
+          var label = _this.choiceImageIDs[_this.canvasID],
+          elt,
+          currentSelection = jQuery(curSel[0]);
+
+          if (label !== undefined) {
+            elt = currentSelection.filter(function() {
+              return this.innerHTML === label ? true : false;
+            });
+          } else {
+            elt = currentSelection.first();
+          }
+          elt.addClass('current-choice-img');
         })
         .on('click', function(d) {
-          _this.eventEmitter.publish('showChoiceImage', d);
+          // switch the choice id in the data model and save to localstorage
+          // window is subscribed
+          _this.eventEmitter.publish('showChoiceImage', {
+            id: _this.id,
+            choiceImageID: d
+          });
+          
+          // update dom
           jQuery(this).parent().children('li').removeClass('current-choice-img');
           jQuery(this).addClass('current-choice-img');
         });
       lis.exit().remove();
+
+      _this.fitImageChoiceMenu();
+    },
+
+    fitImageChoiceMenu: function() {
+      var ul = this.element.find('.multi-image-list'),
+      height = ul.closest('.window').find('.content-container').css('height');
+      ul.css('max-height', height);
     },
 
     toggleBookView: function(canvasID) {
@@ -971,6 +1022,7 @@
       this.getAnnotations();
       switch(this.currentImageMode) {
         case 'ImageView':
+          // choiceImageID is undefined
           this.toggleImageView(this.canvasID);
         break;
         case 'BookView':
