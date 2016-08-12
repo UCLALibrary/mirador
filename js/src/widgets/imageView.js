@@ -702,7 +702,6 @@
 
       /*
        * @param {Object} infoJson An object that is the contents of info.json.
-       * @param {Array} alternateImgs An array that contains objects of the same structure as infoJson.
        */
       var initOSD = function(infoJson) {
         var isMultiImage = infoJson.hasOwnProperty('default') && infoJson.hasOwnProperty('item');
