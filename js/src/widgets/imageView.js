@@ -889,12 +889,13 @@
        */
       var addAlternateImages = function(tileSources) {
         jQuery.each(tileSources, function(index, value) {
+          // assumes that images are all the same size
           var options = {
             tileSource: value,
             opacity: 1,
             x: 0,
             y: 0,
-            width: value.width
+            width: 1
           };
           _this.osd.addTiledImage(options);
         });
