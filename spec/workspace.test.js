@@ -89,7 +89,7 @@ describe('Workspace', function() {
     });
   });
 
-  describe('removeNode', function() {
+  xdescribe('removeNode', function() {
     it('should remove a sibling (going from 3 to 2)', function() {
       this.workspace = new Mirador.Workspace({
         parent:                     this.viewer, //viewer

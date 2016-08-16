@@ -1812,7 +1812,7 @@ a.mirador-icon-annotations [class^="icon-"] {
 
 .mirador-viewer ul.dropdown {
   display: none;
-  width: 160px;
+  width: auto;
   z-index: 3;
   opacity: 0.98;
   background-color: #efefef;
@@ -1821,9 +1821,13 @@ a.mirador-icon-annotations [class^="icon-"] {
   position: absolute;
   padding:0;
   margin-top:10px;
-  height: auto;
+  //height: auto;
   box-shadow: 0px 2px 4px #B1B1B1;
   border: 1px solid #B1B1B1;
+}
+
+.mirador-viewer ul.dropdown.multi-image-list {
+  overflow-y: scroll;
 }
 
 .mirador-viewer .dropdown li {
@@ -1842,7 +1846,8 @@ a.mirador-icon-annotations [class^="icon-"] {
   font-weight: bold;
 }
 
-.mirador-viewer .dropdown.lock-options-list li.current-lg {
+.mirador-viewer .dropdown.lock-options-list li.current-lg,
+.mirador-viewer .dropdown.multi-image-list li.current-choice-img  {
   background-color: deepskyblue;
 }
 
@@ -1872,7 +1877,7 @@ a.mirador-icon-empty-slot [class^="icon-"] {
   padding-bottom:30px;
 }
 
-.mirador-viewer a.mirador-icon-window-menu, .mirador-viewer a.mirador-icon-toc, .mirador-viewer a.mirador-close-window, .mirador-viewer a.mirador-icon-ruler, .mirador-viewer a.mirador-icon-lock-window {
+.mirador-viewer a.mirador-icon-window-menu, .mirador-viewer a.mirador-icon-toc, .mirador-viewer a.mirador-close-window, .mirador-viewer a.mirador-icon-ruler, .mirador-viewer a.mirador-icon-lock-window, .mirador-viewer a.mirador-icon-multi-image {
   float:left;
   background: none;
   color: rgb( 146, 145, 145 );
@@ -1892,6 +1897,7 @@ a.mirador-icon-window-menu, a.mirador-icon-view-type {
 .mirador-viewer a.mirador-icon-toc:hover,
 .mirador-viewer a.mirador-osd-fullscreen:hover,
 .mirador-viewer a.mirador-icon-lock-window:hover,
+.mirador-viewer a.mirador-icon-multi-image:hover,
 .mirador-viewer a.mirador-icon-ruler:hover {
   color: black;
 }
@@ -1900,6 +1906,7 @@ a.mirador-icon-window-menu, a.mirador-icon-view-type {
 .mirador-viewer a.mirador-icon-toc.selected,
 .mirador-viewer a.mirador-icon-metadata-view.selected,
 .mirador-viewer a.mirador-icon-lock-window.selected,
+.mirador-viewer a.mirador-icon-multi-image.selected,
 .mirador-viewer a.mirador-icon-ruler.selected {
   color: black;
 }

@@ -164,7 +164,10 @@
       _this.eventEmitter.subscribe('manifestReceived', function(event, newManifest) {
         if (_this.state.getStateProperty('windowObjects')) {
           var check = jQuery.grep(_this.state.getStateProperty('windowObjects'), function(object, index) {
-            return object.loadedManifest === newManifest.uri;
+
+            // handle manifests whose URIs don't end in .json 
+            // TODO: remove the second || operand
+            return object.loadedManifest === newManifest.uri || -1 !== newManifest.uri.indexOf(object.loadedManifest);
           });
           jQuery.each(check, function(index, config) {
             _this.loadManifestFromConfig(config);

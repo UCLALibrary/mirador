@@ -26,6 +26,7 @@
     };
 
     // check if a valid IIIF physical dimension service exists
+    // TODO: may need to make sure that ts is an object
     if (options.hasOwnProperty('tileSources')) {
 
       ts = options.tileSources;
@@ -36,20 +37,20 @@
           ts.service.hasOwnProperty('physicalScale') &&
           metersPerPhysicalUnit.hasOwnProperty(ts.service.physicalUnits)) {
   
-	// openseadragon-scalebar needs to know pixels per meter to render ruler
+        // openseadragon-scalebar needs to know pixels per meter to render ruler
         pixelsPerMeter = 1 / (metersPerPhysicalUnit[ts.service.physicalUnits] * ts.service.physicalScale);
    
         // set pixels per meter
         jQuery.extend(true, this, {
           'scalebar': $.DEFAULT_SETTINGS.scalebar
         }, {
-          'scalebar': { 'pixelsPerMeter': pixelsPerMeter }	
+          'scalebar': { 'pixelsPerMeter': pixelsPerMeter }
         });
   
         // setup the scalebar
         osd.scalebar(this.scalebar);
 
-	osd.hasPhysicalDimensionData = true;
+        osd.hasPhysicalDimensionData = true;
         return osd;
       }
     }
