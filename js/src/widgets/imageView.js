@@ -803,18 +803,12 @@
           // TODO: do we need the following line?
           _this.eventEmitter.publish('osdOpen.'+_this.windowId);
 
-
-          var addItemHandler = function( event ) {
-            _this.osd.world.removeHandler( "add-item", addItemHandler );
-            if (_this.osdOptions.osdBounds) {
-              var rect = new OpenSeadragon.Rect(_this.osdOptions.osdBounds.x, _this.osdOptions.osdBounds.y, _this.osdOptions.osdBounds.width, _this.osdOptions.osdBounds.height);
-              _this.osd.viewport.fitBounds(rect, true);
-            } else {
-              _this.setBounds();
-            }
-          };
-
-          _this.osd.world.addHandler( "add-item", addItemHandler );
+          if (_this.osdOptions.osdBounds) {
+            var rect = new OpenSeadragon.Rect(_this.osdOptions.osdBounds.x, _this.osdOptions.osdBounds.y, _this.osdOptions.osdBounds.width, _this.osdOptions.osdBounds.height);
+            _this.osd.viewport.fitBounds(rect, true);
+          } else {
+            _this.setBounds();
+          }
 
           _this.addAnnotationsLayer(_this.elemAnno);
 
