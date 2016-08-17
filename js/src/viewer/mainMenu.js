@@ -96,6 +96,7 @@
               'workspacePanelVisible': '.change-layout',
               'bookmarkPanelVisible': '.bookmark-workspace',
               'workspaceUploadPanelVisible': '.workspace-upload',
+              'workspaceDownloadPanelVisible': '.workspace-download',
               'lockGroupsPanelVisible': '.toggle-lock-groups'
             };
 
@@ -118,6 +119,7 @@
               '.change-layout': 'TOGGLE_WORKSPACE_PANEL',
               '.bookmark-workspace': 'TOGGLE_BOOKMARK_PANEL',
               '.workspace-upload': 'TOGGLE_WORKSPACE_UPLOAD_PANEL',
+              '.workspace-download': 'TOGGLE_WORKSPACE_DOWNLOAD_PANEL',
               '.toggle-lock-groups': 'TOGGLE_LOCK_GROUPS_PANEL',
               '.fullscreen-viewer': 'TOGGLE_FULLSCREEN',
               '.add-flexible-slot': 'ADD_FLEXIBLE_SLOT',
