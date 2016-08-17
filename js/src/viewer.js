@@ -22,6 +22,7 @@
         'optionsPanelVisible': false,
         'bookmarkPanelVisible': false,
         'workspaceUploadPanelVisible': false,
+        'workspaceDownloadPanelVisible': false,
         'lockGroupsPanelVisible': false
       },
       manifests:             []
@@ -142,6 +143,7 @@
       // add file upload panel
       if (showMainMenu && this.state.getStateProperty('workspaceDownload')) {
         this.workspaceUploadPanel = new $.WorkspaceUploadPanel({ appendTo: this.element.find('.mirador-viewer'), state: this.state, eventEmitter: this.eventEmitter });
+        this.workspaceDownloadPanel = new $.WorkspaceDownloadPanel({ appendTo: this.element.find('.mirador-viewer'), state: this.state, eventEmitter: this.eventEmitter });
       }
 
       // set this to be displayed
@@ -185,6 +187,10 @@
 
       _this.eventEmitter.subscribe('TOGGLE_WORKSPACE_UPLOAD_PANEL', function(event) {
         _this.toggleWorkspaceUploadPanel();
+      });
+
+      _this.eventEmitter.subscribe('TOGGLE_WORKSPACE_DOWNLOAD_PANEL', function(event) {
+        _this.toggleWorkspaceDownloadPanel();
       });
 
       _this.eventEmitter.subscribe('TOGGLE_LOCK_GROUPS_PANEL', function(event) {
@@ -281,6 +287,10 @@
 
     toggleWorkspaceUploadPanel: function() {
       this.toggleOverlay('workspaceUploadPanelVisible');
+    },
+
+    toggleWorkspaceDownloadPanel: function() {
+      this.toggleOverlay('workspaceDownloadPanelVisible');
     },
 
     toggleLockGroupsPanel: function() {
