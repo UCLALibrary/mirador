@@ -87,10 +87,10 @@
       "layoutOptions" : {
         "newObject" : true,
         "close" : true,
-        "slotRight" : true,
-        "slotLeft" : true,
-        "slotAbove" : true,
-        "slotBelow" : true,
+        "slotRight" : false,
+        "slotLeft" : false,
+        "slotAbove" : false,
+        "slotBelow" : false,
       }
     },
 
