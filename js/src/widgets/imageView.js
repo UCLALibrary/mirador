@@ -192,13 +192,15 @@
        * @param {Object} data Contains the id of the window to update, and the choiceImageID to switch to
        */
       _this.eventEmitter.subscribe('showChoiceImage', function(event, data) {
-        _this.selectChoiceImage(data.choiceImageID);
+        if (_this.windowId === data.id) {
+          _this.selectChoiceImage(data.choiceImageID);
 
-        // goes to SaveController
-        _this.eventEmitter.publish('windowUpdated', {
-          id: data.id,
-          choiceImageIDs: _this.choiceImageIDs
-        });
+          // goes to SaveController
+          _this.eventEmitter.publish('windowUpdated', {
+            id: data.id,
+            choiceImageIDs: _this.choiceImageIDs
+          });
+        }
       });
     },
 
@@ -851,11 +853,14 @@
             }
 
             // tell window to render the dropdown menu
-            _this.eventEmitter.publish('imageChoiceReady', {data: [infoJson['default'].label].concat(infoJson.item.map(function(v) { return v.label; }))});
+            _this.eventEmitter.publish('imageChoiceReady', {
+              data: [infoJson['default'].label].concat(infoJson.item.map(function(v) { return v.label; })),
+              id: _this.windowId
+            });
           }
           else {
             // tell window to render the dropdown menu
-            _this.eventEmitter.publish('noImageChoice');
+            _this.eventEmitter.publish('noImageChoice', _this.windowId);
           }
         });
 
