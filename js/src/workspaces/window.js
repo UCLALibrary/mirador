@@ -398,11 +398,15 @@
        * @param {Object} data
        */
       _this.eventEmitter.subscribe('imageChoiceReady', function(event, data) {
-        _this.renderImageChoiceMenu(data.data);
+        if (data.id === _this.id) {
+          _this.renderImageChoiceMenu(data.data);
+        }
       });
 
-      _this.eventEmitter.subscribe('noImageChoice', function(event) {
-        _this.renderImageChoiceMenu([]);
+      _this.eventEmitter.subscribe('noImageChoice', function(event, id) {
+        if (id === _this.id) {
+          _this.renderImageChoiceMenu([]);
+        }
       });
 
       /*
@@ -828,7 +832,7 @@
       var _this = this;
       var lis;
       
-      lis = d3.select('.multi-image-list').selectAll('li').data(data, function(d) { return d; });
+      lis = d3.select(_this.element[0]).select('.multi-image-list').selectAll('li').data(data, function(d) { return d; });
       lis.enter().append('li')
         .text(function(d) { return d; })
         .classed({'multi-image-list-item': true})
