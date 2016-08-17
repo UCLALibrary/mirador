@@ -240,8 +240,8 @@
 
     template: Handlebars.compile([
        '<div id="lock-groups-panel">',
-         '<h3>Manage Lock Groups</h3>',
-         '<span>Lock Group Name: ',
+         '<h3>Manage Synchronized Windows</h3>',
+         '<span>Window Group Name: ',
            '<input id="new-lock-group-name" type="text">',
            '<a href="javascript:;" class="mirador-btn mirador-icon-create-lock-group">',
              '<i class="fa fa-plus fa-lg"></i>',
