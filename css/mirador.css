@@ -236,7 +236,7 @@ a {
   background-color: #fff;
   box-shadow: 0 0 6px #333;
 }
-#bookmark-panel, #workspace-upload-panel {
+#bookmark-panel, #workspace-upload-panel, #workspace-download-panel  {
   position: absolute;
   height: 20%;
   width: 30%;
@@ -261,15 +261,15 @@ a {
   padding: 10px;
 }
 
-#bookmark-panel span, #workspace-upload-panel span, #lock-groups-panel span {
+#bookmark-panel span, #workspace-upload-panel span, #workspace-download-panel span, #lock-groups-panel span {
   width: 100%;
   padding-left: 2%;
 }
-#bookmark-panel input, #workspace-upload-panel input, #lock-groups-panel span {
+#bookmark-panel input, #workspace-upload-panel input, #workspace-download-panel input, #lock-groups-panel span {
   width: 80%;
   margin-right: 3px;
 }
-#bookmark-panel h3, #workspace-upload-panel h3, #lock-groups-panel h3 {
+#bookmark-panel h3, #workspace-upload-panel h3, #workspace-download-panel h3, #lock-groups-panel h3 {
   text-align: center;
 }
 #manifest-select-menu .container {
