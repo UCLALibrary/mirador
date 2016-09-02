@@ -588,8 +588,8 @@
       // default slot window dimensions
       slotX = 50,
       slotY = 50,
-      slotDX = 250,
-      slotDY = 250,
+      slotDX = 500,
+      slotDY = 500,
 
       children,
       child,
