@@ -1,5 +1,6 @@
 module.exports = function(grunt) {
 
+  grunt.template.addDelimiters('square', '[%', '%]');
   // ----------
   grunt.loadNpmTasks('grunt-contrib-compress');
   grunt.loadNpmTasks('grunt-contrib-concat');
@@ -42,6 +43,7 @@ module.exports = function(grunt) {
     'js/lib/paper-full.min.js',
     'js/lib/spectrum.js',
     'js/lib/jquery.awesome-cursor.js',
+    'js/lib/underscore-min.js',
     'js/lib/i18next.min.js'
   ],
 
@@ -87,8 +89,10 @@ module.exports = function(grunt) {
     concat: {
       js: {
         options: {
-          banner: '//! <%= pkg.name %> <%= pkg.version %>\n' + '//! Built on <%= grunt.template.today("yyyy-mm-dd") %>\n',
-          process: true
+          banner: '//! [%= pkg.name %> <%= pkg.version %]\n' + '//! Built on [%= grunt.template.today("yyyy-mm-dd") %]\n',
+          process: {
+            delimiters: 'square'
+          }
         },
         src:  [ "<banner>" ].concat(vendors, sources),
         dest: distribution

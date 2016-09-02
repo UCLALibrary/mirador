@@ -16,18 +16,91 @@
       appendTo: null,
     }, options);
 
-    // TODO: remove? handled by D3 automatically I think
     /*
-    Handlebars.registerHelper('listitems', function(items) {
-      console.log(items);
-      var out = '';
-      for(var i=0, l=items.length; i<l; i++) {
-        out = out + "<li>" + items[i] + '<a href="javascript:;" class="mirador-btn mirador-icon-delete-lock-group"><i class="fa fa-minus fa-lg"></i></a>' + '</li>';
+     * options for each lock group settings form
+     *
+     * name: input name attribute
+     * label: input element label
+     * type: input type attribute
+     * disabled: whether or not is disabled
+     * test: test to see if input is checked or not
+     * options: nested inputs
+     */
+    this.formOptions = [
+      {
+        name: 'zoompan',
+        label: 'zoom/pan',
+        type: 'checkbox',
+        disabled: false,
+        test: function(lg) { return function(d) { return lg.byGroup[d].settings.zoompan ? 'checked' : ''; };},
+        options: [
+          {
+            name: 'dimensionalLockMirror',
+            label: 'mirror',
+            type: 'radio',
+            disabled: true,
+            test: function(lg) { return function(d) { return lg.byGroup[d].settings.profile === 'dimensionalLockMirror' ? 'checked' : ''; };}
+          },
+          {
+            name: 'dimensionalLockOffset',
+            label: 'offset',
+            type: 'radio',
+            disabled: true,
+            test: function(lg) { return function(d) { return lg.byGroup[d].settings.profile === 'dimensionalLockOffset' ? 'checked' : ''; };}
+          }
+        ]
+      },
+      {
+        name: 'rotation',
+        label: 'rotation',
+        type: 'checkbox',
+        disabled: false,
+        test:function(lg) { return function(d) { return lg.byGroup[d].settings.rotation? 'checked' : '';};}
+      },
+      {
+        name: 'brightness',
+        label: 'brightness',
+        type: 'checkbox',
+        disabled: false,
+        test:function(lg) { return function(d) { return lg.byGroup[d].settings.brightness ? 'checked' : '';};}
+      },
+      {
+        name: 'contrast',
+        label: 'contrast',
+        type: 'checkbox',
+        disabled: false,
+        test:function(lg) { return function(d) { return lg.byGroup[d].settings.contrast ? 'checked' : '';};}
+      },
+      {
+        name: 'saturation',
+        label: 'saturation',
+        type: 'checkbox',
+        disabled: false,
+        test:function(lg) { return function(d) { return lg.byGroup[d].settings.saturation ? 'checked' : '';};}
+      },
+      {
+        name: 'invert',
+        label: 'invert',
+        type: 'checkbox',
+        disabled: false,
+        test:function(lg) { return function(d) { return lg.byGroup[d].settings.invert ? 'checked' : '';};}
+      },
+      {
+        name: 'grayscale',
+        label: 'grayscale',
+        type: 'checkbox',
+        disabled: false,
+        test:function(lg) { return function(d) { return lg.byGroup[d].settings.grayscale ? 'checked' : '';};}
+      },
+      {
+        name: 'reset',
+        label: 'reset',
+        type: 'checkbox',
+        disabled: false,
+        test:function(lg) { return function(d) { return lg.byGroup[d].settings.reset ? 'checked' : '';};}
       }
+    ];
 
-      return out;
-    });
-    */
     this.init();
   };
 
@@ -63,7 +136,7 @@
       
         keys = lg.keys;
 
-        lockGroupsLi = d3.select('#lock-groups')
+        lockGroupsLi = d3.select(_this.element[0]).select('#lock-groups')
           .selectAll('li')
           .data(keys, function(d) { return d; });
 
@@ -74,130 +147,78 @@
             .text(function(d) { return d; })
             .select(function() { return this.parentNode; })
           .append('form')
-          // zoompan
-          .append('input')
-            .property('type', 'checkbox')
-            .property('name', 'zoompan')
-            .property('checked', function(d) { return lg.byGroup[d].settings.zoompan ? 'checked' : '';})
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('sync zoom/pan')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          // dimensionalLockMirror
-          .append('input')
-            .property('type', 'radio')
-            .property('name', 'dimensionalLockMirror')
-            .property('checked', function(d) { return lg.byGroup[d].settings.profile === 'dimensionalLockMirror' ? 'checked' : '';})
-            .property('disabled', 'disabled')
-            .style('margin-left', '1em')
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('mirror')
-            .style('color', '#AFAFAF')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          // dimensionalLockOffset
-          .append('input')
-            .property('type', 'radio')
-            .property('name', 'dimensionalLockOffset')
-            .property('checked', function(d) { return lg.byGroup[d].settings.profile === 'dimensionalLockOffset' ? 'checked' : '';})
-            .property('disabled', 'disabled')
-            .style('margin-left', '1em')
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('offset')
-            .style('color', '#AFAFAF')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          // rotation
-          .append('input')
-            .property('type', 'checkbox')
-            .property('name', 'rotation')
-            .property('checked', function(d) { return lg.byGroup[d].settings.rotation? 'checked' : '';})
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('sync rotation')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          // brightness
-          .append('input')
-            .property('type', 'checkbox')
-            .property('name', 'brightness')
-            .property('checked', function(d) { return lg.byGroup[d].settings.brightness? 'checked' : '';})
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('sync brightness')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          // contrast
-          .append('input')
-            .property('type', 'checkbox')
-            .property('name', 'contrast')
-            .property('checked', function(d) { return lg.byGroup[d].settings.contrast? 'checked' : '';})
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('sync contrast')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          // saturation
-          .append('input')
-            .property('type', 'checkbox')
-            .property('name', 'saturation')
-            .property('checked', function(d) { return lg.byGroup[d].settings.saturation? 'checked' : '';})
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('sync saturation')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          // invert
-          .append('input')
-            .property('type', 'checkbox')
-            .property('name', 'invert')
-            .property('checked', function(d) { return lg.byGroup[d].settings.invert ? 'checked' : '';})
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('sync invert')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          .append('input')
-            .property('type', 'checkbox')
-            .property('name', 'grayscale')
-            .property('checked', function(d) { return lg.byGroup[d].settings.grayscale ? 'checked' : '';})
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('sync grayscale')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          .append('input')
-            .property('type', 'checkbox')
-            .property('name', 'reset')
-            .property('checked', function(d) { return lg.byGroup[d].settings.reset ? 'checked' : '';})
-            .select(function() { return this.parentNode; })
-          .append('label')
-            .text('sync reset')
-            .select(function() { return this.parentNode; })
-          .append('br')
-            .select(function() { return this.parentNode; })
-          .append('a')
-            .attr('href', 'javascript:;')
-            .classed({'mirador-btn': true, 'mirador-icon-delete-lock-group': true})
-          .append('i')
-            .classed({'fa': true, 'fa-trash-o': true, 'fa-lg': true});
+          .each(function(d, i) {
+
+            // this is the selection we will chain d3 appends on
+            var ret = d3.select(this);
+
+            /*
+             * Append an input element to the form.
+             *
+             * @param {Object} sel The current d3 selection object in the chain.
+             * @param {int} indentLevel How many 'em's to indent the input element.
+             * @param {Object} option An item of this.formOptions.
+             */
+            var appendInputElement = function(sel, indentLevel, option) {
+              sel
+                .append('input')
+                  .property('type', option.type)
+                  .property('name', option.name)
+                  .property('checked', option.test(lg))
+                  .call(function() {
+                    if (indentLevel > 0) {
+                      this.style('margin-left', indentLevel + 'em');
+                    }
+                    if (option.disabled) {
+                      this.property('disabled', 'disabled');
+                    }
+                  })
+                  .on('change', function() {
+                    _this.eventEmitter.publish('toggleLockGroupSettings', {
+                      groupID: jQuery(this).parent().parent().find('h4').text(),
+                      key: jQuery(this).attr('name')
+                    });
+                  })
+                  .select(function() { return this.parentNode; })
+                .append('label')
+                  .text(option.label)
+                  .call(function() {
+                    if (option.disabled) {
+                      this.style('color', '#AFAFAF');
+                    }
+                  })
+                  .select(function() { return this.parentNode; })
+                .append('br')
+                  .select(function() { return this.parentNode; });
+            };
+
+            _this.formOptions.forEach(function(e) {
+              appendInputElement(ret, 0, e);
+
+              // check for nested options
+              if (e.hasOwnProperty('options')) {
+                e.options.forEach(function(f) {
+                  appendInputElement(ret, 1, f);
+                });
+              }
+            });
+
+            // add a delete button
+            ret
+              .append('a')
+                .attr('href', 'javascript:;')
+                .classed({'mirador-btn': true, 'mirador-icon-delete-lock-group': true})
+                .on('click', function(event) {
+                  _this.eventEmitter.publish('deleteLockGroup', jQuery(this).parent().parent().find('h4').text());
+                })
+              .append('i')
+                .classed({'fa': true, 'fa-trash-o': true, 'fa-lg': true});
+
+          });
 
         lockGroupsLi.exit().remove();
 
         jQuery('#lock-groups').accordion('refresh');
-        _this.bindEvents();
       });
     },
 
@@ -218,16 +239,6 @@
            alert('Please choose a name with non-zero length.');
          }
       });
-
-      // onclick event for deleting a lock group
-      _this.element.find('.mirador-icon-delete-lock-group').off('click').on('click', function(event) {
-        _this.eventEmitter.publish('deleteLockGroup', jQuery(this).parent().parent().find('h4').text());
-      });
-
-      // onchange event for changes to form inputs
-      _this.element.find('#lock-groups form input').off('change').change(function() {
-        _this.eventEmitter.publish('toggleLockGroupSettings', {groupID: jQuery(this).parent().parent().find('h4').text(), key: jQuery(this).attr('name')});
-      });
     },
 
     hide: function() {
@@ -240,17 +251,14 @@
 
     template: Handlebars.compile([
        '<div id="lock-groups-panel">',
-         '<h3>Manage Lock Groups</h3>',
-         '<span>Lock Group Name: ',
+         '<h3>Manage Synchronized Windows</h3>',
+         '<span>Window Group Name: ',
            '<input id="new-lock-group-name" type="text">',
            '<a href="javascript:;" class="mirador-btn mirador-icon-create-lock-group">',
              '<i class="fa fa-plus fa-lg"></i>',
            '</a>',
          '</span>',
-         '<ul id="lock-groups">',
-           // TODO: remove?
-           //'{{#listitems lockGroups}}{{/listitems}',
-         '</ul>',
+         '<ul id="lock-groups"></ul>',
        '</div>'
     ].join(''))
   };

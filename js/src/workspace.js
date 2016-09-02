@@ -7,7 +7,7 @@
       workspaceSlotCls: 'slot',
       focusedSlot:      null,
       slots:            [],
-      snapGroups:       { groups: [], byWindow: {} },
+      snapGroups:       { groups: [], byWindow: {}, windowGraph: new $.Graph() },
       windows:          [],
       appendTo:         null,
       layoutDescription:    null,
@@ -187,31 +187,42 @@
     /*
      * Add a window to the snapGroup.
      *
-     * @param {string} windowName The data-layout-slot-id of the window to add
+     * @param {Array} windowNamesList A list of the data-layout-slot-id strings of windows to add
      * @param {string} sgname Name of snapGroup
      */
-    addToSnapGroup: function(windowName, sgname) {
+    addToSnapGroup: function(windowNamesList, sgname) {
       // add to windows array of the snapGroup object
-      this.getSnapGroupObject(sgname).windows.push(windowName);
+      var _this = this;
+      windowNamesList.forEach(function(f) {
+        if (_this.snapGroups.byWindow[f] === undefined) {
+          _this.getSnapGroupObject(sgname).windows.push(f);
 
-      // add to byWindow
-      this.snapGroups.byWindow[windowName] = sgname;
+          // add to byWindow
+          _this.snapGroups.byWindow[f] = sgname;
+        }
+      });
     },
 
     /* 
      * Remove a window from its snapGroup.
      *
-     * @param {string} windowName The data-layout-slot-id of the window to remove
+     * @param {Array} windowNamesList A list of the data-layout-slot-id strings of windows to remove
      */
-    removeFromSnapGroup: function(windowName) {
+    removeFromSnapGroup: function(windowNamesList) {
       // remove from windows array of the snapGroup object
-      var sg = this.getSnapGroupObject(this.getSnapGroupNameOfWindow(windowName));
-      sg.windows = sg.windows.filter(function(e) {
-        return e !== windowName;
+      var _this = this;
+      windowNamesList.forEach(function(f) {
+        var sg = _this.getSnapGroupNameOfWindow(f);
+        if (sg) {
+          sg = _this.getSnapGroupObject(sg);
+          sg.windows = sg.windows.filter(function(e) {
+            return e !== f;
+          });
+          // remove from byWindow
+          delete _this.snapGroups.byWindow[f];
+        }
       });
 
-      // remove from byWindow
-      delete this.snapGroups.byWindow[windowName];
     },
 
     /*
@@ -253,9 +264,17 @@
      * Restores the snapGroup state from localStorage.
      */
     restoreSnapGroups: function() {
+      var reviver = function(k, v) {
+        if (k === 'windowGraph') {
+          // value is a $.Graph object
+          return new $.Graph(v.node_list);
+        }
+        else { return v; }
+      };
+
       var savedSettings = this.state.getStateProperty('snapGroupState');
       if (savedSettings !== undefined) {
-        this.snapGroups = JSON.parse(savedSettings);
+        this.snapGroups = JSON.parse(savedSettings, reviver);
         jQuery.each(this.snapGroups.byWindow, function(k, v) {
           jQuery('[data-layout-slot-id="'+ k +'"]').addClass(v);
         });
@@ -272,17 +291,18 @@
       sg.top = pos.top + 'px';
     },
 
-    /**
-     * Updates the snap-group classes on the DOM elements,
-     * and updates the data model to reflect the DOM state.
+    /*
+     * returns:
      *
-     * Called by the drag-stop events on elements with classes drag-handle and layout-slot.
-     *
-     * @param {Object} that Reference to a Workspace object
-     * NOTE: this function is called so that {this} refers to the DOM element that has stopped dragging
+     * {
+     *   thisElt
+     *   targetElts (can be heterogeneous!) {
+     *     windows:
+     *     dragHangle:
+     * }
      */
-    updateSnapGroups: function(that) {
-      
+    getSnapTargets: function(that) {
+
       /**
        * Get the name of the snap group that corresponds to a give jQuery selection.
        *
@@ -302,7 +322,13 @@
           }
           return false;
         }
-        return selection.filter('.layout-slot').hasClassRegEx(re) || getDragHandleId(selection.filter('.drag-handle'));
+        return selection.filter('.layout-slot').toArray().reduce(function(p, c) {
+          if (p !== false) {
+            return p;
+          } else {
+            return jQuery(c).hasClassRegEx(re);
+          }
+        }, false) || getDragHandleId(selection.filter('.drag-handle'));
       }
   
       // Get the possible snap targets, then pull out only the snap targets that are "snapping"
@@ -312,39 +338,140 @@
         return element.snapping ? element.item : null;
       }),
       thisElt = jQuery(this),
+      thisSlotID = thisElt.attr('data-layout-slot-id'),
       thisSnapGroup = extractSnapGroupName(thisElt),
+
       targetElts = jQuery(snappedTargets),
-      targetSnapGroup = extractSnapGroupName(targetElts);
-  
-      // thisElt is a slot
-      if (thisElt.filter('.layout-slot').length > 0) {
-        // remove old snap group first
-        if (thisSnapGroup) {
-          thisElt.removeClass(thisSnapGroup[0]);
+      targetSlotIDs = targetElts.filter('.layout-slot').map(function(i, e) {
+        return jQuery(e).attr('data-layout-slot-id');
+      }).toArray(),
+      targetHandleID = targetElts.filter('.drag-handle').attr('id');
 
-          // update data model
-          that.removeFromSnapGroup(thisElt.attr('data-layout-slot-id'));
-        }
-        // target elt has a snapGroup
-        if (targetSnapGroup) {
-          thisElt.addClass(targetSnapGroup[0]);
+      return {
+        thisSlotID: thisSlotID,
+        thisSnapGroup: thisSnapGroup !== false ? thisSnapGroup[0] : undefined,
+        targetSlotIDs: targetSlotIDs,
+        targetHandleID: targetHandleID,
+      };
+    },
 
-          // update data model
-          that.addToSnapGroup(thisElt.attr('data-layout-slot-id'), targetSnapGroup[0]);
-        }
+    /**
+     * Updates the snap-group classes on the DOM elements,
+     * and updates the data model to reflect the DOM state.
+     *
+     * Called by the drag-stop events on elements with classes drag-handle and layout-slot.
+     *
+     * @param {Object} that Reference to a Workspace object
+     * NOTE: this function is called so that {this} refers to the DOM element that has stopped dragging
+     */
+    updateConnectivityGraphAndClasses: function(st) {
 
-      // thisElt is a dragHandle
-      } else { 
-        targetElts.filter('.layout-slot')
-          .removeClass(targetSnapGroup[0])
-          .addClass(thisSnapGroup[0])
-          .each(function(i, e) {
-            // add window to snapGroup if it isn't already 
-            if (!that.isInSnapGroup(jQuery(e).attr('data-layout-slot-id'), thisSnapGroup[0])) {
-              that.addToSnapGroup(jQuery(e).attr('data-layout-slot-id'), thisSnapGroup[0]);
-            }
+      var _this = this,
+      wg = _this.snapGroups.windowGraph,
+      oldConnectedSlots,
+      newConnectedSlots,
+      oldSnapGroup,
+      newSnapGroup,
+      enteringSlots,
+      exitingSlots;
+
+      switch (st.option) {
+        case 'addWindow':
+          wg.addNode(st.eltName, []);
+          break;
+        case 'dragWindow':
+          // get list of nodes that were connected to the window before dragging
+          oldConnectedSlots = wg.getConnectedNodeNames(st.thisSlotID, []);
+          // update the graph
+          wg.updateNodeEdges(st.thisSlotID, st.targetSlotIDs);
+          // get new list of connected windows
+          newConnectedSlots = wg.getConnectedNodeNames(st.thisSlotID, []);
+
+          // if thisElement was connected to a drag handle before the move, remove it
+          if (st.thisSnapGroup !== undefined) {
+            // remove old handle if it exists on thisSlot
+            wg.removeDragHandle(st.thisSnapGroup, [st.thisSlotID]);
+
+            // remove the class if the windows are no longer connected to that old drag handle
+            // so, either connected to 1) a different handle, or 2) none at all
+            exitingSlots = oldConnectedSlots.filter(function(e) {
+              return wg.getDragHandle(e) !== st.thisSnapGroup;
+            });
+            // update date model and DOM
+            this.removeFromSnapGroup(exitingSlots);
+            this.reassignClasses(st.thisSnapGroup, [], exitingSlots);
+          }
+
+          // if this window is now adjacent to the drag handle, add it to the node
+          if (st.targetHandleID !== undefined) {
+            wg.addDragHandle(st.targetHandleID, [st.thisSlotID]);
+          }
+          newSnapGroup = wg.getDragHandle(st.thisSlotID);
+
+          // if targetElts contains a drag handle, add it to the node
+          if (newSnapGroup !== undefined) {
+            // update date model and DOM
+            this.addToSnapGroup(newConnectedSlots, newSnapGroup);
+            this.reassignClasses(newSnapGroup, newConnectedSlots, []);
+          }
+          break;
+        case 'dragHandle':
+          // make sure that there aren't any drag handles already connected
+          if (wg.getDragHandle(st.targetSlotIDs[0]) !== undefined && wg.getDragHandle(st.targetSlotIDs[0]) !== st.thisSnapGroup) {
+            alert('Only one drag handle per group!');
+            // TODO: move handle to previous position
+            return;
+          }
+          enteringSlots = st.targetSlotIDs.reduce(function(p, c) {
+            return _.union(p, wg.getConnectedNodeNames(c, []));
+          }, []);
+          wg.addDragHandle(st.thisSnapGroup, st.targetSlotIDs);
+
+          // for each window connected to the target elements, update data model and DOM
+          this.addToSnapGroup(enteringSlots, st.thisSnapGroup);
+          this.reassignClasses(st.thisSnapGroup, enteringSlots, []);
+          break;
+        case 'removeWindow':
+          // get list of windows connected to the window that is being removed
+          oldConnectedSlots = wg.getConnectedNodeNames(st.eltName, []);
+          // all windows connected to st.eltName will have same drag handle
+          oldSnapGroup = wg.getDragHandle(st.eltName);
+          // delete window from the graph
+          wg.removeNode(st.eltName);
+          newConnectedSlots = _.difference(oldConnectedSlots, [st.eltName]);
+
+          // remove the slots that are no longer connected to the drag handle
+          exitingSlots = newConnectedSlots.filter(function(e) {
+            return wg.getDragHandle(e) !== oldSnapGroup;
           });
+          // update data model and DOM
+          this.removeFromSnapGroup(exitingSlots);
+          this.reassignClasses(oldSnapGroup, [], exitingSlots);
+          break;
+        case 'removeHandle':
+          // remove drag handle from graph, and update DOM (data model was updated by caller)
+          wg.removeDragHandle(st.eltName);
+          this.reassignClasses(st.eltName, [], jQuery('.' + st.eltName));
+          break;
       }
+    },
+
+    /* Add or remove classes based on graph
+     * @param {string} name Name of class
+     * @param {Array | jQuery} enter Nodes to add to that class. Can be either a list of ids or jQuery selection
+     * @param {Array | jQuery} exit Nodes to remove from that class. Can be either a list of ids or jQuery selection
+     */
+    reassignClasses: function(name, enter, exit) {
+
+      var reduceFn = function(p, c) {
+        return p.add(jQuery('[data-layout-slot-id="'+ c +'"]'));
+      };
+      
+      var a = enter instanceof jQuery ? enter : enter.reduce(reduceFn, jQuery());
+      var b = exit instanceof jQuery ? exit : exit.reduce(reduceFn, jQuery());
+
+      a.addClass(name);
+      b.removeClass(name);
     },
 
     /**
@@ -397,7 +524,14 @@
 
               _this.calculateLayout(undefined, slotIDs, undefined);
       
-              _this.updateSnapGroups.call(this, _this);
+              // TODO:
+              // if there are any snappedTargets
+              //   update the connectivity graph
+              //   re-assign snapGroup class (remove or add) for each affected node
+              var st = _this.getSnapTargets.call(this, _this);
+              if (st.targetSlotIDs.length > 0) {
+                _this.updateConnectivityGraphAndClasses(jQuery.extend({option: 'dragHandle'}, st));
+              }
               _this.updateDragHandlePosition(dragHandle.id, jQuery(dragHandle).position());
               _this.saveSnapGroupState();
             }
@@ -421,7 +555,6 @@
         .on('click', function(d) {
           _this.deleteSnapGroup(d.name);
           _this.renderDragHandles();
-          _this.saveSnapGroupState();
           d3.event.stopPropagation();
         });
 
@@ -432,8 +565,11 @@
 
       handles.exit().remove('div')
         .each(function(d) {
+          _this.updateConnectivityGraphAndClasses({option: 'removeHandle', eltName: d.name});
+          _this.saveSnapGroupState();
+
           // de-register the removed dragHandle's layout-slots
-          jQuery('.layout-slot.' + d.name).removeClass(d.name);
+          //jQuery('.layout-slot.' + d.name).removeClass(d.name);
         });
     },
 
@@ -574,7 +710,7 @@
           eventEmitter: _this.eventEmitter
         }));
 
-
+        _this.updateConnectivityGraphAndClasses({option: 'addWindow', eltName: d.id});
       })
       .on('click', function() {
         // Bring clicked window to the top
@@ -616,7 +752,11 @@
             var slotIDs = [id];
             _this.calculateLayout(undefined, slotIDs, undefined);
     
-            _this.updateSnapGroups.call(this, _this);
+            // TODO: implement
+              // update the connectivity graph based on the snappedTargets
+              // re-assign snapGroup class (remove or add) for each affected node
+            var st = _this.getSnapTargets.call(this, _this);
+            _this.updateConnectivityGraphAndClasses(jQuery.extend({option: 'dragWindow'}, st));
             _this.saveSnapGroupState();
           }
         })
@@ -659,7 +799,8 @@
           delete _this.slotCoordinates[d.id];
         }
 
-        _this.removeFromSnapGroup(d.id);
+        _this.updateConnectivityGraphAndClasses({option: 'removeWindow', eltName: d.id});
+        _this.saveSnapGroupState();
       });
 
       function cell() {

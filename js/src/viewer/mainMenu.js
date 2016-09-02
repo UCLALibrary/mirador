@@ -180,7 +180,7 @@
         // lockController
           '<li>',
             '<a href="javascript:;" class="toggle-lock-groups mainmenu-button" title="Lock Groups">',
-              '<span class="fa fa-lock fa-lg fa-fw"></span> Lock Groups',
+              '<span class="fa fa-lock fa-lg fa-fw"></span> Synchronized Windows',
             '</a>',
           '</li>',
         // end lockController
