@@ -12,7 +12,11 @@
         blendTime:        0.1,
         alwaysBlend:      false,
         prefixUrl:        'images/openseadragon/',
-        showNavigationControl: false
+        showNavigationControl: false,
+        id: undefined,
+        infoJson: undefined,
+        uniqueID: undefined,
+        toolbarID: undefined
       }, options)
 
     );
@@ -27,18 +31,29 @@
 
     // check if a valid IIIF physical dimension service exists
     // TODO: may need to make sure that ts is an object
-    if (options.hasOwnProperty('tileSources')) {
+    if (options.hasOwnProperty('infoJson')) {
 
-      ts = options.tileSources;
+      ts = options.infoJson;
       
-      if (ts.hasOwnProperty('service') &&
-          ts.service.profile === 'http://iiif.io/api/annex/services/physdim' &&
-          ts.service['@context'] === 'http://iiif.io/api/annex/services/physdim/1/context.json' &&
-          ts.service.hasOwnProperty('physicalScale') &&
-          metersPerPhysicalUnit.hasOwnProperty(ts.service.physicalUnits)) {
+      var checkForPhysdimData = function(obj) {
+        return obj.hasOwnProperty('data') &&
+          obj.data.hasOwnProperty('service') &&
+          obj.data.service.profile === 'http://iiif.io/api/annex/services/physdim' &&
+          obj.data.service['@context'] === 'http://iiif.io/api/annex/services/physdim/1/context.json' &&
+          obj.data.service.hasOwnProperty('physicalScale') &&
+          obj.data.service.hasOwnProperty('physicalUnits') &&
+          metersPerPhysicalUnit.hasOwnProperty(obj.data.service.physicalUnits);
+      };
+
+      // if image choice, use default image
+      if (ts.hasOwnProperty('default')) {
+        ts = ts.default;
+      }
+
+      if (checkForPhysdimData(ts)) {
   
         // openseadragon-scalebar needs to know pixels per meter to render ruler
-        pixelsPerMeter = 1 / (metersPerPhysicalUnit[ts.service.physicalUnits] * ts.service.physicalScale);
+        pixelsPerMeter = 1 / (metersPerPhysicalUnit[ts.data.service.physicalUnits] * ts.data.service.physicalScale);
    
         // set pixels per meter
         jQuery.extend(true, this, {

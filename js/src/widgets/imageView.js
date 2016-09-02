@@ -716,6 +716,7 @@
 
         _this.osd = $.OpenSeadragon({
           'id':           osdID,
+          'infoJson': infoJson,
           'uniqueID' : uniqueID
         });
 
