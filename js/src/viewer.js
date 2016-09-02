@@ -62,7 +62,7 @@
       //add background and positioning information on the root element that is provided in config
       var backgroundImage = _this.state.getStateProperty('buildPath') + _this.state.getStateProperty('imagesPath') + 'debut_dark.png';
       this.element.css('background-color', '#333').css('background-image','url('+backgroundImage+')').css('background-position','left top')
-      .css('background-repeat','repeat');
+      .css('background-repeat','repeat').css('position', 'fixed');
 
       //register Handlebars helper
       Handlebars.registerHelper('t', function(i18n_key) {
