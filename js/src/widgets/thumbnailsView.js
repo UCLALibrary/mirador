@@ -47,8 +47,8 @@
           return {};
         }
 
-        var aspectRatio = canvas.height/canvas.width,
-        width = (_this.thumbInfo.thumbsHeight/aspectRatio),
+        // we want square thumbnails
+        width = _this.thumbInfo.thumbsHeight,
         thumbnailUrl = $.getThumbnailForCanvas(canvas, width);
 
         return {
