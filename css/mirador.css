@@ -1886,7 +1886,7 @@ a.mirador-icon-empty-slot [class^="icon-"] {
   padding-bottom:30px;
 }
 
-a.mirador-icon-window-menu, a.mirador-icon-view-type {
+a.mirador-icon-window-menu, a.mirador-icon-view-type, a.mirador-icon-ruler, a.mirador-icon-lock-window, a.mirador-icon-multi-image {
   width: 30px;
 }
 

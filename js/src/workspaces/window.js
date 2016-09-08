@@ -1320,7 +1320,6 @@
                                  '<hr class="menu-divider"/>',
                                  '{{/if}}',
                                  '{{#if layoutOptions.slotRight}}',
-                                 // lockGroup stuff
                                  '<li class="add-slot-right"><i class="fa fa-arrow-circle-right fa-lg fa-fw"></i> {{t "addSlotRight"}}</li>',
                                  '{{/if}}',
                                  '{{#if layoutOptions.slotLeft}}',
@@ -1340,7 +1339,9 @@
                                  '{{/if}}',
 
                                  // TODO: hide this ruler UI html if no physical dimensions are available
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-ruler" title="ruler"><i class="fa fa-text-width fa-lg fa-fw"></i>',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-ruler" title="ruler">',
+                                 '<i class="fa fa-text-width fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown ruler-options-list">',
                                  '<li class="ruler-hide"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
                                  '<li class="ruler-horizontal"><i class="fa fa-text-width fa-lg fa-fw"></i> Horizontal Ruler</li>',
@@ -1360,7 +1361,9 @@
                                  // end of ruler UI html
  
                                  // lockController
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock-window" title="lock"><i class="fa fa-lock fa-lg fa-fw"></i>',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock-window" title="lock">',
+                                 '<i class="fa fa-lock fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown lock-options-list">',
                                  '<li class="no-lock remove-from-lock-group"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
                                  '{{#list2 lockGroups}}{{/list2}}',
@@ -1370,7 +1373,9 @@
 
                                  //'{{#if isMultiImageView}}',
                                  // dropdown list for multi
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-multi-image" title="multi-image"><i class="fa fa-copy fa-lg fa-fw"></i>',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-multi-image" title="multi-image">',
+                                 '<i class="fa fa-copy fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown multi-image-list"></ul>',
                                  '</a>',
                                  //'{{/#if}}',
