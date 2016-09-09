@@ -51,9 +51,19 @@
         width = _this.thumbInfo.thumbsHeight,
         thumbnailUrl = $.getThumbnailForCanvas(canvas, width);
 
+        function extractLabelSubstring(l) {
+          var splitString = l.split('_');
+          if (splitString.length > 1) {
+            return splitString[1];
+          }
+          else {
+            return l;
+          }
+        }
+
         return {
           thumbUrl: thumbnailUrl,
-          title:    $.JsonLd.getTextValue(canvas.label),
+          title:    extractLabelSubstring($.JsonLd.getTextValue(canvas.label)),
           id:       canvas['@id'],
           width:    width,
           highlight: _this.currentImgIndex === index ? 'highlight' : ''
