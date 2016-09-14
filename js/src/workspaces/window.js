@@ -320,6 +320,13 @@
 
       _this.eventEmitter.subscribe('SET_CURRENT_CANVAS_ID.' + this.id, function(event, canvasID) {
         _this.setCurrentCanvasID(canvasID);
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeNavigationControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: canvasID
+          });
+        }
       });
 
       _this.eventEmitter.subscribe('REMOVE_CLASS.' + this.id, function(event, className) {
@@ -382,7 +389,7 @@
       _this.eventEmitter.subscribe('activateLockGroupMenuItem', function(event, data) {
         // check if this window has the window id
         // if so, set the li with the innerHTML that has groupID to data.groupId
-        if (data.windowId === _this.focusModules[_this.currentImageMode].windowId) { 
+        if (data.windowId === _this.focusModules[_this.currentImageMode].windowId) {
           _this.element.find('.add-to-lock-group').each(function(i, e) {
             if (e.innerHTML === data.groupId) {
               jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
@@ -419,6 +426,21 @@
 
     bindEvents: function() {
       var _this = this;
+
+      // prevent infinite looping with coordinated zoom
+      this.element.on({
+        mouseenter: function() {
+          _this.leading = true;
+        },
+        mouseleave: function() {
+          _this.leading = false;
+        }
+      });
+
+      // onclick event to add the window to the selected lock group
+      this.element.find('.add-to-lock-group').on('click', function(event) {
+        _this.addToLockGroup(this);
+      });
 
       //this event should trigger from layout
       jQuery(window).resize($.debounce(function(){
@@ -468,11 +490,6 @@
       });
       */
       // TODO: remove the above
-
-      // onclick event to add the window to the selected lock group
-      this.element.find('.add-to-lock-group').on('click', function(event) {
-        _this.addToLockGroup(this);
-      });
 
       // onclick event to remove the window from its lock group
       this.element.find('.remove-from-lock-group').on('click', function(event) {
@@ -805,6 +822,7 @@
           manifest: this.manifest,
           appendTo: this.element.find('.view-container'),
           windowId: this.id,
+          windowObj: this,
           state:  this.state,
           eventEmitter: this.eventEmitter,
           canvasID: canvasID,
@@ -1205,54 +1223,184 @@
       
       this.element.find('.ruler-hide').on('click', function() {
         _this.setRulerVisibility('invisible');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerVisibility',
+              arg: 'invisible'
+            }
+          });
+        }
       });
       
       this.element.find('.ruler-horizontal').on('click', function() {
         _this.setRulerOrientation('horizontal');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerOrientation',
+              arg: 'horizontal'
+            }
+          });
+        }
       });
       
       this.element.find('.ruler-vertical').on('click', function() {
         _this.setRulerOrientation('vertical');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerOrientation',
+              arg: 'vertical'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-black').on('click', function() {
         _this.setRulerColor('black');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerColor',
+              arg: 'black'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-white').on('click', function() {
         _this.setRulerColor('white');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerColor',
+              arg: 'white'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-top-left').on('click', function() {
         _this.setRulerPosition('tl');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'tl'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-top-middle').on('click', function() {
         _this.setRulerPosition('tm');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'tm'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-top-right').on('click', function() {
         _this.setRulerPosition('tr');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'tr'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-middle-left').on('click', function() {
         _this.setRulerPosition('ml');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'ml'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-middle-right').on('click', function() {
         _this.setRulerPosition('mr');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'mr'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-bottom-left').on('click', function() {
         _this.setRulerPosition('bl');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'bl'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-bottom-middle').on('click', function() {
         _this.setRulerPosition('bm');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'bm'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-bottom-right').on('click', function() {
         _this.setRulerPosition('br');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'br'
+            }
+          });
+        }
       });
     },
 
@@ -1264,15 +1412,15 @@
     renderLockGroupMenu: function(lockGroupNames) {
       // each menu in the window should get a dropdown with items in the 'data' array
       var _this = this,
-      lockGroups = d3.selectAll('.lock-options-list').selectAll('.lock-options-list-item')
+      lockGroups = d3.select(this.element[0]).select('.lock-options-list').selectAll('.lock-options-list-item')
         .data(lockGroupNames, function(d) { return d; });
       lockGroups.enter().append('li')
         .classed({'lock-options-list-item': true, 'add-to-lock-group': true})
-        .text(function(d) { return d; });
+        .text(function(d) { return d; })
+        .on('click', function() {
+          _this.addToLockGroup(this);
+        });
       lockGroups.exit().remove();
-
-      // bind lock group click events on all new li's
-      _this.bindEvents();
     },
 
     // template should be based on workspace type

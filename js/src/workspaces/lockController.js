@@ -268,6 +268,24 @@
       });
 
       /*
+       * Sync the ruler control action of any followers of the viewobject
+       *
+       * @param {Object} viewObj The leader.
+       */
+      _this.eventEmitter.subscribe('synchronizeRulerControls', function(event, data) {
+        _this.updateFollowers(data.viewObj, 'rulerControls', data.value);
+      });
+
+      /*
+       * Sync the navigation control action of any followers of the viewobject
+       *
+       * @param {Object} viewObj The leader.
+       */
+      _this.eventEmitter.subscribe('synchronizeNavigationControls', function(event, data) {
+        _this.updateFollowers(data.viewObj, 'navigationControls', data.value);
+      });
+
+      /*
        * Handle the request from the DOM to toggle settings for a lock group.
        *
        * @param {Object} data Contains
@@ -323,7 +341,9 @@
             contrast: true,
             invert: true,
             grayscale: true,
-            reset: true
+            reset: true,
+            rulerControls: true,
+            navigationControls: true
           }
         };
         
@@ -428,6 +448,8 @@
         case 'invert':
         case 'grayscale':
         case 'reset':
+        case 'rulerControls':
+        case 'navigationControls':
           // just flip the current setting
           settings[key] = !settings[key];
           break;
@@ -496,6 +518,13 @@
                     break;
                   case 'rotation':
                     follower.imageRotate(value);
+                    break;
+                  case 'rulerControls':
+                    // calls the function with the argument on the window associated with the viewObject
+                    follower.windowObj[value.fn](value.arg);
+                    break;
+                  case 'navigationControls':
+                    this.eventEmitter.publish('SET_CURRENT_CANVAS_ID.' + follower.windowId, value);
                     break;
                   default:
                     // should never get here

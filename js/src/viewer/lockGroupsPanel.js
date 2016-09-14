@@ -98,6 +98,20 @@
         type: 'checkbox',
         disabled: false,
         test:function(lg) { return function(d) { return lg.byGroup[d].settings.reset ? 'checked' : '';};}
+      },
+      {
+        name: 'rulerControls',
+        label: 'ruler controls',
+        type: 'checkbox',
+        disabled: false,
+        test:function(lg) { return function(d) { return lg.byGroup[d].settings.rulerControls ? 'checked' : '';};}
+      },
+      {
+        name: 'navigationControls',
+        label: 'navigation controls',
+        type: 'checkbox',
+        disabled: false,
+        test:function(lg) { return function(d) { return lg.byGroup[d].settings.navigationControls ? 'checked' : '';};}
       }
     ];
 

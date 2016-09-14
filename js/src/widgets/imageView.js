@@ -5,6 +5,7 @@
     jQuery.extend(this, {
       currentImg:       null,
       windowId:         null,
+      windowObj:        null,
       currentImgIndex:  0,
       canvasID:          null,
       // key-value map of canvasIDs to choiceImageIDs
@@ -206,6 +207,16 @@
 
     bindEvents: function() {
       var _this = this;
+
+      // prevent infinite looping with coordinated zoom
+      this.element.on({
+        mouseenter: function() {
+          _this.leading = true;
+        },
+        mouseleave: function() {
+          _this.leading = false;
+        }
+      });
 
       this.element.find('.mirador-osd-next').on('click', function() {
         _this.next();
@@ -746,15 +757,6 @@
           }
         }, 30));
 
-        // prevent infinite looping with coordinated zoom
-        _this.element.on({
-          mouseenter: function() {
-            _this.leading = true;
-          },
-          mouseleave: function() {
-            _this.leading = false;
-          }
-        });
 
         if (_this.state.getStateProperty('autoHideControls')) {
           var timeoutID = null,
