@@ -56,7 +56,7 @@
       // if currentImg has choice, then display the menu in the Window obj (eventEmit)
       // TODO: get labels and label the dropdown menu accordingly
       if ($.Iiif.imageHasAlternateResources(this.currentImg)) {
-        this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsAndUrls(this.currentImg));
+        this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsIdsAndThumbnails(this.currentImg));
       } else {
         this.createOpenSeadragonInstance($.Iiif.getImageUrl(this.currentImg));
       }
@@ -680,8 +680,6 @@
       alternateImgObjList = [];
 
       if (typeof imageUrlData === 'string') {
-        imageUrlData += '/info.json';
-
         jQuery.when.apply(this, [
           jQuery.getJSON(imageUrlData, function(data) { 
             defaultImgObj = data;
@@ -691,15 +689,12 @@
         });
 
       } else if (typeof imageUrlData === 'object') {
-        imageUrlData['default'].url += '/info.json';
-        imageUrlData.item.forEach(function(v) { v.url += '/info.json';});
-
         jQuery.when.apply(this, [
-          jQuery.getJSON(imageUrlData['default'].url, function(data) { 
+          jQuery.getJSON(imageUrlData['default']['@id'], function(data) { 
             imageUrlData['default'].data = data;
           })]
           .concat(imageUrlData.item.map(function(v) {
-            return jQuery.getJSON(v.url, function(data) {
+            return jQuery.getJSON(v['@id'], function(data) {
               v.data = data;
             });
           }))
@@ -857,7 +852,7 @@
 
             // tell window to render the dropdown menu
             _this.eventEmitter.publish('imageChoiceReady', {
-              data: [infoJson['default'].label].concat(infoJson.item.map(function(v) { return v.label; })),
+              data: [infoJson['default']].concat(infoJson.item),
               id: _this.windowId
             });
           }
@@ -943,7 +938,7 @@
         this.osd.close();
 
         if ($.Iiif.imageHasAlternateResources(this.currentImg)) {
-          this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsAndUrls(this.currentImg));
+          this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsIdsAndThumbnails(this.currentImg));
         } else {
           this.createOpenSeadragonInstance($.Iiif.getImageUrl(this.currentImg));
         }

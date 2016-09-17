@@ -261,4 +261,21 @@
     return (document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement);
   };
 
+  $.getWorkspaceBoundingBox = function(elt) {
+    var manifestInfoHeight = 39,
+        mainMenuHeight = 33,
+        dragHandleWidth = 100,
+        dragHandleHeight = 25,
+        w=window,d=document,e=d.documentElement,g=d.getElementsByTagName('body')[0],x=w.innerWidth||e.clientWidth||g.clientWidth,y=w.innerHeight||e.clientHeight||g.clientHeight;
+    if (elt === 'drag-handle') {
+      // must drag drag-handle within browser viewport
+      return [0, mainMenuHeight, x - dragHandleWidth, y - dragHandleHeight];
+    } else if (elt === 'layout-slot') {
+      // can drag window horizontally off the screen if desired
+      return [-x, mainMenuHeight, 2*x, y - manifestInfoHeight];
+    } else {
+      throw '$.getWorkspaceBoundingBox: unknown element type "' + elt + '"';
+    }
+  };
+
 }(Mirador));

@@ -841,6 +841,9 @@
       this.toggleFocus('ImageView', 'ImageView');
     },
 
+    /*
+     * @param {Array} data Array of objects that contains label and thumbnail url
+     */
     renderImageChoiceMenu: function(data) {
 
       // first remove inline style attr
@@ -850,9 +853,19 @@
       var _this = this;
       var lis;
       
-      lis = d3.select(_this.element[0]).select('.multi-image-list').selectAll('li').data(data, function(d) { return d; });
+      lis = d3.select(_this.element[0]).select('.multi-image-list').selectAll('li').data(data, function(d) { return d.label; });
       lis.enter().append('li')
-        .text(function(d) { return d; })
+        .append('img')
+          .attr('src', function(d) { return d.thumbnail;})
+          .attr('alt', function(d) { return d.label; })
+          .classed({'choice-img-thumbnail': true})
+          .select(function() {
+              return this.parentNode; })
+        .append('span')
+          .text(function(d) {
+            return d.label; })
+          .select(function() {
+              return this.parentNode; })
         .classed({'multi-image-list-item': true})
         .call(function(curSel) {
           // get label of choice image for this selection
@@ -874,7 +887,7 @@
           // window is subscribed
           _this.eventEmitter.publish('showChoiceImage', {
             id: _this.id,
-            choiceImageID: d
+            choiceImageID: d.label
           });
           
           // update dom

@@ -123,6 +123,10 @@
         _this.renderDragHandles();
         _this.saveSnapGroupState();
       });
+
+      _this.eventEmitter.subscribe('BROWSER_VIEWPORT_RESIZED', function(event) {
+        _this.resizeDraggableBoundingBoxes();
+      });
     },
 
     get: function(prop, parent) {
@@ -140,6 +144,13 @@
         this[prop] = value;
       }
       _this.eventEmitter.publish(prop + '.set', value);
+    },
+
+    // reset the draggable area bounding boxes when the browser viewport is resized
+    resizeDraggableBoundingBoxes: function() {
+      ['layout-slot', 'drag-handle'].forEach(function(i) {
+        jQuery('.' + i).draggable('option', 'containment', $.getWorkspaceBoundingBox(i));
+      });
     },
 
     /*
@@ -497,11 +508,12 @@
           'border-top-right-radius': '8px',
           'height': '25px',
           'position': 'absolute',
-          'width': '50px'
+          'width': '100px'
         })
         .each(function(d) {
           // make this a draggable element that can drag multiple other draggable elements
           jQuery(this).draggable({
+            containment: $.getWorkspaceBoundingBox('drag-handle'),
             multiple: {
               items: function getSelectedItems() {
                 return jQuery('.ui-draggable.' + d.name);
@@ -541,8 +553,8 @@
           assocSnapGroup = _this.getSnapGroupObject(d.name);
           if (assocSnapGroup.left === undefined && assocSnapGroup.top === undefined) {
             // new dragHandle, so give it the defaults and update the data model
-            d3.select(this).style({'left': 75*n + 'px', 'top': '50px'});
-            _this.updateDragHandlePosition(d.name, {'left': 75*n, 'top': 50});
+            d3.select(this).style({'left': 75*n + 'px', 'top': '100px'});
+            _this.updateDragHandlePosition(d.name, {'left': 75*n, 'top': 100});
           }
           else {
             // restoring a dragHandle, so set only the style
@@ -588,8 +600,8 @@
       // default slot window dimensions
       slotX = 50,
       slotY = 50,
-      slotDX = 500,
-      slotDY = 500,
+      slotDX = 750,
+      slotDY = 750,
 
       children,
       child,
@@ -739,6 +751,7 @@
       .each(function() {
         jQuery(this)
         .draggable({
+          containment: $.getWorkspaceBoundingBox('layout-slot'),
           handle: '.manifest-info',
           stack: '.layout-slot',
           snap: '.layout-slot, .drag-handle',
