@@ -261,21 +261,53 @@
     return (document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement);
   };
 
+  $.getBrowserViewportDimensions = function() {
+    var w=window,d=document,e=d.documentElement,g=d.getElementsByTagName('body')[0],x=w.innerWidth||e.clientWidth||g.clientWidth,y=w.innerHeight||e.clientHeight||g.clientHeight;
+    return {x:x,y:y};
+  };
+
   $.getWorkspaceBoundingBox = function(elt) {
     var manifestInfoHeight = 39,
         mainMenuHeight = 33,
         dragHandleWidth = 100,
         dragHandleHeight = 25,
-        w=window,d=document,e=d.documentElement,g=d.getElementsByTagName('body')[0],x=w.innerWidth||e.clientWidth||g.clientWidth,y=w.innerHeight||e.clientHeight||g.clientHeight;
-    if (elt === 'drag-handle') {
+        dimensions = $.getBrowserViewportDimensions(),
+        x = dimensions.x,
+        y = dimensions.y;
+    if (elt === 'drag-handle.ui-draggable') {
       // must drag drag-handle within browser viewport
       return [0, mainMenuHeight, x - dragHandleWidth, y - dragHandleHeight];
-    } else if (elt === 'layout-slot') {
+    } else if (elt === 'layout-slot.ui-draggable') {
       // can drag window horizontally off the screen if desired
       return [-x, mainMenuHeight, 2*x, y - manifestInfoHeight];
     } else {
       throw '$.getWorkspaceBoundingBox: unknown element type "' + elt + '"';
     }
+  };
+
+  /*
+   * Used to bring an element to the top of a stack.
+   * @param {String} stack jQuery selector that selects all elements to stack on top of
+   */
+  $.bringEltToTop = function(stack) {
+    var elem = this,
+    min,
+    group = jQuery.makeArray(jQuery(stack)).sort(function(a, b) {
+      return (parseInt(jQuery(a).css("zIndex"), 10) || 0) - (parseInt(jQuery(b).css("zIndex"), 10) || 0);
+    });
+    if (group.length < 1) {
+      return;
+    }
+    min = parseInt(group[0].style.zIndex, 10) || 0;
+    jQuery(group).each(function(i) {
+      this.style.zIndex = min+i;
+    });
+    /* // why do we need the following check
+    if (elem === undefined) {
+      return;
+    }
+    */
+    jQuery(elem).css({'zIndex' : min+group.length});
   };
 
 }(Mirador));
