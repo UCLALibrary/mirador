@@ -52,20 +52,14 @@
         thumbnailUrl = $.getThumbnailForCanvas(canvas, width);
 
         /*
-         * Gets the page number and r/v distinction for the image.
+         * Gets the page number, r/v distinction, and photosettings for the image.
          * @param {String} l Label to extract substring from. Should be in the form of:
          *   <ManuscriptName>_\d{3}{r|v}_<PhotoSettings>
          * @return {String}
          */
         function extractLabelSubstring(l) {
-          var splitString = l.split('_');
-          if (splitString.length > 1) {
-            // of the form \d{3}{r|v}
-            return splitString[1];
-          }
-          else {
-            return l;
-          }
+          var manuscriptName = l.split('_', 1);
+          return l.substring(manuscriptName.length + 1);
         }
 
         return {

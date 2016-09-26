@@ -1504,7 +1504,7 @@
                                  '<i class="fa fa-text-width fa-lg fa-fw"></i>',
                                  '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown ruler-options-list">',
-                                 '<li class="ruler-hide"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
+                                 '<li class="ruler-hide"><i class="fa fa-ban fa-lg fa-fw"></i> Hide Ruler</li>',
                                  '<li class="ruler-horizontal"><i class="fa fa-text-width fa-lg fa-fw"></i> Horizontal Ruler</li>',
                                  '<li class="ruler-vertical"><i class="fa fa-text-height fa-lg fa-fw"></i> Vertical Ruler</li>',
                                  '<li class="ruler-black"><i class="fa fa-square fa-lg fa-fw"></i> Black Lines</li>',
