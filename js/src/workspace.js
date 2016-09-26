@@ -127,6 +127,14 @@
       _this.eventEmitter.subscribe('BROWSER_VIEWPORT_RESIZED', function(event) {
         _this.resizeDraggableBoundingBoxes();
       });
+
+      _this.eventEmitter.subscribe('ADD_DUPLICATE_WINDOW', function(event, config) {
+        // add blank slot
+        _this.eventEmitter.publish('ADD_FLEXIBLE_SLOT');
+        config.slotAddress = _this.getAvailableSlot().layoutAddress;
+        // instantiate the blank slot
+        _this.eventEmitter.publish('ADD_WINDOW', config);
+      });
     },
 
     get: function(prop, parent) {

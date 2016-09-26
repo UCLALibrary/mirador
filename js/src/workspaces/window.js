@@ -495,6 +495,20 @@
       this.element.find('.remove-from-lock-group').on('click', function(event) {
         _this.removeFromLockGroup(this);
       });
+
+      this.element.find('.mirador-icon-duplicate-window').on('click', function(event) {
+        // get info of the current window to duplicate
+        var windowConfig = {
+          canvasID: _this.canvasID,
+          manifest: _this.manifest,
+          viewType: _this.currentImageMode,
+          choiceImageIDs: _this.choiceImageIDs,
+          slotAddress: null
+        };
+
+        // to workspace
+        _this.eventEmitter.publish('ADD_DUPLICATE_WINDOW', windowConfig);
+      });
     },
 
     addToLockGroup: function(elt, replacing) {
@@ -1540,6 +1554,12 @@
                                  '<ul class="dropdown multi-image-list"></ul>',
                                  '</a>',
                                  //'{{/#if}}',
+
+                                 // duplicate
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-duplicate-window" title="duplicate window">',
+                                 '<i class="fa fa-copy fa-lg fa-fw"></i>',
+                                 '</a>',
+
 
                                  '<h3 class="window-manifest-title" title="{{title}}" aria-label="{{title}}">{{title}}</h3>',
                                  '</div>',
