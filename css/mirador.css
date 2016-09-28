@@ -1895,6 +1895,22 @@ a.mirador-icon-window-menu, a.mirador-icon-view-type, a.mirador-icon-ruler, a.mi
   width: 30px;
 }
 
+a.mirador-icon-ruler .ruler-icon {
+  background-image: url("../images/ruler_icon.ico");
+  background-size: 1em;
+  height: 0.75em;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+a.mirador-icon-ruler .ruler-icon-grey {
+  background-image: url("../images/ruler_icon_grey.ico");
+  background-size: 1em;
+  height: 0.75em;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 .mirador-viewer a.mirador-icon-view-type:hover,
 .mirador-viewer a.mirador-icon-metadata-view:hover,
 .mirador-viewer a.mirador-icon-empty-slot:hover,
@@ -1903,8 +1919,8 @@ a.mirador-icon-window-menu, a.mirador-icon-view-type, a.mirador-icon-ruler, a.mi
 .mirador-viewer a.mirador-osd-fullscreen:hover,
 .mirador-viewer a.mirador-icon-lock-window:hover,
 .mirador-viewer a.mirador-icon-multi-image:hover,
-.mirador-viewer a.mirador-icon-duplicate-window:hover,
-.mirador-viewer a.mirador-icon-ruler:hover {
+.mirador-viewer a.mirador-icon-ruler:hover,
+.mirador-viewer a.mirador-icon-duplicate-window:hover {
   color: black;
 }
 
@@ -1912,8 +1928,7 @@ a.mirador-icon-window-menu, a.mirador-icon-view-type, a.mirador-icon-ruler, a.mi
 .mirador-viewer a.mirador-icon-toc.selected,
 .mirador-viewer a.mirador-icon-metadata-view.selected,
 .mirador-viewer a.mirador-icon-lock-window.selected,
-.mirador-viewer a.mirador-icon-multi-image.selected,
-.mirador-viewer a.mirador-icon-ruler.selected {
+.mirador-viewer a.mirador-icon-multi-image.selected {
   color: black;
 }
 

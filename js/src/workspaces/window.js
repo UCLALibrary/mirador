@@ -166,8 +166,6 @@
       templateData.currentFocusClass = _this.iconClasses[_this.viewType];
       templateData.showFullScreen = _this.fullScreen;
 
-
-
       // get info about lockGroups
       templateData.lockGroups = Object.keys(this.lockController.getLockGroupData());
 
@@ -1243,10 +1241,15 @@
       this.element.find('.mirador-icon-ruler').on('mouseenter',
         function() {
         _this.element.find('.ruler-options-list').stop().slideFadeToggle(300);
+        _this.element.find('.ruler-icon-grey').hide();
+        _this.element.find('.ruler-icon').show();
       }).on('mouseleave',
       function() {
         _this.element.find('.ruler-options-list').stop().slideFadeToggle(300);
+        _this.element.find('.ruler-icon').hide();
+        _this.element.find('.ruler-icon-grey').show();
       });
+      _this.element.find('.ruler-icon').hide();
       
       this.element.find('.ruler-hide').on('click', function() {
         _this.setRulerVisibility('invisible');
@@ -1515,7 +1518,8 @@
 
                                  // TODO: hide this ruler UI html if no physical dimensions are available
                                  '<a href="javascript:;" class="mirador-btn mirador-icon-ruler" title="ruler">',
-                                 '<i class="fa fa-text-width fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-lg fa-fw ruler-icon-grey"></i>',
+                                 '<i class="fa fa-lg fa-fw ruler-icon"></i>',
                                  '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown ruler-options-list">',
                                  '<li class="ruler-hide"><i class="fa fa-ban fa-lg fa-fw"></i> Hide Ruler</li>',
