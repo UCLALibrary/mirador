@@ -35,12 +35,12 @@
      * @param {Object} image JSON representation of image
      * @return {Object}
      */
-    getImageResourceLabelsAndUrls: function(image) {
+    getImageResourceLabelsIdsAndThumbnails: function(image) {
       var d = image.images[0].resource['default'];
       var i = image.images[0].resource.item;
       return {
-        'default': {'label': d.label, 'url': d.service['@id'].replace(/\/$/, "")},
-        'item': i.map(function(v) { return {'label': v.label, 'url': v.service['@id'].replace(/\/$/, "")}; })
+        'default': {'label': d.label, '@id': d.service['@id'].replace(/\/$/, "") + '/info.json', 'thumbnail': d.thumbnail},
+        'item': i.map(function(v) { return {'label': v.label, '@id': v.service['@id'].replace(/\/$/, "") + '/info.json', 'thumbnail': v.thumbnail}; })
       };
     },
 

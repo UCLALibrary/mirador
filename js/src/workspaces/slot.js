@@ -112,13 +112,14 @@
     },
 
     bindEvents: function() {
-      var _this = this,
-          dropTarget = this.element.find('.dropMask');
+      var _this = this;
+      // var dropTarget = this.element.find('.dropMask');
 
       this.element.find('.addItemLink').on('click', function(){ _this.addItem(); });
       this.element.find('.remove-slot-option').on('click', function(){
         _this.eventEmitter.publish('REMOVE_NODE', _this);
       });
+      /*
       this.element.on('dragover', function(e) {
         e.preventDefault();
         dropTarget.show();
@@ -135,6 +136,7 @@
       this.element.on('drop', function(e) {
         _this.dropItem(e);
       });
+      */
     },
 
     dropItem: function(e) {
@@ -280,16 +282,16 @@
                                  // if these are merely h1 tags for aesthetic purposes, it might be better to make them specific classes
                                 '<h1 class="plus" role="presentation" aria-label="Add item using Link">',
                                     '<span>+</span>',
-                                '<div class="dropIcon">',
-                                    '<i class="fa fa-level-down"></i>',
-                                '</div>',
+                                // '<div class="dropIcon">',
+                                //     '<i class="fa fa-level-down"></i>',
+                                // '</div>',
                                 '</h1>',
                                  '<h1 class="addItemText">{{t "addItem"}}</h1>',
-                                 '<h1 class="dropMeMessage">{{t "dropToLoad"}}</h1>',
+                                // '<h1 class="dropMeMessage">{{t "dropToLoad"}}</h1>',
                                  '</div>',
                                  '<a class="addItemLink" role="button" aria-label="Add item"></a>',
                                  '<a class="remove-slot-option"><i class="fa fa-times fa-lg fa-fw"></i> {{t "close"}}</a>',
-      '<a class="dropMask"></a>',
+      // '<a class="dropMask"></a>',
                                  '</div>'
     ].join(''))
   };

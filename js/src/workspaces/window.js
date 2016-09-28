@@ -166,8 +166,6 @@
       templateData.currentFocusClass = _this.iconClasses[_this.viewType];
       templateData.showFullScreen = _this.fullScreen;
 
-
-
       // get info about lockGroups
       templateData.lockGroups = Object.keys(this.lockController.getLockGroupData());
 
@@ -320,6 +318,13 @@
 
       _this.eventEmitter.subscribe('SET_CURRENT_CANVAS_ID.' + this.id, function(event, canvasID) {
         _this.setCurrentCanvasID(canvasID);
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeNavigationControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: canvasID
+          });
+        }
       });
 
       _this.eventEmitter.subscribe('REMOVE_CLASS.' + this.id, function(event, className) {
@@ -382,7 +387,7 @@
       _this.eventEmitter.subscribe('activateLockGroupMenuItem', function(event, data) {
         // check if this window has the window id
         // if so, set the li with the innerHTML that has groupID to data.groupId
-        if (data.windowId === _this.focusModules[_this.currentImageMode].windowId) { 
+        if (data.windowId === _this.focusModules[_this.currentImageMode].windowId) {
           _this.element.find('.add-to-lock-group').each(function(i, e) {
             if (e.innerHTML === data.groupId) {
               jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
@@ -419,6 +424,21 @@
 
     bindEvents: function() {
       var _this = this;
+
+      // prevent infinite looping with coordinated zoom
+      this.element.on({
+        mouseenter: function() {
+          _this.leading = true;
+        },
+        mouseleave: function() {
+          _this.leading = false;
+        }
+      });
+
+      // onclick event to add the window to the selected lock group
+      this.element.find('.add-to-lock-group').on('click', function(event) {
+        _this.addToLockGroup(this);
+      });
 
       //this event should trigger from layout
       jQuery(window).resize($.debounce(function(){
@@ -469,14 +489,23 @@
       */
       // TODO: remove the above
 
-      // onclick event to add the window to the selected lock group
-      this.element.find('.add-to-lock-group').on('click', function(event) {
-        _this.addToLockGroup(this);
-      });
-
       // onclick event to remove the window from its lock group
       this.element.find('.remove-from-lock-group').on('click', function(event) {
         _this.removeFromLockGroup(this);
+      });
+
+      this.element.find('.mirador-icon-duplicate-window').on('click', function(event) {
+        // get info of the current window to duplicate
+        var windowConfig = {
+          canvasID: _this.canvasID,
+          manifest: _this.manifest,
+          viewType: _this.currentImageMode,
+          choiceImageIDs: _this.choiceImageIDs,
+          slotAddress: null
+        };
+
+        // to workspace
+        _this.eventEmitter.publish('ADD_DUPLICATE_WINDOW', windowConfig);
       });
     },
 
@@ -805,6 +834,7 @@
           manifest: this.manifest,
           appendTo: this.element.find('.view-container'),
           windowId: this.id,
+          windowObj: this,
           state:  this.state,
           eventEmitter: this.eventEmitter,
           canvasID: canvasID,
@@ -823,6 +853,9 @@
       this.toggleFocus('ImageView', 'ImageView');
     },
 
+    /*
+     * @param {Array} data Array of objects that contains label and thumbnail url
+     */
     renderImageChoiceMenu: function(data) {
 
       // first remove inline style attr
@@ -832,9 +865,19 @@
       var _this = this;
       var lis;
       
-      lis = d3.select(_this.element[0]).select('.multi-image-list').selectAll('li').data(data, function(d) { return d; });
+      lis = d3.select(_this.element[0]).select('.multi-image-list').selectAll('li').data(data, function(d) { return d.label; });
       lis.enter().append('li')
-        .text(function(d) { return d; })
+        .append('img')
+          .attr('src', function(d) { return d.thumbnail;})
+          .attr('alt', function(d) { return d.label; })
+          .classed({'choice-img-thumbnail': true})
+          .select(function() {
+              return this.parentNode; })
+        .append('span')
+          .text(function(d) {
+            return d.label; })
+          .select(function() {
+              return this.parentNode; })
         .classed({'multi-image-list-item': true})
         .call(function(curSel) {
           // get label of choice image for this selection
@@ -856,7 +899,7 @@
           // window is subscribed
           _this.eventEmitter.publish('showChoiceImage', {
             id: _this.id,
-            choiceImageID: d
+            choiceImageID: d.label
           });
           
           // update dom
@@ -1198,61 +1241,196 @@
       this.element.find('.mirador-icon-ruler').on('mouseenter',
         function() {
         _this.element.find('.ruler-options-list').stop().slideFadeToggle(300);
+        _this.element.find('.ruler-icon-grey').hide();
+        _this.element.find('.ruler-icon').show();
       }).on('mouseleave',
       function() {
         _this.element.find('.ruler-options-list').stop().slideFadeToggle(300);
+        _this.element.find('.ruler-icon').hide();
+        _this.element.find('.ruler-icon-grey').show();
       });
+      _this.element.find('.ruler-icon').hide();
       
       this.element.find('.ruler-hide').on('click', function() {
         _this.setRulerVisibility('invisible');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerVisibility',
+              arg: 'invisible'
+            }
+          });
+        }
       });
       
       this.element.find('.ruler-horizontal').on('click', function() {
         _this.setRulerOrientation('horizontal');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerOrientation',
+              arg: 'horizontal'
+            }
+          });
+        }
       });
       
       this.element.find('.ruler-vertical').on('click', function() {
         _this.setRulerOrientation('vertical');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerOrientation',
+              arg: 'vertical'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-black').on('click', function() {
         _this.setRulerColor('black');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerColor',
+              arg: 'black'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-white').on('click', function() {
         _this.setRulerColor('white');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerColor',
+              arg: 'white'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-top-left').on('click', function() {
         _this.setRulerPosition('tl');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'tl'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-top-middle').on('click', function() {
         _this.setRulerPosition('tm');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'tm'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-top-right').on('click', function() {
         _this.setRulerPosition('tr');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'tr'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-middle-left').on('click', function() {
         _this.setRulerPosition('ml');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'ml'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-middle-right').on('click', function() {
         _this.setRulerPosition('mr');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'mr'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-bottom-left').on('click', function() {
         _this.setRulerPosition('bl');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'bl'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-bottom-middle').on('click', function() {
         _this.setRulerPosition('bm');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'bm'
+            }
+          });
+        }
       });
 
       this.element.find('.ruler-bottom-right').on('click', function() {
         _this.setRulerPosition('br');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('synchronizeRulerControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: {
+              fn: 'setRulerPosition',
+              arg: 'br'
+            }
+          });
+        }
       });
     },
 
@@ -1264,15 +1442,15 @@
     renderLockGroupMenu: function(lockGroupNames) {
       // each menu in the window should get a dropdown with items in the 'data' array
       var _this = this,
-      lockGroups = d3.selectAll('.lock-options-list').selectAll('.lock-options-list-item')
+      lockGroups = d3.select(this.element[0]).select('.lock-options-list').selectAll('.lock-options-list-item')
         .data(lockGroupNames, function(d) { return d; });
       lockGroups.enter().append('li')
         .classed({'lock-options-list-item': true, 'add-to-lock-group': true})
-        .text(function(d) { return d; });
+        .text(function(d) { return d; })
+        .on('click', function() {
+          _this.addToLockGroup(this);
+        });
       lockGroups.exit().remove();
-
-      // bind lock group click events on all new li's
-      _this.bindEvents();
     },
 
     // template should be based on workspace type
@@ -1320,7 +1498,6 @@
                                  '<hr class="menu-divider"/>',
                                  '{{/if}}',
                                  '{{#if layoutOptions.slotRight}}',
-                                 // lockGroup stuff
                                  '<li class="add-slot-right"><i class="fa fa-arrow-circle-right fa-lg fa-fw"></i> {{t "addSlotRight"}}</li>',
                                  '{{/if}}',
                                  '{{#if layoutOptions.slotLeft}}',
@@ -1340,9 +1517,12 @@
                                  '{{/if}}',
 
                                  // TODO: hide this ruler UI html if no physical dimensions are available
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-ruler" title="ruler"><i class="fa fa-text-width fa-lg fa-fw"></i>',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-ruler" title="ruler">',
+                                 '<i class="fa fa-lg fa-fw ruler-icon-grey"></i>',
+                                 '<i class="fa fa-lg fa-fw ruler-icon"></i>',
+                                 '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown ruler-options-list">',
-                                 '<li class="ruler-hide"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
+                                 '<li class="ruler-hide"><i class="fa fa-ban fa-lg fa-fw"></i> Hide Ruler</li>',
                                  '<li class="ruler-horizontal"><i class="fa fa-text-width fa-lg fa-fw"></i> Horizontal Ruler</li>',
                                  '<li class="ruler-vertical"><i class="fa fa-text-height fa-lg fa-fw"></i> Vertical Ruler</li>',
                                  '<li class="ruler-black"><i class="fa fa-square fa-lg fa-fw"></i> Black Lines</li>',
@@ -1360,7 +1540,9 @@
                                  // end of ruler UI html
  
                                  // lockController
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock-window" title="lock"><i class="fa fa-lock fa-lg fa-fw"></i>',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock-window" title="lock">',
+                                 '<i class="fa fa-lock fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown lock-options-list">',
                                  '<li class="no-lock remove-from-lock-group"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
                                  '{{#list2 lockGroups}}{{/list2}}',
@@ -1370,10 +1552,18 @@
 
                                  //'{{#if isMultiImageView}}',
                                  // dropdown list for multi
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-multi-image" title="multi-image"><i class="fa fa-copy fa-lg fa-fw"></i>',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-multi-image" title="multi-image">',
+                                 '<i class="fa fa-th-list fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown multi-image-list"></ul>',
                                  '</a>',
                                  //'{{/#if}}',
+
+                                 // duplicate
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-duplicate-window" title="duplicate window">',
+                                 '<i class="fa fa-copy fa-lg fa-fw"></i>',
+                                 '</a>',
+
 
                                  '<h3 class="window-manifest-title" title="{{title}}" aria-label="{{title}}">{{title}}</h3>',
                                  '</div>',

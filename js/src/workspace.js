@@ -123,6 +123,18 @@
         _this.renderDragHandles();
         _this.saveSnapGroupState();
       });
+
+      _this.eventEmitter.subscribe('BROWSER_VIEWPORT_RESIZED', function(event) {
+        _this.resizeDraggableBoundingBoxes();
+      });
+
+      _this.eventEmitter.subscribe('ADD_DUPLICATE_WINDOW', function(event, config) {
+        // add blank slot
+        _this.eventEmitter.publish('ADD_FLEXIBLE_SLOT');
+        config.slotAddress = _this.getAvailableSlot().layoutAddress;
+        // instantiate the blank slot
+        _this.eventEmitter.publish('ADD_WINDOW', config);
+      });
     },
 
     get: function(prop, parent) {
@@ -140,6 +152,13 @@
         this[prop] = value;
       }
       _this.eventEmitter.publish(prop + '.set', value);
+    },
+
+    // reset the draggable area bounding boxes when the browser viewport is resized
+    resizeDraggableBoundingBoxes: function() {
+      ['layout-slot.ui-draggable', 'drag-handle.ui-draggable'].forEach(function(i) {
+        jQuery('.' + i).draggable('option', 'containment', $.getWorkspaceBoundingBox(i));
+      });
     },
 
     /*
@@ -497,11 +516,17 @@
           'border-top-right-radius': '8px',
           'height': '25px',
           'position': 'absolute',
-          'width': '50px'
+          'width': '100px'
+        })
+        .on('click', function() {
+          // Bring clicked window to the top
+          $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
+          d3.event.stopPropagation();
         })
         .each(function(d) {
           // make this a draggable element that can drag multiple other draggable elements
           jQuery(this).draggable({
+            containment: $.getWorkspaceBoundingBox('drag-handle.ui-draggable'),
             multiple: {
               items: function getSelectedItems() {
                 return jQuery('.ui-draggable.' + d.name);
@@ -541,8 +566,14 @@
           assocSnapGroup = _this.getSnapGroupObject(d.name);
           if (assocSnapGroup.left === undefined && assocSnapGroup.top === undefined) {
             // new dragHandle, so give it the defaults and update the data model
-            d3.select(this).style({'left': 75*n + 'px', 'top': '50px'});
-            _this.updateDragHandlePosition(d.name, {'left': 75*n, 'top': 50});
+            var windowDims = $.getBrowserViewportDimensions(),
+                ll = Math.floor((windowDims.x - 100)/2),
+                tt = Math.floor((windowDims.y - 25)/2);
+            d3.select(this).style({'left': ll + 'px', 'top': tt + 'px'});
+            _this.updateDragHandlePosition(d.name, {'left': ll, 'top': tt});
+
+            // bring it to front
+            $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
           }
           else {
             // restoring a dragHandle, so set only the style
@@ -588,12 +619,15 @@
       // default slot window dimensions
       slotX = 50,
       slotY = 50,
-      slotDX = 500,
-      slotDY = 500,
+      slotDX = 750,
+      slotDY = 750,
 
       children,
       child,
-      tscKey;
+      tscKey,
+      
+      // call $.bringToFront() on these
+      newNodesBringToFront = [];
 
       /*
        * Saves the slotCoordinates from the given layout node,
@@ -661,11 +695,14 @@
 
           // if _this.slotCoordinates doesnt have anything for this children item, new window
           if (!_this.slotCoordinates[tscKey]) {
+            var windowDims = $.getBrowserViewportDimensions();
             _this.slotCoordinates[tscKey] = {};
-            _this.slotCoordinates[tscKey].x = slotX * (j + 1);
-            _this.slotCoordinates[tscKey].y = slotY * (j + 1);
+            _this.slotCoordinates[tscKey].x = Math.floor((windowDims.x - slotDX)/2);
+            _this.slotCoordinates[tscKey].y = slotY;
             _this.slotCoordinates[tscKey].dx = slotDX;
             _this.slotCoordinates[tscKey].dy = slotDY;
+
+            newNodesBringToFront.push(tscKey);
           }
 
           // restore the layout object
@@ -710,35 +747,16 @@
           eventEmitter: _this.eventEmitter
         }));
 
-        _this.updateConnectivityGraphAndClasses({option: 'addWindow', eltName: d.id});
-      })
-      .on('click', function() {
-        // Bring clicked window to the top
-        var elem = this,
-        stack = '.layout-slot',
-        min,
-        group = jQuery.makeArray(jQuery(stack)).sort(function(a, b) {
-          return (parseInt(jQuery(a).css("zIndex"), 10) || 0) - (parseInt(jQuery(b).css("zIndex"), 10) || 0);
-        });
-        if (group.length < 1) {
-          return;
+        // bring to front
+        if (newNodesBringToFront.indexOf(d.id) !== -1) {
+          $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
         }
-        min = parseInt(group[0].style.zIndex, 10) || 0;
-        jQuery(group).each(function(i) {
-          this.style.zIndex = min+i;
-        });
-        /* // why do we need the following check
-        if (elem === undefined) {
-          return;
-        }
-        */
-        jQuery(elem).css({'zIndex' : min+group.length});
 
-        d3.event.stopPropagation();
-      })
-      .each(function() {
+        _this.updateConnectivityGraphAndClasses({option: 'addWindow', eltName: d.id});
+
         jQuery(this)
         .draggable({
+          containment: $.getWorkspaceBoundingBox('layout-slot.ui-draggable'),
           handle: '.manifest-info',
           stack: '.layout-slot',
           snap: '.layout-slot, .drag-handle',
@@ -772,6 +790,11 @@
           // fit image choice menu to the new window size
           _this.eventEmitter.publish('fitImageChoiceMenu');
         });
+      })
+      .on('click', function() {
+        // Bring clicked window to the top
+        $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
+        d3.event.stopPropagation();
       });
 
       // Exit
