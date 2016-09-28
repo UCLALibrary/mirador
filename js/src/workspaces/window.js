@@ -1553,7 +1553,7 @@
                                  //'{{#if isMultiImageView}}',
                                  // dropdown list for multi
                                  '<a href="javascript:;" class="mirador-btn mirador-icon-multi-image" title="multi-image">',
-                                 '<i class="fa fa-copy fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-th-list fa-lg fa-fw"></i>',
                                  '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown multi-image-list"></ul>',
                                  '</a>',
