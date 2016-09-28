@@ -5,6 +5,7 @@
     jQuery.extend(this, {
       currentImg:       null,
       windowId:         null,
+      windowObj:        null,
       currentImgIndex:  0,
       canvasID:          null,
       // key-value map of canvasIDs to choiceImageIDs
@@ -55,7 +56,7 @@
       // if currentImg has choice, then display the menu in the Window obj (eventEmit)
       // TODO: get labels and label the dropdown menu accordingly
       if ($.Iiif.imageHasAlternateResources(this.currentImg)) {
-        this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsAndUrls(this.currentImg));
+        this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsIdsAndThumbnails(this.currentImg));
       } else {
         this.createOpenSeadragonInstance($.Iiif.getImageUrl(this.currentImg));
       }
@@ -206,6 +207,16 @@
 
     bindEvents: function() {
       var _this = this;
+
+      // prevent infinite looping with coordinated zoom
+      this.element.on({
+        mouseenter: function() {
+          _this.leading = true;
+        },
+        mouseleave: function() {
+          _this.leading = false;
+        }
+      });
 
       this.element.find('.mirador-osd-next').on('click', function() {
         _this.next();
@@ -669,8 +680,6 @@
       alternateImgObjList = [];
 
       if (typeof imageUrlData === 'string') {
-        imageUrlData += '/info.json';
-
         jQuery.when.apply(this, [
           jQuery.getJSON(imageUrlData, function(data) { 
             defaultImgObj = data;
@@ -680,15 +689,12 @@
         });
 
       } else if (typeof imageUrlData === 'object') {
-        imageUrlData['default'].url += '/info.json';
-        imageUrlData.item.forEach(function(v) { v.url += '/info.json';});
-
         jQuery.when.apply(this, [
-          jQuery.getJSON(imageUrlData['default'].url, function(data) { 
+          jQuery.getJSON(imageUrlData['default']['@id'], function(data) { 
             imageUrlData['default'].data = data;
           })]
           .concat(imageUrlData.item.map(function(v) {
-            return jQuery.getJSON(v.url, function(data) {
+            return jQuery.getJSON(v['@id'], function(data) {
               v.data = data;
             });
           }))
@@ -746,15 +752,6 @@
           }
         }, 30));
 
-        // prevent infinite looping with coordinated zoom
-        _this.element.on({
-          mouseenter: function() {
-            _this.leading = true;
-          },
-          mouseleave: function() {
-            _this.leading = false;
-          }
-        });
 
         if (_this.state.getStateProperty('autoHideControls')) {
           var timeoutID = null,
@@ -855,7 +852,7 @@
 
             // tell window to render the dropdown menu
             _this.eventEmitter.publish('imageChoiceReady', {
-              data: [infoJson['default'].label].concat(infoJson.item.map(function(v) { return v.label; })),
+              data: [infoJson['default']].concat(infoJson.item),
               id: _this.windowId
             });
           }
@@ -941,7 +938,7 @@
         this.osd.close();
 
         if ($.Iiif.imageHasAlternateResources(this.currentImg)) {
-          this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsAndUrls(this.currentImg));
+          this.createOpenSeadragonInstance($.Iiif.getImageResourceLabelsIdsAndThumbnails(this.currentImg));
         } else {
           this.createOpenSeadragonInstance($.Iiif.getImageUrl(this.currentImg));
         }

@@ -47,13 +47,24 @@
           return {};
         }
 
-        var aspectRatio = canvas.height/canvas.width,
-        width = (_this.thumbInfo.thumbsHeight/aspectRatio),
+        // we want square thumbnails
+        width = _this.thumbInfo.thumbsHeight,
         thumbnailUrl = $.getThumbnailForCanvas(canvas, width);
+
+        /*
+         * Gets the page number, r/v distinction, and photosettings for the image.
+         * @param {String} l Label to extract substring from. Should be in the form of:
+         *   <ManuscriptName>_\d{3}{r|v}_<PhotoSettings>
+         * @return {String}
+         */
+        function extractLabelSubstring(l) {
+          var manuscriptName = l.split('_', 1);
+          return l.substring(manuscriptName.length + 1);
+        }
 
         return {
           thumbUrl: thumbnailUrl,
-          title:    $.JsonLd.getTextValue(canvas.label),
+          title:    extractLabelSubstring($.JsonLd.getTextValue(canvas.label)),
           id:       canvas['@id'],
           width:    width,
           highlight: _this.currentImgIndex === index ? 'highlight' : ''

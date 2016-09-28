@@ -81,6 +81,9 @@
 
             jQuery(window).resize($.throttle(function() {
               _this.resizePanel();
+
+              // sent to workspace
+              _this.eventEmitter.publish('BROWSER_VIEWPORT_RESIZED');
             }, 50, true));
         },
         

@@ -43,8 +43,8 @@
           // load file contents into local storage, keyed by sessionID
 	      localStorage.setItem(sessionID, event.target.result);
 
-	      // reload page to URL with sessionID appended
-	      window.location.assign("http://localhost:8000/#" + sessionID);
+	      // reload page to URL with new sessionID appended
+	      window.location.assign(window.location.origin + window.location.pathname + '#' + sessionID);
           window.location.reload();
         };
 	    fr.readAsText(file);
