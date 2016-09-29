@@ -267,8 +267,10 @@
   };
 
   $.getWorkspaceBoundingBox = function(elt) {
-    var manifestInfoHeight = 39,
-        mainMenuHeight = 33,
+    var manifestInfoHeight = jQuery('.manifest-info').height(),
+        workspaceTop = jQuery('.mirador-viewer').offset().top,
+
+        // magic vars because no drag handles may be present at some time
         dragHandleWidth = 100,
         dragHandleHeight = 25,
         dimensions = $.getBrowserViewportDimensions(),
@@ -276,10 +278,10 @@
         y = dimensions.y;
     if (elt === 'drag-handle.ui-draggable') {
       // must drag drag-handle within browser viewport
-      return [0, mainMenuHeight, x - dragHandleWidth, y - dragHandleHeight];
+      return [0, workspaceTop, x - dragHandleWidth, y - dragHandleHeight];
     } else if (elt === 'layout-slot.ui-draggable') {
       // can drag window horizontally off the screen if desired
-      return [-x, mainMenuHeight, 2*x, y - manifestInfoHeight];
+      return [-x, workspaceTop, 2*x, y - manifestInfoHeight];
     } else {
       throw '$.getWorkspaceBoundingBox: unknown element type "' + elt + '"';
     }
