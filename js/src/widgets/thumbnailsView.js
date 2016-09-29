@@ -58,13 +58,14 @@
          * @return {String}
          */
         function extractLabelSubstring(l) {
-          var manuscriptName = l.split('_', 1);
+          var manuscriptName = l.split('_', 1)[0];
           return l.substring(manuscriptName.length + 1);
         }
 
         return {
           thumbUrl: thumbnailUrl,
           title:    extractLabelSubstring($.JsonLd.getTextValue(canvas.label)),
+          tooltip:  canvas.label,
           id:       canvas['@id'],
           width:    width,
           highlight: _this.currentImgIndex === index ? 'highlight' : ''
@@ -187,7 +188,7 @@
                                  '<ul class="{{listingCssCls}}" role="list" aria-label="Thumbnails">',
                                  '{{#thumbs}}',
                                  '<li class="{{highlight}}" role="listitem" aria-label="Thumbnail">',
-                                 '<img class="thumbnail-image {{highlight}}" title="{{title}}" data-image-id="{{id}}" src="" data="{{thumbUrl}}" height="{{../defaultHeight}}" width="{{width}}">',
+                                 '<img class="thumbnail-image {{highlight}}" title="{{tooltip}}" data-image-id="{{id}}" src="" data="{{thumbUrl}}" height="{{../defaultHeight}}" width="{{width}}">',
                                  '<div class="thumb-label">{{title}}</div>',
                                  '</li>',
                                  '{{/thumbs}}',
