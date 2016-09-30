@@ -95,6 +95,9 @@
       } else {
         _this.eventEmitter.publish('SET_BOTTOM_PANEL_VISIBILITY.' + this.windowId, null);
       }
+
+      // start with the image manip controls showing
+      this.element.find('.mirador-manipulation-toggle').click();
     },
 
     template: Handlebars.compile([

@@ -1174,14 +1174,14 @@ li.highlight {
   margin:0 10px 0 0;
   font-weight: normal;
 }
-.mirador-annotation-controls {
+.mirador-osd-annotation-controls {
   position: absolute;
-  top: 0px;
+  top: 30px;
   left: 0px;
 }
 .mirador-manipulation-controls {
   position: absolute;
-  top: 30px;
+  top: 0px;
   left: 0px;
 }
 
