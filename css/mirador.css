@@ -674,10 +674,10 @@ li.highlight {
 
 /* window scaffolding */
 .window {
-  position:relative;
+  position:absolute;
   width:100%;
   height:100%;
-  overflow: hidden;
+  overflow: visible;
   background-color: #333;
 }
 .manifest-info {
@@ -1882,7 +1882,7 @@ a.mirador-icon-empty-slot [class^="icon-"] {
   padding-bottom:30px;
 }
 
-.mirador-viewer a.mirador-icon-window-menu, .mirador-viewer a.mirador-icon-toc, .mirador-viewer a.mirador-close-window, .mirador-viewer a.mirador-icon-ruler, .mirador-viewer a.mirador-icon-lock-window, .mirador-viewer a.mirador-icon-multi-image, .mirador-viewer a.mirador-icon-duplicate-window {
+.mirador-viewer a.mirador-icon-window-menu, .mirador-viewer a.mirador-icon-toc, .mirador-viewer a.mirador-close-window, .mirador-viewer a.mirador-icon-ruler, .mirador-viewer a.mirador-icon-lock-window, .mirador-viewer a.mirador-icon-multi-image, .mirador-viewer a.mirador-icon-duplicate-window, .mirador-viewer a.mirador-icon-new-object {
   float:left;
   background: none;
   color: rgb( 146, 145, 145 );
@@ -1920,15 +1920,14 @@ a.mirador-icon-ruler .ruler-icon-grey {
 .mirador-viewer a.mirador-icon-lock-window:hover,
 .mirador-viewer a.mirador-icon-multi-image:hover,
 .mirador-viewer a.mirador-icon-ruler:hover,
+.mirador-viewer a.mirador-icon-new-object:hover,
 .mirador-viewer a.mirador-icon-duplicate-window:hover {
   color: black;
 }
 
 .mirador-viewer a.mirador-icon-view-type.selected,
 .mirador-viewer a.mirador-icon-toc.selected,
-.mirador-viewer a.mirador-icon-metadata-view.selected,
-.mirador-viewer a.mirador-icon-lock-window.selected,
-.mirador-viewer a.mirador-icon-multi-image.selected {
+.mirador-viewer a.mirador-icon-metadata-view.selected {
   color: black;
 }
 

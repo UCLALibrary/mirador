@@ -142,6 +142,13 @@
       var _this = this;
 
       /*
+       * Simply sends lock group data.
+       */
+      _this.eventEmitter.subscribe('windowReadyForLockGroups', function(event) {
+        _this.eventEmitter.publish('updateLockGroupMenus', _this.synchronizedWindows);
+      });
+
+      /*
        * Creates a new lock group. Published by lockGroupsPanel.
        *
        * @param {string} name Name of new lock group.

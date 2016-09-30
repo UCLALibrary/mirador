@@ -188,7 +188,7 @@
                                  '<ul class="{{listingCssCls}}" role="list" aria-label="Thumbnails">',
                                  '{{#thumbs}}',
                                  '<li class="{{highlight}}" role="listitem" aria-label="Thumbnail">',
-                                 '<img class="thumbnail-image {{highlight}}" title="{{tooltip}}" data-image-id="{{id}}" src="" data="{{thumbUrl}}" height="{{../defaultHeight}}" width="{{width}}">',
+                                 '<img class="thumbnail-image {{highlight}} mirador-tooltip" title="{{tooltip}}" data-image-id="{{id}}" src="" data="{{thumbUrl}}" height="{{../defaultHeight}}" width="{{width}}">',
                                  '<div class="thumb-label">{{title}}</div>',
                                  '</li>',
                                  '{{/thumbs}}',
