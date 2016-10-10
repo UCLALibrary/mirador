@@ -172,8 +172,11 @@
       templateData.lockGroups = Object.keys(this.lockController.getLockGroupData());
 
       _this.element = jQuery(this.template(templateData)).appendTo(_this.appendTo);
-      this.element.find('.manifest-info .mirador-tooltip').each(function() {
-        _this.createOrUpdateTooltip(this);
+      this.element.find('.manifest-info .mirador-tooltip.mirador-icon-view-type').each(function() {
+        _this.createOrUpdateTooltip(this, 'left');
+      });
+      this.element.find('.manifest-info .mirador-tooltip.mirador-icon-ruler, .manifest-info .mirador-tooltip.mirador-icon-lock-window, .manifest-info .mirador-tooltip.mirador-icon-multi-image').each(function() {
+        _this.createOrUpdateTooltip(this, 'right');
       });
       //TODO: this needs to switch the postion when it is a right to left manifest
       this.element.find('.manifest-info .contained-tooltip').qtip({
@@ -264,19 +267,22 @@
       this.eventEmitter.publish('windowReadyForLockGroups');
     },
 
-    createOrUpdateTooltip: function(selector) {
+    createOrUpdateTooltip: function(selector, horizontalPosition) {
       var _this = this;
       jQuery(selector).qtip({
         content: {
           text: jQuery(this).attr('title'),
         },
         position: {
-          my: 'bottom center',
-          at: 'top center',
+          my: 'top ' + (horizontalPosition === 'left' ? 'right': 'left'),
+          at: 'bottom ' + horizontalPosition,
           container: _this.element
         },
         style: {
           classes: 'qtip-dark qtip-shadow qtip-rounded'
+        },
+        hide: {
+          distance: 5
         }
       });
     },
@@ -397,7 +403,7 @@
       // TODO: delete parameter from Handlebars template (not needed)
       _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, data) {
         _this.renderLockGroupMenu(data.keys);
-        _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-lock-window');
+        _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-lock-window', 'right');
       });
 
       /*
@@ -429,14 +435,14 @@
       _this.eventEmitter.subscribe('imageChoiceReady', function(event, data) {
         if (data.id === _this.id) {
           _this.renderImageChoiceMenu(data.data);
-          _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-multi-image');
+          _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-multi-image', 'right');
         }
       });
 
       _this.eventEmitter.subscribe('noImageChoice', function(event, id) {
         if (id === _this.id) {
           _this.renderImageChoiceMenu([]);
-          _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-multi-image');
+          _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-multi-image', 'right');
         }
       });
 
