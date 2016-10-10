@@ -906,6 +906,7 @@
           .select(function() {
               return this.parentNode; })
         .append('span')
+          .classed({'choice-img-label': true})
           .text(function(d) {
             return d.label; })
           .select(function() {
@@ -919,7 +920,7 @@
 
           if (label !== undefined) {
             elt = currentSelection.filter(function() {
-              return this.innerHTML === label ? true : false;
+              return jQuery(this).find('.choice-img-label').text() === label ? true : false;
             });
           } else {
             elt = currentSelection.first();
