@@ -16,7 +16,12 @@
         id: undefined,
         infoJson: undefined,
         uniqueID: undefined,
-        toolbarID: undefined
+        toolbarID: undefined,
+        immediateRender: true,
+        gestureSettingsMouse: {
+          dblClickToZoom: true,
+          clickToZoom: false
+        }
       }, options)
 
     );
