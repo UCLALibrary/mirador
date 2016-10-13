@@ -21,7 +21,9 @@
         gestureSettingsMouse: {
           dblClickToZoom: true,
           clickToZoom: false
-        }
+        },
+        zoomPerClick: 1.1,
+        zoomPerScroll: 1.1
       }, options)
 
     );

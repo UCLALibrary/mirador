@@ -452,6 +452,20 @@
       _this.eventEmitter.subscribe('fitImageChoiceMenu', function(event) {
         _this.fitImageChoiceMenu();
       });
+
+      /*
+       * Received from lockController.
+       */
+      _this.eventEmitter.subscribe('DISABLE_ZOOMING.' + _this.id, function(event) {
+        _this.toggleZoomLock(_this.element.find('.mirador-icon-zoom-lock'), true);
+      });
+
+      /*
+       * Received from lockController.
+       */
+      _this.eventEmitter.subscribe('ENABLE_ZOOMING.' + _this.id, function(event) {
+        _this.toggleZoomLock(_this.element.find('.mirador-icon-zoom-lock'), false);
+      });
     },
 
     bindEvents: function() {
@@ -539,6 +553,34 @@
         // to workspace
         _this.eventEmitter.publish('ADD_DUPLICATE_WINDOW', windowConfig);
       });
+
+      // onclick event to toggle zoom enabled/disabled
+      this.element.find('.mirador-icon-zoom-lock').on('click', function(event) {
+        // flips the current value
+        _this.toggleZoomLock(this, !_this.zoomLock);
+      });
+    },
+
+    /*
+     * Sets this window's zoom-lockedness.
+     *
+     * @param {Object} thisObj
+     *   The element with class '.mirador-icon-zoom-lock' to add/remove class from.
+     * @param {Boolean} locked
+     *   Whether to set this window's zoom to enabled (false) or disabled (true),
+     */
+    toggleZoomLock: function(thisObj, locked) {
+      var _this = this;
+      (function(l) {
+        if (l === true) {
+          _this.eventEmitter.publish("DISABLE_OSD_ZOOM." + _this.id);
+          jQuery(this).addClass('selected');
+        } else {
+          _this.eventEmitter.publish("ENABLE_OSD_ZOOM." + _this.id);
+          jQuery(this).removeClass('selected');
+        }
+        _this.zoomLock = !!l;
+      }).call(thisObj, locked);
     },
 
     addToLockGroup: function(elt, replacing) {
@@ -1600,6 +1642,11 @@
                                  '<i class="fa fa-copy fa-lg fa-fw"></i>',
                                  '</a>',
 
+                                 // zoom lock
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-zoom-lock contained-tooltip" title="Toggle zoom lock on this window">',
+                                 '<i class="fa fa-search fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-lock" style="position:relative;left:-4px;"></i>',
+                                 '</a>',
 
                                  '<h3 class="window-manifest-title" title="{{title}}" aria-label="{{title}}">{{title}}</h3>',
                                  '</div>',

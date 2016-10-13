@@ -206,6 +206,22 @@
           });
         }
       });
+
+      /*
+       * Published by the parent window object, which does not have a direct reference to an OSD viewer.
+       */
+      _this.eventEmitter.subscribe('DISABLE_OSD_ZOOM.' + _this.windowId, function(event) {
+        _this.osd.zoomPerClick = 1;
+        _this.osd.zoomPerScroll = 1;
+      });
+
+      /*
+       * Published by the parent window object, which does not have a direct reference to an OSD viewer.
+       */
+      _this.eventEmitter.subscribe('ENABLE_OSD_ZOOM.' + _this.windowId, function(event) {
+        _this.osd.zoomPerClick = 1.1;
+        _this.osd.zoomPerScroll = 1.1;
+      });
     },
 
     bindEvents: function() {

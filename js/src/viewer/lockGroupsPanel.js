@@ -217,8 +217,30 @@
               }
             });
 
-            // add a delete button
+            // add disable/enable zoom buttons and a delete button
             ret
+              .append('button')
+                .attr('type', 'button')
+                .text('Disable Zoom')
+                .on('click', function() {
+                  _this.eventEmitter.publish('TOGGLE_ZOOM_LOCK_ALL', {
+                    enable: false,
+                    groupID: jQuery(this).parent().parent().find('h4').text()
+                  });
+                })
+                .select(function() { return this.parentNode; })
+              .append('button')
+                .attr('type', 'button')
+                .text('Enable Zoom')
+                .on('click', function() {
+                  _this.eventEmitter.publish('TOGGLE_ZOOM_LOCK_ALL', {
+                    enable: true,
+                    groupID: jQuery(this).parent().parent().find('h4').text()
+                  });
+                })
+                .select(function() { return this.parentNode; })
+              .append('br')
+                .select(function() { return this.parentNode; })
               .append('a')
                 .attr('href', 'javascript:;')
                 .classed({'mirador-btn': true, 'mirador-icon-delete-lock-group': true})
