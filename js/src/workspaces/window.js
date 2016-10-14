@@ -257,14 +257,14 @@
       }
       this.sidePanelVisibility(this.sidePanelVisible, '0s');
 
+      // get initial lock group data
+      this.eventEmitter.publish('windowReadyForLockGroups');
+
       // restore lock group stuff for this window, if we are restoring it
       // sends message to lockController
       if (_this.focusModules[_this.currentImageMode] !== null) {
         _this.eventEmitter.publish('restoreWindowToLockController', _this.focusModules[_this.currentImageMode]);
       }
-
-      // get initial lock group data
-      this.eventEmitter.publish('windowReadyForLockGroups');
     },
 
     createOrUpdateTooltip: function(selector, horizontalPosition) {
