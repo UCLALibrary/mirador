@@ -605,18 +605,44 @@
     },
 
     /*
-     * Calculates the and sets the layout of the workspace.
+     * Calculates and sets the layout of the workspace.
      *
-     * @param {boolean} resetting Passed in from Workspace.resetLayout (not used with flex workspace)
-     * @param {Array} draggedIDs List of slot IDs that have just finished dragging
-     * @param {Array} resizedIDs List of slot IDs that have just finished resizing
+     * This method is made much more complicated due to the requirements of the flexible workspace.
+     * Mirador uses a package called Isfahan (also developed by Stanford University Libraries) to
+     * manage the slot (window) layout of the workspace. In the original code that ships with Mirador,
+     * the workspace slots are laid out in a grid so that each of them always have identical dimensions.
+     *
+     * For the flexible workspace, there is no such requirement of uniformity of dimensions or conformance
+     * to a grid layout. However, Isfahan describes the layout in a way that is expected by many other
+     * parts of the code, so instead of ripping it out completely, I've "sidestepped" the part of it that 
+     * I don't want (specifically, it's setting of position and dimensions of the windows).
+     *
+     * Basically, each time this function is called:
+     *
+     * 1) the subset of nodes in the layoutDescription object whose position and dimensions that we want to
+     * save are saved in the _this.slotCoordinates object
+     * 2) Isfahan is called to alter the layoutDescription object
+     * 3) the subset of nodes in the layoutDescription object whose data we saved in step 1 are restored
+     * using said data
+     *
+     * To make things more complicated, this is not the only function that writes to _this.slotCoordinates (the resizestop and dragstop callbacks for '.layout-slot's also do). The rule is this:
+     *
+     * Whatever is stored in _this.slotCoordinates before Isfahan is called represents what will be the 
+     * end state of the workspace when this function returns.
+     *
+     * @param {boolean} resetting
+     *   Passed in from Workspace.resetLayout (not used with flex workspace)
+     * @param {Array} draggedIDs
+     *   List of slot IDs that have just finished dragging
+     * @param {Array} resizedIDs
+     *   List of slot IDs that have just finished resizing
      */
     calculateLayout: function(resetting, draggedIDs, resizedIDs) {
       var _this = this,
       layout,
       divs,
 
-      // default slot window dimensions
+      // default slot window dimensions, in pixels
       slotX = 50,
       slotY = 50,
       slotDX = 750,
@@ -626,7 +652,7 @@
       child,
       tscKey,
       
-      // call $.bringToFront() on these
+      // will call $.bringToFront() on these
       newNodesBringToFront = [];
 
       /*
@@ -636,29 +662,40 @@
        * @param {Object} node A layout node to save the settings of.
        */
       function saveToSlotCoordinates(node) {
-        // save the coordinates
-        tscKey = node.id;
-          if (node.x && node.y && node.dx && node.dy) {
+        var tscKey = node.id,
+        areDragging = draggedIDs !== undefined && draggedIDs.indexOf(tscKey) !== -1,
+        areNotDragging = draggedIDs === undefined || draggedIDs.indexOf(tscKey) === -1,
+        areNotResizing = resizedIDs === undefined || resizedIDs.indexOf(tscKey) === -1;
+
+        if (node.x && node.y && node.dx && node.dy) {
             
-          // assume key to be something meaningful
+          // tscKey is the key to use for _this.slotCoordinates (tsc)
           if (!_this.slotCoordinates[tscKey]) {
             _this.slotCoordinates[tscKey] = {};
           }
-          if (draggedIDs === undefined || draggedIDs.indexOf(tscKey) === -1) {
-            // hasn't been written to slotCoordinates by the caller, so write it
+
+          // if we are dragging, the width and height of the window have not changed,
+          // so save what we already have in the current node of _this.layoutDescription
+          if (areDragging) {
+            _this.slotCoordinates[tscKey].dx = node.dx;
+            _this.slotCoordinates[tscKey].dy = node.dy;
+          }
+
+          // if we are neither resizing or dragging the current node,
+          // _this.layoutDescription already contains the correct data for the current node,
+          // so save all of it
+          if (areNotDragging && areNotResizing) {
             _this.slotCoordinates[tscKey].x = node.x;
             _this.slotCoordinates[tscKey].y = node.y;
-          }
-          if (resizedIDs === undefined || resizedIDs.indexOf(tscKey) === -1) {
-            // hasn't been written to slotCoordinates by the caller, so write it
             _this.slotCoordinates[tscKey].dx = node.dx;
             _this.slotCoordinates[tscKey].dy = node.dy;
           }
         }
       }
 
+      // Step 1
       // if we have already generated a layout, either restoring from localStorage or using the one from
-      // this sessionq
+      // this session
       if ($.DEFAULT_SETTINGS.flexibleWorkspace === true && typeof _this.layoutDescription === 'object') {
         if (!_this.slotCoordinates) {
           // need to initialize in case we are restoring a saved workspace
@@ -678,6 +715,7 @@
         }
       }
 
+      // Step 2
       // use Isfahan for everything but the slot window dimensions. Will restore them from _this.slotCoordinates
       _this.layout = layout = new Isfahan({
         containerId: _this.element.attr('id'),
@@ -686,6 +724,7 @@
         padding: 3
       });
 
+      // Step 3
       // if flex workspace is enabled, go through the layout obj and restore the saved coordinates
       if ($.DEFAULT_SETTINGS.flexibleWorkspace === true) {
 
@@ -778,12 +817,18 @@
             _this.saveSnapGroupState();
           }
         })
-        .resizable().on('resizestop', function(event, ui) {
+        .resizable({
+          handles: "n, e, s, w, ne, nw, se, sw"
+        })
+        .on('resizestop', function(event, ui) {
           // save slot height/width to localstorage, so that they aren't overwritten by calculateLayout
           var id = ui.helper[0].attributes['data-layout-slot-id'].value;
           _this.slotCoordinates[id].dx = ui.size.width;
           _this.slotCoordinates[id].dy = ui.size.height;
-  
+          // save position too since we might be changing the top/left value
+          _this.slotCoordinates[id].x = ui.position.left;
+          _this.slotCoordinates[id].y = ui.position.top;
+
           var slotIDs = [id];
           _this.calculateLayout(undefined, undefined, slotIDs);
 

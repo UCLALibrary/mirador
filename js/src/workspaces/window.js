@@ -64,6 +64,7 @@
      * @param {Array} items An array of names of lock groups
      */
     // TODO: is this needed?
+    /*
     Handlebars.registerHelper('list2', function(items) {
       var out = ''; 
       for(var i=0, l=items.length; i<l; i++) {
@@ -71,6 +72,7 @@
       }   
       return out;
     });
+    */
 
     this.init();
     this.bindAnnotationEvents();
@@ -170,27 +172,31 @@
       templateData.lockGroups = Object.keys(this.lockController.getLockGroupData());
 
       _this.element = jQuery(this.template(templateData)).appendTo(_this.appendTo);
-      this.element.find('.manifest-info .mirador-tooltip').each(function() {
-        jQuery(this).qtip({
-          content: {
-            text: jQuery(this).attr('title'),
-          },
-          position: {
-            my: 'top center',
-            at: 'bottom center',
-            adjust: {
-              method: 'shift',
-              y: -11
-            },
-            container: _this.element,
-            viewport: true
-          },
-          style: {
-            classes: 'qtip-dark qtip-shadow qtip-rounded'
-          }
-        });
+      this.element.find('.manifest-info .mirador-tooltip.mirador-icon-view-type').each(function() {
+        _this.createOrUpdateTooltip(this, 'left');
+      });
+      this.element.find('.manifest-info .mirador-tooltip.mirador-icon-ruler, .manifest-info .mirador-tooltip.mirador-icon-lock-window, .manifest-info .mirador-tooltip.mirador-icon-multi-image').each(function() {
+        _this.createOrUpdateTooltip(this, 'right');
       });
       //TODO: this needs to switch the postion when it is a right to left manifest
+      this.element.find('.manifest-info .contained-tooltip').qtip({
+        content: {
+          text: jQuery(this).attr('title'),
+        },
+        position: {
+          my: 'top center',
+          at: 'bottom center',
+          adjust: {
+            method: 'shift',
+            y: -11
+          },
+          container: _this.element,
+          viewport: true
+        },
+        style: {
+          classes: 'qtip-dark qtip-shadow qtip-rounded'
+        }
+      });
       this.element.find('.manifest-info .window-manifest-title').qtip({
         content: {
           text: jQuery(this).attr('title'),
@@ -251,11 +257,34 @@
       }
       this.sidePanelVisibility(this.sidePanelVisible, '0s');
 
+      // get initial lock group data
+      this.eventEmitter.publish('windowReadyForLockGroups');
+
       // restore lock group stuff for this window, if we are restoring it
       // sends message to lockController
       if (_this.focusModules[_this.currentImageMode] !== null) {
         _this.eventEmitter.publish('restoreWindowToLockController', _this.focusModules[_this.currentImageMode]);
       }
+    },
+
+    createOrUpdateTooltip: function(selector, horizontalPosition) {
+      var _this = this;
+      jQuery(selector).qtip({
+        content: {
+          text: jQuery(this).attr('title'),
+        },
+        position: {
+          my: 'top ' + (horizontalPosition === 'left' ? 'right': 'left'),
+          at: 'bottom ' + horizontalPosition,
+          container: _this.element
+        },
+        style: {
+          classes: 'qtip-dark qtip-shadow qtip-rounded'
+        },
+        hide: {
+          distance: 5
+        }
+      });
     },
 
     update: function(options) {
@@ -374,6 +403,7 @@
       // TODO: delete parameter from Handlebars template (not needed)
       _this.eventEmitter.subscribe('updateLockGroupMenus', function(event, data) {
         _this.renderLockGroupMenu(data.keys);
+        _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-lock-window', 'right');
       });
 
       /*
@@ -405,12 +435,14 @@
       _this.eventEmitter.subscribe('imageChoiceReady', function(event, data) {
         if (data.id === _this.id) {
           _this.renderImageChoiceMenu(data.data);
+          _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-multi-image', 'right');
         }
       });
 
       _this.eventEmitter.subscribe('noImageChoice', function(event, id) {
         if (id === _this.id) {
           _this.renderImageChoiceMenu([]);
+          _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-multi-image', 'right');
         }
       });
 
@@ -419,6 +451,20 @@
        */
       _this.eventEmitter.subscribe('fitImageChoiceMenu', function(event) {
         _this.fitImageChoiceMenu();
+      });
+
+      /*
+       * Received from lockController.
+       */
+      _this.eventEmitter.subscribe('DISABLE_ZOOMING.' + _this.id, function(event) {
+        _this.toggleZoomLock(_this.element.find('.mirador-icon-zoom-lock'), true);
+      });
+
+      /*
+       * Received from lockController.
+       */
+      _this.eventEmitter.subscribe('ENABLE_ZOOMING.' + _this.id, function(event) {
+        _this.toggleZoomLock(_this.element.find('.mirador-icon-zoom-lock'), false);
       });
     },
 
@@ -507,6 +553,34 @@
         // to workspace
         _this.eventEmitter.publish('ADD_DUPLICATE_WINDOW', windowConfig);
       });
+
+      // onclick event to toggle zoom enabled/disabled
+      this.element.find('.mirador-icon-zoom-lock').on('click', function(event) {
+        // flips the current value
+        _this.toggleZoomLock(this, !_this.zoomLock);
+      });
+    },
+
+    /*
+     * Sets this window's zoom-lockedness.
+     *
+     * @param {Object} thisObj
+     *   The element with class '.mirador-icon-zoom-lock' to add/remove class from.
+     * @param {Boolean} locked
+     *   Whether to set this window's zoom to enabled (false) or disabled (true),
+     */
+    toggleZoomLock: function(thisObj, locked) {
+      var _this = this;
+      (function(l) {
+        if (l === true) {
+          _this.eventEmitter.publish("DISABLE_OSD_ZOOM." + _this.id);
+          jQuery(this).addClass('selected');
+        } else {
+          _this.eventEmitter.publish("ENABLE_OSD_ZOOM." + _this.id);
+          jQuery(this).removeClass('selected');
+        }
+        _this.zoomLock = !!l;
+      }).call(thisObj, locked);
     },
 
     addToLockGroup: function(elt, replacing) {
@@ -874,6 +948,7 @@
           .select(function() {
               return this.parentNode; })
         .append('span')
+          .classed({'choice-img-label': true})
           .text(function(d) {
             return d.label; })
           .select(function() {
@@ -887,7 +962,7 @@
 
           if (label !== undefined) {
             elt = currentSelection.filter(function() {
-              return this.innerHTML === label ? true : false;
+              return jQuery(this).find('.choice-img-label').text() === label ? true : false;
             });
           } else {
             elt = currentSelection.first();
@@ -1213,7 +1288,7 @@
         _this.sidePanelVisibility(!_this.sidePanelVisible, '0.3s');
       });
 
-      this.element.find('.new-object-option').on('click', function() {
+      this.element.find('.new-object-option, .mirador-icon-new-object').on('click', function() {
         _this.eventEmitter.publish('ADD_ITEM_FROM_WINDOW', _this.id);
       });
 
@@ -1458,7 +1533,7 @@
                                  '<div class="window">',
                                  '<div class="manifest-info">',
                                  '<div class="window-manifest-navigation">',
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-view-type" role="button" title="{{t "viewTypeTooltip"}}" aria-label="{{t "viewTypeTooltip"}}">',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-view-type mirador-tooltip" role="button" title="{{t "viewTypeTooltip"}}" aria-label="{{t "viewTypeTooltip"}}">',
                                  '<i class="{{currentFocusClass}}"></i>',
                                  '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown image-list">',
@@ -1477,21 +1552,21 @@
                                  '</ul>',
                                  '</a>',
                                  '{{#if MetadataView}}',
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-metadata-view mirador-tooltip" role="button" title="{{t "metadataTooltip"}}" aria-label="{{t "metadataTooltip"}}">',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-metadata-view contained-tooltip" role="button" title="{{t "metadataTooltip"}}" aria-label="{{t "metadataTooltip"}}">',
                                  '<i class="fa fa-info-circle fa-lg fa-fw"></i>',
                                  '</a>',
                                  '{{/if}}',
                                  '{{#if showFullScreen}}',
-                                 '<a class="mirador-btn mirador-osd-fullscreen mirador-tooltip" role="button" title="{{t "fullScreenWindowTooltip"}}" aria-label="{{t "fullScreenWindowTooltip"}}">',
+                                 '<a class="mirador-btn mirador-osd-fullscreen contained-tooltip" role="button" title="{{t "fullScreenWindowTooltip"}}" aria-label="{{t "fullScreenWindowTooltip"}}">',
                                  '<i class="fa fa-lg fa-fw fa-expand"></i>',
                                  '</a>',
                                  '{{/if}}',
                                  '</div>',
                                  '{{#if layoutOptions.close}}',
-                                 '<a href="javascript:;" class="mirador-btn mirador-close-window remove-object-option mirador-tooltip" title="{{t "closeTooltip"}}" aria-label="{{t "closeTooltip"}}"><i class="fa fa-times fa-lg fa-fw"></i></a>',
+                                 '<a href="javascript:;" class="mirador-btn mirador-close-window remove-object-option contained-tooltip" title="{{t "closeTooltip"}}" aria-label="{{t "closeTooltip"}}"><i class="fa fa-times fa-lg fa-fw"></i></a>',
                                  '{{/if}}',
                                  '{{#if displayLayout}}',
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-window-menu" title="{{t "changeLayoutTooltip"}}" aria-label="{{t "changeLayoutTooltip"}}"><i class="fa fa-th-large fa-lg fa-fw"></i><i class="fa fa-caret-down"></i>',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-window-menu mirador-tooltip" title="{{t "changeLayoutTooltip"}}" aria-label="{{t "changeLayoutTooltip"}}"><i class="fa fa-th-large fa-lg fa-fw"></i><i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown slot-controls">',
                                  '{{#if layoutOptions.newObject}}',
                                  '<li class="new-object-option"><i class="fa fa-refresh fa-lg fa-fw"></i> {{t "newObject"}}</li>',
@@ -1511,18 +1586,21 @@
                                  '{{/if}}',
                                  '</ul>',
                                  '</a>',
+                                 '{{else}}',
+                                 // just have regen object
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-new-object contained-tooltip" title="Choose a new manuscript to load"><i class="fa fa-refresh fa-lg fa-fw"></i></a>',
                                  '{{/if}}',
                                  '{{#if sidePanel}}',
                                  '<a href="javascript:;" class="mirador-btn mirador-icon-toc selected mirador-tooltip" title="{{t "sidePanelTooltip"}}" aria-label="{{t "sidePanelTooltip"}}"><i class="fa fa-bars fa-lg fa-fw"></i></a>',
                                  '{{/if}}',
 
                                  // TODO: hide this ruler UI html if no physical dimensions are available
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-ruler" title="ruler">',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-ruler mirador-tooltip" title="Manage this window&#39;s ruler settings">',
                                  '<i class="fa fa-lg fa-fw ruler-icon-grey"></i>',
                                  '<i class="fa fa-lg fa-fw ruler-icon"></i>',
                                  '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown ruler-options-list">',
-                                 '<li class="ruler-hide"><i class="fa fa-ban fa-lg fa-fw"></i> Hide Ruler</li>',
+                                 '<li class="ruler-hide"><i class="fa fa-ban fa-lg fa-fw"></i> (hide ruler)</li>',
                                  '<li class="ruler-horizontal"><i class="fa fa-text-width fa-lg fa-fw"></i> Horizontal Ruler</li>',
                                  '<li class="ruler-vertical"><i class="fa fa-text-height fa-lg fa-fw"></i> Vertical Ruler</li>',
                                  '<li class="ruler-black"><i class="fa fa-square fa-lg fa-fw"></i> Black Lines</li>',
@@ -1540,19 +1618,19 @@
                                  // end of ruler UI html
  
                                  // lockController
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock-window" title="lock">',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-lock-window mirador-tooltip" title="Manage this window&#39;s &quot;synchronized window group&quot; assignment">',
                                  '<i class="fa fa-lock fa-lg fa-fw"></i>',
                                  '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown lock-options-list">',
-                                 '<li class="no-lock remove-from-lock-group"><i class="fa fa-ban fa-lg fa-fw"></i></li>',
-                                 '{{#list2 lockGroups}}{{/list2}}',
+                                 '<li class="no-lock remove-from-lock-group"><i class="fa fa-ban fa-lg fa-fw"></i> (no group)</li>',
+                                 //'{{#list2 lockGroups}}{{/list2}}',
                                  '</ul>',
                                  '</a>',
                                  // end lockController
 
                                  //'{{#if isMultiImageView}}',
                                  // dropdown list for multi
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-multi-image" title="multi-image">',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-multi-image mirador-tooltip" title="Choose between the available spectral images">',
                                  '<i class="fa fa-th-list fa-lg fa-fw"></i>',
                                  '<i class="fa fa-caret-down"></i>',
                                  '<ul class="dropdown multi-image-list"></ul>',
@@ -1560,10 +1638,15 @@
                                  //'{{/#if}}',
 
                                  // duplicate
-                                 '<a href="javascript:;" class="mirador-btn mirador-icon-duplicate-window" title="duplicate window">',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-duplicate-window contained-tooltip" title="Duplicate this window">',
                                  '<i class="fa fa-copy fa-lg fa-fw"></i>',
                                  '</a>',
 
+                                 // zoom lock
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-zoom-lock contained-tooltip" title="Toggle zoom lock on this window">',
+                                 '<i class="fa fa-search fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-lock" style="position:relative;left:-4px;"></i>',
+                                 '</a>',
 
                                  '<h3 class="window-manifest-title" title="{{title}}" aria-label="{{title}}">{{title}}</h3>',
                                  '</div>',

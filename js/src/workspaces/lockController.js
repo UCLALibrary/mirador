@@ -142,6 +142,13 @@
       var _this = this;
 
       /*
+       * Simply sends lock group data.
+       */
+      _this.eventEmitter.subscribe('windowReadyForLockGroups', function(event) {
+        _this.eventEmitter.publish('updateLockGroupMenus', _this.synchronizedWindows);
+      });
+
+      /*
        * Creates a new lock group. Published by lockGroupsPanel.
        *
        * @param {string} name Name of new lock group.
@@ -319,6 +326,22 @@
           _this.synchronizedWindows.byGroup[groupID].views.push(viewObj);
           _this.eventEmitter.publish('activateLockGroupMenuItem', {windowId: viewObj.windowId, groupId: groupID});
         }
+      });
+
+      /*
+       * Received from the lockGroupsPanel buttons for Disable/Enable Zoom.
+       *
+       * @param {Object} data
+       *   Data used to determine the action to take.
+       * @param {Boolean} data.enable
+       *   Whether or not to enable zooming.
+       * @param {String} data.groupID
+       *   Which group to publish events to.
+       */
+      _this.eventEmitter.subscribe('TOGGLE_ZOOM_LOCK_ALL', function(event, data) {
+        _this.synchronizedWindows.byGroup[data.groupID].views.forEach(function(e) {
+          _this.eventEmitter.publish((data.enable === true ? 'ENABLE' : 'DISABLE') + '_ZOOMING.' + e.windowId);
+        });
       });
     },
 
