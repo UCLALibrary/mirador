@@ -866,10 +866,12 @@
             _this.setBounds();
           }, 500));
 
-          // hide the loading indicator when the first tile is drawn
-          _this.osd.addHandler('tile-drawn', function() {
+          // hide the loading indicator when the first tile is drawn, and remove the handler at once
+          var tileDrawnHandler = function() {
             jQuery('#loading-spinner').hide();
-          });
+            _this.osd.removeHandler('tile-drawn', tileDrawnHandler);
+          };
+          _this.osd.addHandler('tile-drawn', tileDrawnHandler);
 
           // send message to window so that it can render dropdown menu and register events on it
           if (isMultiImage) {
