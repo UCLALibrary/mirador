@@ -731,7 +731,11 @@
        * @param {Object} infoJson An object that is the contents of info.json.
        */
       var initOSD = function(infoJson) {
+
         var isMultiImage = infoJson.hasOwnProperty('default') && infoJson.hasOwnProperty('item');
+
+        // show the loading indicator
+        jQuery('#loading-spinner').show();
 
         _this.elemOsd =
           jQuery('<div/>')
@@ -861,6 +865,11 @@
           _this.osd.addHandler('pan', $.debounce(function(){
             _this.setBounds();
           }, 500));
+
+          // hide the loading indicator when the first tile is drawn
+          _this.osd.addHandler('tile-drawn', function() {
+            jQuery('#loading-spinner').hide();
+          });
 
           // send message to window so that it can render dropdown menu and register events on it
           if (isMultiImage) {

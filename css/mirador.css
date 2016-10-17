@@ -2053,3 +2053,17 @@ a.mirador-icon-ruler .ruler-icon-grey {
 .mce-edit-area iframe {
   height: 75px !important;
 }
+
+#loading-spinner {
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  color: white;
+  z-index: 1048576;
+}
+
+#loading-spinner span {
+  display: block;
+  width: 100%;
+  text-align: center;
+}
