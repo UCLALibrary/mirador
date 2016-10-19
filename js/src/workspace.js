@@ -31,10 +31,28 @@
       //   return;
       // }
 
+
+      // get the z-index stacking order of windows and dragHandles
+      // must do this before calling calculateLayout, since that function will
+      // overwrite the saved stacking order
+      // TODO: fix that
+      // stackingOrder is formatted as { "windows": [], "dragHandles": [] }
+      var stackingOrder = this.state.getStateProperty('stackingOrder');
+
       this.calculateLayout();
 
       this.restoreSnapGroups();
       this.renderDragHandles();
+
+      if (stackingOrder !== undefined) {
+        // Mash the two arrays together and sort them based on zIndex
+        var sortedAndCombinedStackingOrder = stackingOrder.windows
+          .concat(stackingOrder.dragHandles)
+          .sort(function(a, b) {
+            return a.zIndex - b.zIndex;
+          });
+        this.restoreStackingOrder(sortedAndCombinedStackingOrder);
+      }
 
       this.listenForActions();
     },
@@ -518,10 +536,18 @@
           'position': 'absolute',
           'width': '100px'
         })
-        .on('click', function() {
-          // Bring clicked window to the top
+        .on('click', function(d) {
+          // Bring clicked window to the top, along with any slots that are connected to it
           $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
           d3.event.stopPropagation();
+
+          _this.getSnapGroupObject(d.name).windows.forEach(function(e) {
+            $.bringEltToTop.call(jQuery('[data-layout-slot-id="'+ e +'"]')[0], '.layout-slot, .drag-handle');
+            d3.event.stopPropagation();
+          });
+
+          // save zIndex order
+          _this.saveStackingOrder();
         })
         .each(function(d) {
           // make this a draggable element that can drag multiple other draggable elements
@@ -529,9 +555,10 @@
             containment: $.getWorkspaceBoundingBox('drag-handle.ui-draggable'),
             multiple: {
               items: function getSelectedItems() {
-                return jQuery('.ui-draggable.' + d.name);
+                return jQuery('.ui-draggable.' + d.name + ', #' + d.name);
               },
               beforeStart: jQuery.noop,
+              stack: '.layout-slot, .drag-handle'
             },
             snap: '.layout-slot',
             snapMode: 'outer',
@@ -602,6 +629,56 @@
           // de-register the removed dragHandle's layout-slots
           //jQuery('.layout-slot.' + d.name).removeClass(d.name);
         });
+    },
+
+    /*
+     * Publishes the z-index ordering of workspace elements to the savecontroller,
+     * so that it can be restored later.
+     */
+    saveStackingOrder: function() {
+      var _this = this;
+      _this.eventEmitter.publish("stackingOrderChanged",
+        {
+          windows: _this.windows.map(function(e) {
+            return {
+              id: e.element.closest('.layout-slot').attr('data-layout-slot-id'),
+              zIndex: e.element.zIndex(),
+              type: 'window'
+            };
+          }),
+          dragHandles: jQuery('.drag-handle').toArray().map(function(e) {
+            return {
+              id: e.id,
+              zIndex: jQuery(e).zIndex(),
+              type: 'dragHandle'
+            };
+          })
+        }
+      );
+    },
+    
+    /*
+     * Restores the workspace according to the saved ordering of workspace elements.
+     *
+     * @param {Array} orderedElements
+     *   Array of objects containing id and z-index for each window and drag-handle,
+     *   sorted in increasing z-index order.
+     */
+    restoreStackingOrder: function(orderedElements) {
+      var _this = this,
+      selector;
+
+      // Bring each element to the top of the stack, in order
+      // For some reason this works better than just setting z-indexes manually
+      jQuery.each(orderedElements, function(i, e) {
+        // Choose the appropriate CSS selector based on the type of node
+        if (e.type === 'window') {
+          selector = '[data-layout-slot-id="' + e.id + '"]';
+        } else if (e.type === 'dragHandle') {
+          selector = '#' + e.id;
+        }
+        $.bringEltToTop.call(jQuery(selector), '.layout-slot, .drag-handle');
+      });
     },
 
     /*
@@ -797,7 +874,7 @@
         .draggable({
           containment: $.getWorkspaceBoundingBox('layout-slot.ui-draggable'),
           handle: '.manifest-info',
-          stack: '.layout-slot',
+          stack: '.layout-slot, .drag-handle',
           snap: '.layout-slot, .drag-handle',
           //snapMode: 'outer',
           stop: function(event, ui) {
@@ -840,6 +917,9 @@
         // Bring clicked window to the top
         $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
         d3.event.stopPropagation();
+
+        // save zIndex ordering of elements
+        _this.saveStackingOrder();
       });
 
       // Exit
@@ -889,6 +969,9 @@
         } else {
           _this.eventEmitter.publish('SHOW_REMOVE_SLOT');
         }
+
+      // save zIndex ordering of elements
+      _this.saveStackingOrder();
     },
 
     split: function(targetSlot, direction) {

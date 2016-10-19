@@ -345,6 +345,20 @@
         _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
       });
 
+      /*
+       * Saves the z-index ordering of elements in the workspace (windows and drag-handles).
+       * Published by workspace.
+       *
+       * @param {Object} data
+       * @param {Array} data.windows
+       *   Array of objects that contain an id and z-index for each window.
+       * @param {Array} data.dragHandles
+       *   Array of objects that contain an id and z-index for each drag-handle.
+       */
+      _this.eventEmitter.subscribe('stackingOrderChanged', function(event, data) {
+        _this.set('stackingOrder', data, {parent: "currentConfig"});
+      });
+
       _this.eventEmitter.subscribe('etc...', function(junk) {
         // handle adding the property in the appropriate place
         // in this.currentConfig by passing to the _this.set(),
