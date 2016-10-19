@@ -93,9 +93,6 @@
       }
 
       this.bindEvents();
-      console.log("*****state", this.state);
-      console.log("*****slots", this.slots);
-
     },
 
     getWindowObjectById: function(windowId) {
