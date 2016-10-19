@@ -913,13 +913,24 @@
           _this.eventEmitter.publish('fitImageChoiceMenu');
         });
       })
-      .on('click', function() {
-        // Bring clicked window to the top
-        $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
-        d3.event.stopPropagation();
-
+      .on('click', function(d) {
+        // check if this window has a handle associated with it
+        var dh = _this.snapGroups.windowGraph.getDragHandle(d.id);
+        if (dh !== undefined) {
+          // bring the handle of the window and all elements connected to the handle to the top
+          $.bringEltToTop.call(document.getElementById(dh), '.layout-slot, .drag-handle');
+          jQuery('.layout-slot.' + dh).each(function(i, e) {
+            $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
+          });
+        }
+        else {
+          // Bring clicked window to the top
+          $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
+        }
         // save zIndex ordering of elements
         _this.saveStackingOrder();
+
+        d3.event.stopPropagation();
       });
 
       // Exit
