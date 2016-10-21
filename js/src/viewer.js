@@ -36,9 +36,6 @@
       this.availableAnnotationDrawingTools = options.availableAnnotationDrawingTools;
     }
 
-    // spinning element to indicate workspace loading progress
-    jQuery('<div id="loading-spinner"><span class="sr-only">LOADING</span><i class="fa fa-circle-o-notch fa-spin fa-5x fa-fw"></i></div>').appendTo(this.element);
-
     if (this.data) {
       this.init();
     }

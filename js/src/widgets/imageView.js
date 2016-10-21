@@ -734,9 +734,6 @@
 
         var isMultiImage = infoJson.hasOwnProperty('default') && infoJson.hasOwnProperty('item');
 
-        // show the loading indicator
-        jQuery('#loading-spinner').show();
-
         _this.elemOsd =
           jQuery('<div/>')
         .addClass(_this.osdCls)
@@ -868,10 +865,13 @@
 
           // hide the loading indicator when the first tile is drawn, and remove the handler at once
           var tileDrawnHandler = function() {
-            jQuery('#loading-spinner').hide();
+            _this.osd.removeOverlay('loading-spinner-' + _this.windowId);
             _this.osd.removeHandler('tile-drawn', tileDrawnHandler);
           };
           _this.osd.addHandler('tile-drawn', tileDrawnHandler);
+
+          var loadingSpinnerOverlay = jQuery('<div id="loading-spinner-' + _this.windowId + '" class="loading-spinner"><span class="sr-only">LOADING</span><i class="fa fa-circle-o-notch fa-spin fa-5x fa-fw"></i></div>', document)[0];
+          _this.osd.addOverlay(loadingSpinnerOverlay, _this.osd.viewport.getCenter(), OpenSeadragon.OverlayPlacement.CENTER);
 
           // send message to window so that it can render dropdown menu and register events on it
           if (isMultiImage) {

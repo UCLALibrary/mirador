@@ -2054,16 +2054,15 @@ a.mirador-icon-ruler .ruler-icon-grey {
   height: 75px !important;
 }
 
-#loading-spinner {
-  position: absolute;
+.loading-spinner {
   bottom: 0px;
   left: 0px;
   color: white;
   z-index: 1048576;
+  text-align: center;
 }
 
-#loading-spinner span {
+.loading-spinner span {
   display: block;
   width: 100%;
-  text-align: center;
 }
