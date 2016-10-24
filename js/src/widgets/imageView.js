@@ -731,6 +731,7 @@
        * @param {Object} infoJson An object that is the contents of info.json.
        */
       var initOSD = function(infoJson) {
+
         var isMultiImage = infoJson.hasOwnProperty('default') && infoJson.hasOwnProperty('item');
 
         _this.elemOsd =
@@ -862,23 +863,30 @@
             _this.setBounds();
           }, 500));
 
+          // hide the loading indicator when the first tile is drawn, and remove the handler at once
+          var tileDrawnHandler = function() {
+            _this.osd.removeOverlay('loading-spinner-' + _this.windowId);
+            _this.osd.removeHandler('tile-drawn', tileDrawnHandler);
+          };
+          _this.osd.addHandler('tile-drawn', tileDrawnHandler);
+
+          var loadingSpinnerOverlay = jQuery('<div id="loading-spinner-' + _this.windowId + '" class="loading-spinner"><span class="sr-only">LOADING</span><i class="fa fa-circle-o-notch fa-spin fa-5x fa-fw"></i></div>', document)[0];
+          _this.osd.addOverlay(loadingSpinnerOverlay, _this.osd.viewport.getCenter(), OpenSeadragon.OverlayPlacement.CENTER);
+
           // send message to window so that it can render dropdown menu and register events on it
+          var imgChoiceData;
           if (isMultiImage) {
             var choiceImgId = _this.choiceImageIDs[_this.canvasID];
             if (choiceImgId) {
               _this.selectChoiceImage(choiceImgId);
             }
+            imgChoiceData = { data: [infoJson['default']].concat(infoJson.item) };
+          } else {
+            imgChoiceData = { data: [] };
+          }
 
-            // tell window to render the dropdown menu
-            _this.eventEmitter.publish('imageChoiceReady', {
-              data: [infoJson['default']].concat(infoJson.item),
-              id: _this.windowId
-            });
-          }
-          else {
-            // tell window to render the dropdown menu
-            _this.eventEmitter.publish('noImageChoice', _this.windowId);
-          }
+          // tell window to render the dropdown menu
+          _this.eventEmitter.publish('imageChoiceReady.' + _this.windowId, imgChoiceData);
         });
 
         if (isMultiImage) {

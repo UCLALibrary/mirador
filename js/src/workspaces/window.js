@@ -411,20 +411,17 @@
        * viewobject has the given windowId
        *
        * @param {Object} data Contains:
-       *     windowId {string}
-       *     groupId {string}
+       *     groupId {string} The name of the window group
        */
-      _this.eventEmitter.subscribe('activateLockGroupMenuItem', function(event, data) {
+      _this.eventEmitter.subscribe('activateLockGroupMenuItem.' + _this.id, function(event, groupId) {
         // check if this window has the window id
-        // if so, set the li with the innerHTML that has groupID to data.groupId
-        if (data.windowId === _this.focusModules[_this.currentImageMode].windowId) {
-          _this.element.find('.add-to-lock-group').each(function(i, e) {
-            if (e.innerHTML === data.groupId) {
-              jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
-              jQuery(this).addClass('current-lg');
-            }
-          });
-        }
+        // if so, set the li with the innerHTML that has groupId
+        _this.element.find('.add-to-lock-group').each(function(i, e) {
+          if (e.innerHTML === groupId) {
+            jQuery(this).parent().children('.add-to-lock-group').removeClass('current-lg');
+            jQuery(this).addClass('current-lg');
+          }
+        });
       });
 
       /*
@@ -432,18 +429,9 @@
        *
        * @param {Object} data
        */
-      _this.eventEmitter.subscribe('imageChoiceReady', function(event, data) {
-        if (data.id === _this.id) {
-          _this.renderImageChoiceMenu(data.data);
-          _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-multi-image', 'right');
-        }
-      });
-
-      _this.eventEmitter.subscribe('noImageChoice', function(event, id) {
-        if (id === _this.id) {
-          _this.renderImageChoiceMenu([]);
-          _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-multi-image', 'right');
-        }
+      _this.eventEmitter.subscribe('imageChoiceReady.' + _this.id, function(event, data) {
+        _this.renderImageChoiceMenu(data.data);
+        _this.createOrUpdateTooltip('.mirador-tooltip.mirador-icon-multi-image', 'right');
       });
 
       /*

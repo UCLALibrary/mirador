@@ -324,7 +324,7 @@
         var groupID = _this.getLockGroupOfWindow(viewObj);  
         if (groupID !== undefined) {
           _this.synchronizedWindows.byGroup[groupID].views.push(viewObj);
-          _this.eventEmitter.publish('activateLockGroupMenuItem', {windowId: viewObj.windowId, groupId: groupID});
+          _this.eventEmitter.publish('activateLockGroupMenuItem.' + viewObj.windowId, groupID);
         }
       });
 

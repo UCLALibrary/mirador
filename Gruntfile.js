@@ -27,7 +27,7 @@ module.exports = function(grunt) {
     'js/lib/jquery.min.js',
     'js/lib/jquery.hasClassRegEx.js',
     'js/lib/jquery-ui.min.js',
-    'js/lib/jquery-ui.drag-multiple.min.js',
+    'js/lib/jquery-ui.drag-multiple.js',
     'js/lib/jquery.scrollTo.min.js',
     'js/lib/jquery.qtip.min.js',
     'js/lib/state-machine.min.js',
