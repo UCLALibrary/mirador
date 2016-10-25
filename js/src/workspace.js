@@ -418,11 +418,11 @@
           break;
         case 'dragWindow':
           // get list of nodes that were connected to the window before dragging
-          oldConnectedSlots = wg.getConnectedNodeNames(st.thisSlotID, []);
+          oldConnectedSlots = wg.getConnectedComponent(st.thisSlotID);
           // update the graph
           wg.updateNodeEdges(st.thisSlotID, st.targetSlotIDs);
           // get new list of connected windows
-          newConnectedSlots = wg.getConnectedNodeNames(st.thisSlotID, []);
+          newConnectedSlots = wg.getConnectedComponent(st.thisSlotID);
 
           // if thisElement was connected to a drag handle before the move, remove it
           if (st.thisSnapGroup !== undefined) {
@@ -460,7 +460,7 @@
             return;
           }
           enteringSlots = st.targetSlotIDs.reduce(function(p, c) {
-            return _.union(p, wg.getConnectedNodeNames(c, []));
+            return _.union(p, wg.getConnectedComponent(c));
           }, []);
           wg.addDragHandle(st.thisSnapGroup, st.targetSlotIDs);
 
@@ -470,7 +470,7 @@
           break;
         case 'removeWindow':
           // get list of windows connected to the window that is being removed
-          oldConnectedSlots = wg.getConnectedNodeNames(st.eltName, []);
+          oldConnectedSlots = wg.getConnectedComponent(st.eltName);
           // all windows connected to st.eltName will have same drag handle
           oldSnapGroup = wg.getDragHandle(st.eltName);
           // delete window from the graph
