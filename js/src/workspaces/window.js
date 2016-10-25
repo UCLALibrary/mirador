@@ -313,6 +313,7 @@
 
     listenForActions: function() {
       var _this = this;
+      _this.eventEmitter.unsubscribe('bottomPanelSet.' + _this.id);
       _this.eventEmitter.subscribe('bottomPanelSet.' + _this.id, function(event, visible) {
         var panel = _this.element.find('.bottomPanel');
         if (visible === true) {
@@ -376,6 +377,7 @@
         _this.element.find('.mirador-icon-toc').show();
       });
 
+      _this.eventEmitter.unsubscribe('SET_BOTTOM_PANEL_VISIBILITY.' + _this.id);
       _this.eventEmitter.subscribe('SET_BOTTOM_PANEL_VISIBILITY.' + this.id, function(event, visibility) {
         if (typeof visibility !== 'undefined' && visibility !== null) {
           _this.bottomPanelVisibility(visibility);
@@ -384,6 +386,7 @@
         }
       });
 
+      _this.eventEmitter.unsubscribe('TOGGLE_BOTTOM_PANEL_VISIBILITY.' + _this.id);
       _this.eventEmitter.subscribe('TOGGLE_BOTTOM_PANEL_VISIBILITY.' + this.id, function(event) {
         var visible = !_this.bottomPanelVisible;
         _this.bottomPanelVisibility(visible);
