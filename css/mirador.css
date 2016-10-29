@@ -237,6 +237,17 @@ a {
   background-color: #fff;
   box-shadow: 0 0 6px #333;
 }
+#synchronized-window-groups-panel {
+  position: absolute;
+  width: 30%;
+  background-color: rgba(255,255,255,0.94);
+  display: none;
+  overflow: hidden;
+  z-index: 1048576;
+  right: 0;
+  top: 0;
+  padding: 10px;
+}
 #bookmark-panel {
   position: absolute;
   height: 20%;
@@ -249,7 +260,7 @@ a {
   top: 0;
   padding: 10px;
 }
-#bookmark-panel span {
+#bookmark-panel span, #synchronized-window-groups-panel > span {
   width: 100%;
   padding-left: 2%;
 }
@@ -257,7 +268,10 @@ a {
   width: 80%;
   margin-right: 3px;
 }
-#bookmark-panel h3 {
+#synchronized-window-groups-panel input {
+  margin-right: 3px;
+}
+#bookmark-panel h3, #synchronized-window-groups-panel h3 {
   text-align: center;
 }
 #manifest-select-menu .container {
@@ -1894,6 +1908,10 @@ a.mirador-icon-annotations [class^="icon-"] {
   text-align:left;
 }
 
+.mirador-viewer .dropdown.synchronized-window-groups li.current-group {
+  background-color: deepskyblue;
+}
+
 .mirador-viewer .dropdown li:hover {
   border-left: 3px solid deepskyblue;
   background-color: #dddddd;
@@ -1919,7 +1937,7 @@ a.mirador-icon-empty-slot [class^="icon-"] {
   position:absolute;
 }
 
-.mirador-viewer a.mirador-icon-view-type, .mirador-viewer a.mirador-icon-metadata-view, .mirador-viewer a.mirador-osd-fullscreen  {
+.mirador-viewer a.mirador-icon-view-type, .mirador-viewer a.mirador-icon-metadata-view, .mirador-viewer a.mirador-osd-fullscreen {
   background: none;
   color: rgb( 146, 145, 145 );
   box-sizing: border-box;
@@ -1927,7 +1945,7 @@ a.mirador-icon-empty-slot [class^="icon-"] {
   padding-bottom:30px;
 }
 
-.mirador-viewer a.mirador-icon-window-menu, .mirador-viewer a.mirador-icon-toc, .mirador-viewer a.mirador-close-window  {
+.mirador-viewer a.mirador-icon-window-menu, .mirador-viewer a.mirador-icon-toc, .mirador-viewer a.mirador-close-window, .mirador-viewer a.mirador-icon-synchronized-window-groups {
   float:left;
   background: none;
   color: rgb( 146, 145, 145 );
@@ -1936,7 +1954,7 @@ a.mirador-icon-empty-slot [class^="icon-"] {
   padding-bottom:30px;
 }
 
-a.mirador-icon-window-menu, a.mirador-icon-view-type {
+a.mirador-icon-window-menu, a.mirador-icon-view-type, a.mirador-icon-synchronized-window-groups {
   width: 30px;
 }
 
@@ -1945,7 +1963,8 @@ a.mirador-icon-window-menu, a.mirador-icon-view-type {
 .mirador-viewer a.mirador-icon-empty-slot:hover,
 .mirador-viewer a.mirador-icon-window-menu:hover,
 .mirador-viewer a.mirador-icon-toc:hover,
-.mirador-viewer a.mirador-osd-fullscreen:hover {
+.mirador-viewer a.mirador-osd-fullscreen:hover,
+.mirador-viewer a.mirador-icon-synchronized-window-groups:hover {
   color: black;
 }
 
