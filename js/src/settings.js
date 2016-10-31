@@ -148,6 +148,7 @@
       'show': true,
       'buttons' : {
         'bookmark' : false,
+        'synchronizedWindowGroups' : false,
         'layout' : true,
         'options' : false,
         'fullScreenViewer': true

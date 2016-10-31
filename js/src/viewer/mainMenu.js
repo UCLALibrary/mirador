@@ -41,6 +41,7 @@
             this.element.append(this.template({
                 mainMenuCls: this.mainMenuCls,
                 showBookmark : this.state.getStateProperty('mainMenuSettings').buttons.bookmark,
+                showSynchronizedWindowGroups : this.state.getStateProperty('mainMenuSettings').buttons.synchronizedWindowGroups,
                 showLayout : this.state.getStateProperty('mainMenuSettings').buttons.layout,
                 showOptions: this.state.getStateProperty('mainMenuSettings').buttons.options,
                 showFullScreenViewer : this.state.getStateProperty('mainMenuSettings').buttons.fullScreenViewer,
@@ -105,6 +106,17 @@
               }
             });
 
+            this.element.find('.toggle-synchronized-window-groups').on('click', function() {
+              _this.eventEmitter.publish('TOGGLE_SYNCHRONIZED_WINDOW_GROUPS_PANEL');
+              //remove active class from other buttons
+              _this.element.find('.synchronized-window-groups').removeClass('active');
+              if (jQuery(this).hasClass('active')) {
+                jQuery(this).removeClass('active');
+              } else {
+                jQuery(this).addClass('active');
+              }
+            });
+
             // when options are implemented, this will need to do something
             this.element.find('.window-options').on('click', function() { });
             this.element.find('.fullscreen-viewer').on('click', function() {
@@ -123,6 +135,13 @@
           '<li>',
             '<a href="javascript:;" class="bookmark-workspace mainmenu-button" title="{{t "bookmarkTooltip"}}" aria-label="{{t "bookmarkTooltip"}}">',
               '<span class="fa fa-bookmark fa-lg fa-fw"></span> {{t "bookmark"}}',
+            '</a>',
+          '</li>',
+        '{{/if}}',
+        '{{#if showSynchronizedWindowGroups}}',
+          '<li>',
+            '<a href="javascript:;" class="toggle-synchronized-window-groups mainmenu-button" title="Create, delete, and manage settings of &quot;synchronized window groups&quot;">',
+              '<span class="fa fa-lock fa-lg fa-fw"></span> Synchronized Windows',
             '</a>',
           '</li>',
         '{{/if}}',

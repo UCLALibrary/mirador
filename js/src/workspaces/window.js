@@ -148,6 +148,9 @@
       }
       templateData.currentFocusClass = _this.iconClasses[_this.viewType];
       templateData.showFullScreen = _this.fullScreen;
+
+      templateData.synchronizedWindowGroups = this.state.getStateProperty('mainMenuSettings').buttons.synchronizedWindowGroups;
+
       _this.element = jQuery(this.template(templateData)).appendTo(_this.appendTo);
       this.element.find('.manifest-info .mirador-tooltip').each(function() {
         jQuery(this).qtip({
@@ -229,6 +232,15 @@
         this.bottomPanelVisibility(this.bottomPanelVisible);
       }
       this.sidePanelVisibility(this.sidePanelVisible, '0s');
+
+      // get initial synchronized window group data
+      this.eventEmitter.publish('windowReadyForSynchronizedWindowGroups');
+
+      // restore synchronized window group stuff for this window, if we are restoring it
+      // sends message to controller
+      if (_this.focusModules[_this.currentImageMode] !== null) {
+        _this.eventEmitter.publish('restoreWindowToSynchronizedWindowController', _this.focusModules[_this.currentImageMode]);
+      }
     },
 
     update: function(options) {
@@ -291,6 +303,13 @@
 
       _this.eventEmitter.subscribe('SET_CURRENT_CANVAS_ID.' + this.id, function(event, canvasID) {
         _this.setCurrentCanvasID(canvasID);
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('syncWindowNavigationControls', {
+            viewObj: _this.focusModules[_this.currentImageMode],
+            value: canvasID
+          });
+        }
       });
 
       _this.eventEmitter.subscribe('REMOVE_CLASS.' + this.id, function(event, className) {
@@ -333,6 +352,31 @@
       _this.eventEmitter.subscribe('ENABLE_WINDOW_FULLSCREEN', function(event) {
         _this.element.find('.mirador-osd-fullscreen').show();
       });
+
+      /*
+       * Calls the D3 rendering method to dynamically add li's.
+       */
+      _this.eventEmitter.subscribe('updateSynchronizedWindowGroupMenus', function(event, data) {
+        _this.renderSynchronizedWindowGroupMenu(data.keys);
+      });
+
+      /*
+       * Activates the li with innerHTML that matches the given synchronizedWindowGroup, inside of the window whose
+       * viewobject has the given windowId
+       *
+       * @param {Object} data Contains:
+       *     groupId {string} The name of the window group
+       */
+      _this.eventEmitter.subscribe('activateSynchronizedWindowGroupMenuItem.' + _this.id, function(event, groupId) {
+        // check if this window has the window id
+        // if so, set the li with the innerHTML that has groupId
+        _this.element.find('.add-to-synchronized-window-group').each(function(i, e) {
+          if (e.innerHTML === groupId) {
+            jQuery(this).parent().children('.add-to-synchronized-window-group').removeClass('current-group');
+            jQuery(this).addClass('current-group');
+          }
+        });
+      });
     },
 
     bindEvents: function() {
@@ -362,6 +406,34 @@
         _this.toggleFullScreen();
       });
 
+      // prevent infinite looping with synchronized window zoom/pan
+      this.element.on({
+        mouseenter: function() {
+          _this.leading = true;
+        },
+        mouseleave: function() {
+          _this.leading = false;
+        }
+      });
+
+      // onclick event to add the window to the selected synchronized window group
+      this.element.find('.add-to-synchronized-window-group').on('click', function(event) {
+        _this.addToSynchronizedWindowGroup(this);
+      });
+
+      // onclick event to remove the window from its synchronized window group
+      this.element.find('.remove-from-synchronized-window-group').on('click', function(event) {
+        _this.removeFromSynchronizedWindowGroup(this);
+      });
+
+      // show/hide synchronized window group menu (window-level)
+      this.element.find('.mirador-icon-synchronized-window-groups').off('mouseenter').on('mouseenter',
+        function() {
+        _this.element.find('.synchronized-window-groups').stop().slideFadeToggle(300);
+      }).off('mouseleave').on('mouseleave',
+      function() {
+        _this.element.find('.synchronized-window-groups').stop().slideFadeToggle(300);
+      });
     },
 
     bindAnnotationEvents: function() {
@@ -418,6 +490,51 @@
         }
         _this.getAnnotations();
       });
+    },
+
+    addToSynchronizedWindowGroup: function(elt, replacing) {
+      var lg;
+      if (replacing === true) {
+        lg = jQuery(elt).parent().children('.add-to-synchronized-window-group.current-group').text();
+
+        // if no lg, do nothing
+        if (lg === '') {
+          return;
+        }
+      }
+      else {
+        lg = jQuery(elt).text();
+      }
+      this.eventEmitter.publish('addToSynchronizedWindowGroup', {viewObj: this.focusModules[this.currentImageMode], synchronizedWindowGroup: lg});
+      jQuery(elt).parent().children('.add-to-synchronized-window-group').removeClass('current-group');
+      jQuery(elt).addClass('current-group');
+    },
+
+    removeFromSynchronizedWindowGroup: function(elt) {
+      var viewObj = this.focusModules[this.currentImageMode];
+      if (viewObj !== null) {
+        this.eventEmitter.publish('removeFromSynchronizedWindowGroup', {'viewObj': viewObj});
+        jQuery(elt).parent().children('.add-to-synchronized-window-group').removeClass('current-group');
+      }
+    },
+
+    /*
+     * Use D3 to dynamically render the window-level synchronized window group menu.
+     *
+     * @param {Array} synchronizedWindowGroupNames An array of strings that represent the synchronized window group names
+     */
+    renderSynchronizedWindowGroupMenu: function(synchronizedWindowGroupNames) {
+      // each menu in the window should get a dropdown with items in the 'data' array
+      var _this = this,
+      synchronizedWindowGroups = d3.select(this.element[0]).select('.synchronized-window-groups').selectAll('.synchronized-window-groups-item')
+        .data(synchronizedWindowGroupNames, function(d) { return d; });
+      synchronizedWindowGroups.enter().append('li')
+        .classed({'synchronized-window-groups-item': true, 'add-to-synchronized-window-group': true})
+        .text(function(d) { return d; })
+        .on('click', function() {
+          _this.addToSynchronizedWindowGroup(this);
+        });
+      synchronizedWindowGroups.exit().remove();
     },
 
     clearViews: function() {
@@ -970,6 +1087,15 @@
                                  '{{/if}}',
                                  '{{#if sidePanel}}',
                                  '<a href="javascript:;" class="mirador-btn mirador-icon-toc selected mirador-tooltip" title="{{t "sidePanelTooltip"}}" aria-label="{{t "sidePanelTooltip"}}"><i class="fa fa-bars fa-lg fa-fw"></i></a>',
+                                 '{{/if}}',
+                                 '{{#if synchronizedWindowGroups}}',
+                                 '<a href="javascript:;" class="mirador-btn mirador-icon-synchronized-window-groups mirador-tooltip" title="Manage this window&#39;s &quot;synchronized window group&quot; assignment">',
+                                 '<i class="fa fa-lock fa-lg fa-fw"></i>',
+                                 '<i class="fa fa-caret-down"></i>',
+                                 '<ul class="dropdown synchronized-window-groups">',
+                                 '<li class="no-lock remove-from-synchronized-window-group"><i class="fa fa-ban fa-lg fa-fw"></i> (no group)</li>',
+                                 '</ul>',
+                                 '</a>',
                                  '{{/if}}',
                                  '<h3 class="window-manifest-title" title="{{title}}" aria-label="{{title}}">{{title}}</h3>',
                                  '</div>',

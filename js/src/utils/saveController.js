@@ -313,6 +313,48 @@
         _this.set("windowObjects", windowObjects, {parent: "currentConfig"} );
       });
 
+      /*
+       * Saves the synchronized window groups state to the saveController when the state changes.
+       *
+       * @param {Object} state
+       *     Object that represents the lock group state
+       *     (structure described in workspaces/synchronizedWindowGroupsController.js)
+       */
+      _this.eventEmitter.subscribe('synchronizedWindowGroupsStateChanged', function(event, state) {
+
+        /*
+         * Strips out the views array from each value in the byGroups property value, so that
+         * we don't try to store a cyclical object. That array will be restored dynamically when
+         * it is reloaded from localStorage.
+         *
+         * @param {string} k Current key
+         * @param {*} v The value of that key
+         * @return {*} The value that we want to correspond to k in the final serialized object.
+         */
+        function replacer(k, v) {
+          // determine if this is a byGroup obj
+          if (k === 'views' &&
+              this.hasOwnProperty('settings') &&
+                this.settings.hasOwnProperty('profile') &&
+                this.settings.hasOwnProperty('zoompan') &&
+                this.settings.hasOwnProperty('rotation') &&
+                this.settings.hasOwnProperty('brightness') &&
+                this.settings.hasOwnProperty('contrast') &&
+                this.settings.hasOwnProperty('saturate') &&
+                this.settings.hasOwnProperty('invert') &&
+                this.settings.hasOwnProperty('grayscale') &&
+                this.settings.hasOwnProperty('reset') ) {
+            // strip it out by setting this to empty array
+            return [];
+          } else {
+            return v;
+          }
+        }
+
+        var serializedState = JSON.stringify(state, replacer);
+        _this.set('synchronizedWindowGroupsState', serializedState, {parent: "currentConfig"});
+      });
+
       _this.eventEmitter.subscribe('etc...', function(junk) {
         // handle adding the property in the appropriate place
         // in this.currentConfig by passing to the _this.set(),

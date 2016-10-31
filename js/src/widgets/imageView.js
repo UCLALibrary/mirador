@@ -275,70 +275,21 @@
       //Annotation specific controls
 
       //Image manipulation controls
-      //set the original values for all of the CSS filter options
-      var filterValues = {
-        "brightness" : "brightness(100%)",
-        "contrast" : "contrast(100%)",
-        "saturate" : "saturate(100%)",
-        "grayscale" : "grayscale(0%)",
-        "invert" : "invert(0%)"
-      };
-
-      function setFilterCSS() {
-        var filterCSS = jQuery.map(filterValues, function(value, key) { return value; }).join(" "),
-        osdCanvas = jQuery(_this.osd.drawer.canvas);
-        osdCanvas.css({
-          'filter'         : filterCSS,
-          '-webkit-filter' : filterCSS,
-          '-moz-filter'    : filterCSS,
-          '-o-filter'      : filterCSS,
-          '-ms-filter'     : filterCSS
-        });
-      }
-
-      function resetImageManipulationControls() {
-        //reset rotation
-        if (_this.osd) {
-          _this.osd.viewport.setRotation(0);
-        }
-
-        //reset brightness
-        filterValues.brightness = "brightness(100%)";
-        _this.element.find('.mirador-osd-brightness-slider').slider('option','value',100);
-        _this.element.find('.mirador-osd-brightness-slider').find('.percent').text(100 + '%');
-
-        //reset contrast
-        filterValues.contrast = "contrast(100%)";
-        _this.element.find('.mirador-osd-contrast-slider').slider('option','value',100);
-        _this.element.find('.mirador-osd-contrast-slider').find('.percent').text(100 + '%');
-
-        //reset saturation
-        filterValues.saturate = "saturate(100%)";
-        _this.element.find('.mirador-osd-saturation-slider').slider('option','value',100);
-        _this.element.find('.mirador-osd-saturation-slider').find('.percent').text(100 + '%');
-
-        //reset grayscale
-        filterValues.grayscale = "grayscale(0%)";
-        _this.element.find('.mirador-osd-grayscale').removeClass('selected');
-
-        //reset color inversion
-        filterValues.invert = "invert(0%)";
-        _this.element.find('.mirador-osd-invert').removeClass('selected');
-
-        setFilterCSS();
-      }
-
       this.element.find('.mirador-osd-rotate-right').on('click', function() {
-        if (_this.osd) {
-          var currentRotation = _this.osd.viewport.getRotation();
-          _this.osd.viewport.setRotation(currentRotation + 90);
+        var degrees = 90;
+        _this.osdRotate(degrees);
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('syncWindowRotation', {viewObj: _this, value: degrees});
         }
       });
 
       this.element.find('.mirador-osd-rotate-left').on('click', function() {
-        if (_this.osd) {
-          var currentRotation = _this.osd.viewport.getRotation();
-          _this.osd.viewport.setRotation(currentRotation - 90);
+        var degrees = -90;
+        _this.osdRotate(degrees);
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('syncWindowRotation', {viewObj: _this, value: degrees});
         }
       });
 
@@ -355,9 +306,11 @@
           jQuery(this).find('.ui-slider-handle').append(span);
         },
         slide: function(event, ui) {
-          filterValues.brightness = "brightness("+ui.value+"%)";
-          setFilterCSS();
-          jQuery(this).find('.percent').text(ui.value + '%');
+          _this.applyCSSFilter(this, 'brightness', ui.value);
+
+          if (_this.leading) {
+            _this.eventEmitter.publish('syncWindowBrightness', {viewObj: _this, value: ui.value});
+          }
         }
       }).hide();
 
@@ -382,9 +335,11 @@
           jQuery(this).find('.ui-slider-handle').append(span);
         },
         slide: function(event, ui) {
-          filterValues.contrast = "contrast("+ui.value+"%)";
-          setFilterCSS();
-          jQuery(this).find('.percent').text(ui.value + '%');
+          _this.applyCSSFilter(this, 'contrast', ui.value);
+
+          if (_this.leading) {
+            _this.eventEmitter.publish('syncWindowContrast', {viewObj: _this, value: ui.value});
+          }
         }
       }).hide();
 
@@ -409,9 +364,11 @@
           jQuery(this).find('.ui-slider-handle').append(span);
         },
         slide: function(event, ui) {
-          filterValues.saturate = "saturate("+ui.value+"%)";
-          setFilterCSS();
-          jQuery(this).find('.percent').text(ui.value + '%');
+          _this.applyCSSFilter(this, 'saturate', ui.value);
+
+          if (_this.leading) {
+            _this.eventEmitter.publish('syncWindowSaturate', {viewObj: _this, value: ui.value});
+          }
         }
       }).hide();
 
@@ -424,35 +381,147 @@
       });
 
       this.element.find('.mirador-osd-grayscale').on('click', function() {
-        if (jQuery(this).hasClass('selected')) {
-          filterValues.grayscale = "grayscale(0%)";
-          jQuery(this).removeClass('selected');
-        } else {
-          filterValues.grayscale = "grayscale(100%)";
-          jQuery(this).addClass('selected');
+        _this.applyCSSFilter(this, 'grayscale');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('syncWindowGrayscale', _this);
         }
-        setFilterCSS();
       });
 
       this.element.find('.mirador-osd-invert').on('click', function() {
-        if (jQuery(this).hasClass('selected')) {
-          filterValues.invert = "invert(0%)";
-          jQuery(this).removeClass('selected');
-        } else {
-          filterValues.invert = "invert(100%)";
-          jQuery(this).addClass('selected');
+        _this.applyCSSFilter(this, 'invert');
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('syncWindowInvert', _this);
         }
-        setFilterCSS();
       });
 
       this.element.find('.mirador-osd-reset').on('click', function() {
-        resetImageManipulationControls();
+        _this.resetImageManipulationControls();
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('syncWindowReset', _this);
+        }
       });
 
       this.eventEmitter.subscribe('resetImageManipulationControls.'+this.windowId, function() {
-        resetImageManipulationControls();
+        _this.resetImageManipulationControls();
+
+        if (_this.leading) {
+          _this.eventEmitter.publish('syncWindowReset', _this);
+        }
       });
       //Image manipulation controls
+
+      // prevent infinite looping with synchronized window zoom/pan
+      this.element.on({
+        mouseenter: function() {
+          _this.leading = true;
+        },
+        mouseleave: function() {
+          _this.leading = false;
+        }
+      });
+    },
+
+    //set the original values for all of the CSS filter options
+    filterValues: {
+      "brightness" : "brightness(100%)",
+      "contrast" : "contrast(100%)",
+      "saturate" : "saturate(100%)",
+      "grayscale" : "grayscale(0%)",
+      "invert" : "invert(0%)"
+    },
+
+    setFilterCSS: function() {
+      var _this = this,
+      filterCSS = jQuery.map(_this.filterValues, function(value, key) { return value; }).join(" "),
+      osdCanvas = jQuery(_this.osd.drawer.canvas);
+      osdCanvas.css({
+        'filter'         : filterCSS,
+        '-webkit-filter' : filterCSS,
+        '-moz-filter'    : filterCSS,
+        '-o-filter'      : filterCSS,
+        '-ms-filter'     : filterCSS
+      });
+    },
+
+    resetImageManipulationControls: function() {
+      //reset rotation
+      if (this.osd) {
+        this.osd.viewport.setRotation(0);
+      }
+
+      //reset brightness
+      this.filterValues.brightness = "brightness(100%)";
+      this.element.find('.mirador-osd-brightness-slider').slider('option','value',100);
+      this.element.find('.mirador-osd-brightness-slider').find('.percent').text(100 + '%');
+
+      //reset contrast
+      this.filterValues.contrast = "contrast(100%)";
+      this.element.find('.mirador-osd-contrast-slider').slider('option','value',100);
+      this.element.find('.mirador-osd-contrast-slider').find('.percent').text(100 + '%');
+
+      //reset saturation
+      this.filterValues.saturate = "saturate(100%)";
+      this.element.find('.mirador-osd-saturation-slider').slider('option','value',100);
+      this.element.find('.mirador-osd-saturation-slider').find('.percent').text(100 + '%');
+
+      //reset grayscale
+      this.filterValues.grayscale = "grayscale(0%)";
+      this.element.find('.mirador-osd-grayscale').removeClass('selected');
+
+      //reset color inversion
+      this.filterValues.invert = "invert(0%)";
+      this.element.find('.mirador-osd-invert').removeClass('selected');
+
+      this.setFilterCSS();
+    },
+
+    osdRotate: function(degrees) {
+      var osd = this.osd;
+      if (osd) {
+        var currentRotation = osd.viewport.getRotation();
+        osd.viewport.setRotation(currentRotation + degrees);
+      }
+    },
+
+    /*
+     * Applies a CSS filter according to specified behavior.
+     *
+     * @param {jQuery | String} elt
+     *   Either a jQuery object or a CSS selector string
+     * @param {String} behavior
+     * @param {Number} val
+     */
+    applyCSSFilter: function(elt, key, val) {
+      switch(key) {
+
+        // toggle button controls
+        case 'grayscale':
+        case 'invert':
+          if (jQuery(elt).hasClass('selected')) {
+            this.filterValues[key] = key + '(0%)';
+            jQuery(elt).removeClass('selected');
+          } else {
+            this.filterValues[key] = key + '(100%)';
+            jQuery(elt).addClass('selected');
+          }
+          break;
+
+        // slider controls
+        case 'brightness':
+        case 'contrast':
+        case 'saturate':
+          this.filterValues[key] = key + '(' + val + '%)';
+          jQuery(elt).find('.percent').text(val + '%');
+          break;
+
+        default:
+          // should never get here
+          break;
+      }
+      this.setFilterCSS();
     },
 
     getPanByValue: function() {
@@ -556,6 +625,11 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
+
+          // tell sync window controller to move any synchronized views
+          if (_this.leading) {
+            _this.eventEmitter.publish('syncWindowZoom', _this);
+          }
         }, 30));
 
         _this.osd.addHandler('pan', $.debounce(function(){
@@ -564,6 +638,11 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
+
+          // tell sync window controller to move any synchronized views
+          if (_this.leading) {
+            _this.eventEmitter.publish('syncWindowPan', _this);
+          }
         }, 30));
 
 //        if (_this.state.getStateProperty('autoHideControls')) {

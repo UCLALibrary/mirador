@@ -20,7 +20,8 @@
         'workspacePanelVisible': false,
         'manifestsPanelVisible': false,
         'optionsPanelVisible': false,
-        'bookmarkPanelVisible': false
+        'bookmarkPanelVisible': false,
+        'synchronizedWindowGroupsPanelVisible': false
       },
       manifests:             []
     }, options);
@@ -104,6 +105,10 @@
       this.layout = typeof this.state.getStateProperty('layout') !== 'string' ? JSON.stringify(this.state.getStateProperty('layout')) : this.state.getStateProperty('layout');
       this.workspace = new $.Workspace({
         layoutDescription: this.layout.charAt(0) === '{' ? JSON.parse(this.layout) : $.layoutDescriptionFromGridString(this.layout),
+        synchronizedWindowController: new $.SynchronizedWindowController({
+          state: this.state,
+          eventEmitter: this.eventEmitter
+        }),
         appendTo: this.element.find('.mirador-viewer'),
         state: this.state,
         eventEmitter: this.eventEmitter
@@ -119,6 +124,10 @@
       //only instatiate bookmarkPanel if we need it
       if (showMainMenu && this.state.getStateProperty('mainMenuSettings').buttons.bookmark) {
         this.bookmarkPanel = new $.BookmarkPanel({ appendTo: this.element.find('.mirador-viewer'), state: this.state, eventEmitter: this.eventEmitter });
+      }
+
+      if (showMainMenu && this.state.getStateProperty('mainMenuSettings').buttons.synchronizedWindowGroups) {
+        this.synchronizedWindowGroupsPanel = new $.SynchronizedWindowGroupsPanel({ appendTo: this.element.find('.mirador-viewer'), state: this.state, eventEmitter: this.eventEmitter });
       }
 
       // set this to be displayed
@@ -155,6 +164,10 @@
 
       _this.eventEmitter.subscribe('TOGGLE_BOOKMARK_PANEL', function(event) {
         _this.toggleBookmarkPanel();
+      });
+
+      _this.eventEmitter.subscribe('TOGGLE_SYNCHRONIZED_WINDOW_GROUPS_PANEL', function(event) {
+        _this.toggleSynchronizedWindowGroupsPanel();
       });
 
       _this.eventEmitter.subscribe('TOGGLE_FULLSCREEN', function(event) {
@@ -240,6 +253,12 @@
 
     toggleBookmarkPanel: function() {
       this.toggleOverlay('bookmarkPanelVisible');
+    },
+
+    toggleSynchronizedWindowGroupsPanel: function() {
+      this.toggleOverlay('synchronizedWindowGroupsPanelVisible');
+      // TODO: do we need to do refresh every time?
+      jQuery('#synchronized-window-groups-accordion').accordion('refresh');
     },
 
     getManifestsData: function() {
