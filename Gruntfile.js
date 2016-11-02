@@ -18,8 +18,8 @@ module.exports = function(grunt) {
   // grunt.loadNpmTasks('jasmine-jquery');
 
   // ----------
-  var distribution = 'mirador-flex/mirador.js',
-  minified = 'mirador-flex/mirador.min.js',
+  var distribution = 'mirador/mirador.js',
+  minified = 'mirador/mirador.min.js',
   releaseRoot = '../site-build/built-mirador/',
 
   // libraries/plugins
@@ -108,14 +108,14 @@ module.exports = function(grunt) {
         'css/mirador.css',
         'css/material-icons.css'
         ],
-        dest: 'mirador-flex/css/mirador-combined.css'
+        dest: 'mirador/css/mirador-combined.css'
       }
     },
 
     cssmin: {
       minify: {
-        src: 'mirador-flex/css/mirador-combined.css',
-        dest: 'mirador-flex/css/mirador-combined.min.css'
+        src: 'mirador/css/mirador-combined.css',
+        dest: 'mirador/css/mirador-combined.min.css'
       }
     },
 
@@ -135,40 +135,40 @@ module.exports = function(grunt) {
         files: [{
           expand: true,
           src: 'css/images/**',
-          dest: 'mirador-flex/'
+          dest: 'mirador/'
         }, {
           expand: true,
           cwd: 'css/',
           src: 'themes/**',
-          dest: 'mirador-flex'
+          dest: 'mirador'
         }, {
           expand: true,
           cwd: 'css/',
           src: 'skins/**',
-          dest: 'mirador-flex'
+          dest: 'mirador'
         }, {
           expand: true,
           cwd: 'css/',
           src: 'plugins/**',
-          dest: 'mirador-flex'
+          dest: 'mirador'
         }, {
           expand: true,
           src: 'images/**',
-          dest: 'mirador-flex'
+          dest: 'mirador'
         }, {
           expand: true,
           src: 'fonts/*',
-          dest: 'mirador-flex'
+          dest: 'mirador'
         }, {
           src: 'js/lib/parse.min.js',
-          dest: 'mirador-flex/parse.min.js'
+          dest: 'mirador/parse.min.js'
         }, {
           src: 'js/lib/ZeroClipboard.swf',
-          dest: 'mirador-flex/ZeroClipboard.swf'
+          dest: 'mirador/ZeroClipboard.swf'
         }, {
 	  expand: true,
           src: 'locales/**',
-          dest: 'mirador-flex'
+          dest: 'mirador'
         }]
       }
     },
@@ -176,7 +176,7 @@ module.exports = function(grunt) {
     compress: {
       zip: {
         options: {
-          archive: 'mirador-flex.zip'
+          archive: 'mirador.zip'
         },
         files: [
           { expand: true, cwd: 'build/', src: ['mirador/**'] }
@@ -184,7 +184,7 @@ module.exports = function(grunt) {
       },
       tar: {
         options: {
-          archive: 'mirador-flex.tar'
+          archive: 'mirador.tar'
         },
         files: [
           { expand: true, cwd: 'build/', src: [ 'mirador/**' ] }

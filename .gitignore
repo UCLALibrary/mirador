@@ -11,6 +11,6 @@ reports/
 data/ecodices
 data/BnF
 data/Harvard
-build/
+mirador/
 .idea/
 bower_components/

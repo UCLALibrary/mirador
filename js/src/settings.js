@@ -165,7 +165,7 @@
     //true or false.  controls display of "Add new object from URL" on manifest listing page
     'showAddFromURLBox' : true,
 
-    'buildPath' : '/mirador-flex/',
+    'buildPath' : '/mirador/',
 
     'i18nPath' : 'locales/',
 
