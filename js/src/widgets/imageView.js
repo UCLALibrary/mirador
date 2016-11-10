@@ -625,12 +625,14 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
+        }, 30));
 
+        _this.osd.addHandler('zoom', function(){
           // tell sync window controller to move any synchronized views
           if (_this.leading) {
             _this.eventEmitter.publish('syncWindowZoom', _this);
           }
-        }, 30));
+        });
 
         _this.osd.addHandler('pan', $.debounce(function(){
           var point = {
@@ -638,12 +640,14 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
+        }, 30));
 
+        _this.osd.addHandler('pan', function(){
           // tell sync window controller to move any synchronized views
           if (_this.leading) {
             _this.eventEmitter.publish('syncWindowPan', _this);
           }
-        }, 30));
+        });
 
 //        if (_this.state.getStateProperty('autoHideControls')) {
 //          var timeoutID = null,
