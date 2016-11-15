@@ -60,12 +60,7 @@
       _this.listenForActions();
     },
 
-    // TODO: remove after refactor
-    getSynchronizedWindowGroupData: function() {
-      return this.synchronizedWindows.byGroup;
-    },
-
-    // TODO: remove after refactor
+    // TODO: remove after refactor; might be useful if we change the underlying data structure
     getSynchronizedWindowGroupOfWindow: function(viewObj) {
       return this.synchronizedWindows.byWindow[viewObj.windowId];
     },
@@ -291,7 +286,7 @@
        *     key: setting to change
        */
       _this.eventEmitter.subscribe('toggleSynchronizedWindowGroupSettings', function(event, data) {
-        _this.toggleSynchronizedWindowGroupSettings(data.groupID, data.key);
+        _this.toggleSynchronizedWindowGroupSettings(data.groupID, data.key, data.value);
 
         // notify saveController that settings have changed
         _this.eventEmitter.publish('synchronizedWindowGroupsStateChanged', _this.synchronizedWindows);
