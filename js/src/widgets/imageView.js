@@ -752,11 +752,6 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
-
-          // tell lock controller to move any synchronized views
-          if (_this.leading) {
-            _this.eventEmitter.publish('synchronizeZoom', _this);
-          }
         }, 30));
 
         _this.osd.addHandler('pan', $.debounce(function(){
@@ -765,12 +760,21 @@
             'y': -10000000
           };
           _this.eventEmitter.publish('updateTooltips.' + _this.windowId, [point, point]);
+        }, 30));
+        
+        _this.osd.addHandler('zoom', function(){
+          // tell lock controller to move any synchronized views
+          if (_this.leading) {
+            _this.eventEmitter.publish('synchronizeZoom', _this);
+          }
+        });
 
+        _this.osd.addHandler('pan', function(){
           // tell lock controller to move any synchronized views
           if (_this.leading) {
             _this.eventEmitter.publish('synchronizePan', _this);
           }
-        }, 30));
+        });
 
 
         if (_this.state.getStateProperty('autoHideControls')) {
