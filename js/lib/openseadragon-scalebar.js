@@ -409,6 +409,25 @@
                     break;
             }
 
+            // determine if ruler grows in a positive direction relative to the browser's coordinate system
+            var positiveGrowth = false;
+            if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
+                switch (this.location) {
+                    case $.ScalebarLocation.TOP_LEFT:
+                    case $.ScalebarLocation.MIDDLE_LEFT:
+                    case $.ScalebarLocation.BOTTOM_LEFT:
+                        positiveGrowth = true;
+                        break;
+                }
+            } else {
+                switch (this.location) {
+                    case $.ScalebarLocation.TOP_LEFT:
+                    case $.ScalebarLocation.TOP_MIDDLE:
+                    case $.ScalebarLocation.TOP_RIGHT:
+                        positiveGrowth = true;
+                        break;
+                }
+            }
 
 	        this.scaleNumbers = [];
 
@@ -423,20 +442,26 @@
 
                     // also draw number next to major grad
                     textElt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-		            this.scaleNumbers.push(textElt);
-                    this.svgEltLabels.appendChild(textElt);
+
+                    if (positiveGrowth === true) {
+                        textElt.setAttribute(axisParallelToRuler, (i) * lineEltOffsetPercent + "%");
+                    } else {
+                        textElt.setAttribute(axisParallelToRuler, (this.nMinorGradations - i) * lineEltOffsetPercent + "%");
+                    }
 
                     if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
-                        textElt.setAttribute(axisParallelToRuler, (i) * lineEltOffsetPercent + "%");
+                        // 'writing-mode' not supported by all browsers e.g. firefox
+                        // so for the time being, just adjust vertical offset with percentages
+                        //textElt.setAttribute('writing-mode', 'tb');
                         textElt.setAttribute(axisPerpendicularToRuler, "75%");
-                    }
-                    else {
-                        textElt.setAttribute(axisParallelToRuler, (i) * lineEltOffsetPercent + "%");
+                    } else {
                         textElt.setAttribute(axisPerpendicularToRuler, "0%");
                     }
                     textElt.style.fill = self.color;
-                    //textElt.innerHTML = i / this.nMinorGradationsPerMajorGradation;
+                    textElt.style.textShadow = "none";
 
+                    this.scaleNumbers.push(textElt);
+                    this.svgEltLabels.appendChild(textElt);
                 }
                 else if (i % (1/2 * this.nMinorGradationsPerMajorGradation) === 0) {
                     // draw semimajor gradation
@@ -447,42 +472,68 @@
                     lineEltType = 'minor';
                 }
 
-                lineElt.setAttribute(axisParallelToRuler + "1", i * lineEltOffsetPercent + "%");
+                if (positiveGrowth === true) {
+                    // numbers increase left to right / top to bottom
+                    lineElt.setAttribute(axisParallelToRuler + "1", i * lineEltOffsetPercent + "%");
+                    lineElt.setAttribute(axisParallelToRuler + "2", i * lineEltOffsetPercent + "%");
+                } else {
+                    // numbers decrease left to right / top to bottom
+                    lineElt.setAttribute(axisParallelToRuler + "1", (this.nMinorGradations - i) * lineEltOffsetPercent + "%");
+                    lineElt.setAttribute(axisParallelToRuler + "2", (this.nMinorGradations - i) * lineEltOffsetPercent + "%");
+                }
                 lineElt.setAttribute(axisPerpendicularToRuler + "1", endpoints[lineEltType][0] + "%");
-                lineElt.setAttribute(axisParallelToRuler + "2", i * lineEltOffsetPercent + "%");
                 lineElt.setAttribute(axisPerpendicularToRuler + "2", endpoints[lineEltType][1] + "%");
 
                 lineElt.setAttribute("stroke", self.color);
                 lineElt.setAttribute("stroke-width", "1");
             }
 
-
             var scalebarLength = size + "px",
-                scalebarThicknessPixels = 20;
+                scalebarThicknessPixels = 20,
                 scalebarLabelsThicknessPixels = 20;
 
             // set style
 
             this.divElt.style.fontSize = this.fontSize;
             this.divElt.style.textAlign = "center";
-            this.divElt.style.lineHeight = "0";
+
+            // not sure why the following two lines are there
+            // this.divElt.style.lineHeight = "0";
             // this.divElt.style.color = this.fontColor;
             this.divElt.style.border = this.barThickness + "px solid " + this.color;
             this.divElt.style.backgroundColor = this.backgroundColor;
 
             // update the labels on the bar
             for (var i = 0; i < this.nMajorGradations - 1; i++) {
-                // change the inner html
-                this.scaleNumbers[i].innerHTML = distance * (i + 1) / this.nMajorGradations + ' ' + units;
+                var newTextNode = document.createTextNode(distance * (i+1) / this.nMajorGradations + ' ' + units);
+                this.scaleNumbers[i].appendChild(newTextNode);
+            }
+
+            // removes vertical padding
+            if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
+                this.svgElt.style.display = "block";
+                this.svgEltLabels.style.display = "block";
+            }
+
+            scalebarLabelsThicknessPixels = 0
+            for (var j = 0; j < this.scaleNumbers.length; j++) {
+                var len;
+                if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
+                    len = this.scaleNumbers[j].getBBox().height;
+                } else {
+                    len = this.scaleNumbers[j].getBBox().width;
+                };
+                scalebarLabelsThicknessPixels = (len > scalebarLabelsThicknessPixels) ? len : scalebarLabelsThicknessPixels;
             }
             
             if (this.orientation === $.ScalebarOrientation.HORIZONTAL) {
                 this.divElt.style.width = scalebarLength;
-                this.divElt.style.height = scalebarThicknessPixels + scalebarLabelsThicknessPixels + "px";
+                this.divElt.style.height = scalebarThicknessPixels + scalebarLabelsThicknessPixels + 10 + "px";
                 this.svgElt.style.width = "100%";
                 this.svgElt.style.height = scalebarThicknessPixels + "px";
                 this.svgEltLabels.style.width = "100%";
                 this.svgEltLabels.style.height = scalebarLabelsThicknessPixels + "px";
+                this.svgEltLabels.style.padding = "5px 0";
                 // uncomment to 'flip' ruler, then comment the above line
                 /*
                 if (this.location === $.ScalebarLocation.TOP_LEFT || this.location === $.ScalebarLocation.TOP_RIGHT) {
@@ -497,18 +548,13 @@
             
                 // set thickness to width of label
                 this.svgEltLabels.style.display = "";
-                scalebarLabelsThicknessPixels = 0
-                himark = this.scaleNumbers;
-                for (var j = 0; j < this.scaleNumbers.length; j++) {
-                    var len = this.scaleNumbers[j].getComputedTextLength();
-                    scalebarLabelsThicknessPixels = (len > scalebarLabelsThicknessPixels) ? len : scalebarLabelsThicknessPixels;
-                }
     
                 this.svgEltLabels.style.width = scalebarLabelsThicknessPixels + "px";
                 this.svgEltLabels.style.height = "100%";
+                this.svgEltLabels.style.padding = "0 5px";
                 this.svgElt.style.width = scalebarThicknessPixels + "px";
                 this.svgElt.style.height = "100%";
-                this.divElt.style.width = scalebarThicknessPixels + scalebarLabelsThicknessPixels + "px";
+                this.divElt.style.width = scalebarThicknessPixels + scalebarLabelsThicknessPixels + 10 + "px";
                 this.divElt.style.height = scalebarLength;
                 // uncomment to 'flip' ruler, then comment the above line
                 /*
