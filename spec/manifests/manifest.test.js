@@ -140,7 +140,25 @@ describe('Manifest', function() {
         expect(thumbnail).toEqual(thumbnailUrl);
       });
 
-      it('when canvas.thumbnail has a service', function () {
+
+      it('when canvas.thumbnail has a level 0 service', function () {
+        var thumbnailUrl = 'http://www.example.org/iiif/book1/thumbnail/p1.jpg';
+        var canvas = {
+          thumbnail: {
+            '@id': thumbnailUrl,
+            service: {
+              '@id': 'http://example.org/images/book1-page1',
+              profile: 'http://iiif.io/api/image/2/level0.json'
+            }
+          }
+        };
+        var manifestInstance = new Mirador.Manifest(null, null, {});
+        var thumbnail = manifestInstance.getThumbnailForCanvas(canvas);
+        expect(thumbnail).toEqual(thumbnailUrl);
+      });
+      
+      
+      it('when canvas.thumbnail has a level 1 or level 2 service', function () {
         var canvas = {
           thumbnail: {
             '@id': 'http://example.org/images/book1-page1/full/80,100/0/default.jpg',
@@ -240,10 +258,11 @@ describe('Manifest', function() {
     });
   });
   
-  describe('getAnnotationsListUrl', function () {
-    it('assuming otherContent has a single annotation list', function (done) {
+  describe('getAnnotationsListUrls', function () {
+    it('assuming otherContent has two annotation lists', function (done) {
       var canvasId = 'http://example.org/iiif/book1/canvas/p1';
-      var listId = 'http://example.org/iiif/book1/canvas/p1';
+      var listId1 = 'http://example.org/iiif/book1/canvas/p1/list/l1';
+      var listId2 = 'http://example.org/iiif/book1/canvas/p1/list/l2';
       var content = {
         sequences: [
           {
@@ -252,7 +271,11 @@ describe('Manifest', function() {
                 '@id': canvasId,
                 otherContent: [
                   {
-                    "@id": listId,
+                    "@id": listId1,
+                    "@type": "sc:AnnotationList"
+                  },
+                  {
+                    "@id": listId2,
                     "@type": "sc:AnnotationList"
                   }
                 ]
@@ -263,15 +286,14 @@ describe('Manifest', function() {
       };
       var manifestInstance = new Mirador.Manifest(null, null, content);
       setTimeout(function () { 
-        var annotationListUrl = manifestInstance.getAnnotationsListUrl(canvasId);
-        expect(annotationListUrl).toEqual(listId);
+        var annotationListUrl = manifestInstance.getAnnotationsListUrls(canvasId);
+        expect(annotationListUrl).toEqual([listId1, listId2]);
         done();
       }, 0);
     });
     
     it('when canvas does not have otherContent', function (done) {
       var canvasId = 'http://example.org/iiif/book1/canvas/p1';
-      var listId = 'http://example.org/iiif/book1/canvas/p1';
       var content = {
         sequences: [
           {
@@ -285,8 +307,8 @@ describe('Manifest', function() {
       };
       var manifestInstance = new Mirador.Manifest(null, null, content);
       setTimeout(function () { 
-        var annotationListUrl = manifestInstance.getAnnotationsListUrl(canvasId);
-        expect(annotationListUrl).toEqual(false); // XXX: why return false?
+        var annotationListUrl = manifestInstance.getAnnotationsListUrls(canvasId);
+        expect(annotationListUrl.length).toEqual(0);
         done();
       }, 0);
     });

@@ -187,21 +187,14 @@
 
     render: function(renderingData) {
       var _this = this;
-
       if (!this.element) {
         this.element = this.appendTo;
         jQuery(_this.template(renderingData)).appendTo(_this.appendTo);
         return;
       }
-
-      if (renderingData.open) {
-        this.appendTo.removeClass('minimized');
-      } else {
-        this.appendTo.addClass('minimized');
-      }
     },
 
-    template: Handlebars.compile([
+    template: $.Handlebars.compile([
       '<div class="tabContentArea">',
       '<ul class="tabGroup">',
       '</ul>',

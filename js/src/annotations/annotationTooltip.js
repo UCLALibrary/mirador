@@ -1,7 +1,6 @@
 (function($) {
 
   $.AnnotationTooltip = function(options) {
-
     jQuery.extend(this, {
       targetElement: null,
       annotations: [],
@@ -69,10 +68,9 @@
         },
         events: {
           render: function(event, api) {
-            _this.eventEmitter.publish('annotationEditorAvailable.' + _this.windowId);
             _this.eventEmitter.publish('disableTooltips.' + _this.windowId);
 
-            jQuery(selector).parent().parent().draggable();
+            api.elements.tooltip.draggable();
 
             jQuery(selector).on("submit", function(event) {
               event.preventDefault();
@@ -81,32 +79,32 @@
 
             jQuery(selector + ' a.cancel').on("click", function(event) {
               event.preventDefault();
-              if (_this.activeEditor.isDirty()) {
-                if (!window.confirm("Do you want to cancel this annotation?")) {
-                  return false;
-                }
-              }
-              api.destroy();
-              if (params.onCancel) { params.onCancel(); }
+
+              var cancelCallback = function(){
+                api.destroy();
+              };
+
+              _this.eventEmitter.publish('onAnnotationCreatedCanceled.'+_this.windowId,[cancelCallback,!_this.activeEditor.isDirty()]);
+
             });
 
             jQuery(selector + ' a.save').on("click", function(event) {
               event.preventDefault();
-
+              if(!params.onSaveClickCheck()){
+                return;
+              }
               var annotation = _this.activeEditor.createAnnotation();
               if (params.onAnnotationCreated) { params.onAnnotationCreated(annotation); }
 
               api.destroy();
-              //reenable viewer tooltips
-              _this.eventEmitter.publish('enableTooltips.' + _this.windowId);
               _this.activeEditor = null;
               _this.activeEditorTip = null;
-
-              if (params.onCompleted) { params.onCompleted(); }
             });
 
             _this.activeEditor.show(selector);
+            _this.eventEmitter.publish('annotationEditorAvailable.' + _this.windowId);
           }
+
         }
       });
       _this.activeEditorTip.qtip('show');
@@ -146,29 +144,29 @@
           classes: 'qtip-bootstrap qtip-viewer',
           tip: false
         },
-        show: {
-          event: false
-        },
         hide: {
           fixed: true,
           delay: 300,
           event: false
         },
         events: {
-          show: function(event, api) {
+          shown: function(event, api) {
             if (params.onTooltipShown) { params.onTooltipShown(event, api); }
           },
           hidden: function(event, api) {
             if (params.onTooltipHidden) { params.onTooltipHidden(event, api); }
+            _this.removeAllEvents(api, params);
           },
-          visible: function(event, api) {
+          visible: function (event, api) {
             _this.removeAllEvents(api, params);
             _this.addViewerEvents(api, params);
           },
-          move: function(event, api) {
-            _this.removeAllEvents(api, params);
-            _this.addViewerEvents(api, params);
-            _this.addEditorEvents(api, params);
+          move: function (event, api) {
+            if (api.cache.contentUpdated) {
+              _this.removeAllEvents(api, params);
+              _this.addViewerEvents(api, params);
+            }
+           api.cache.contentUpdated = false;
           }
         }
       });
@@ -193,14 +191,34 @@
 
       jQuery(selector + ' a.delete').on("click", function(event) {
         event.preventDefault();
-        if (!window.confirm("Do you want to delete this annotation?")) {
-          return false;
-        }
-        var display = jQuery(this).parents('.annotation-display');
-        var id = display.attr('data-anno-id');
-        _this.eventEmitter.publish('annotationDeleted.' + _this.windowId, [id]);
-        api.hide();
-        display.remove();
+        var elem = this;
+        new $.DialogBuilder(viewerParams.container).dialog({
+          message: i18next.t('deleteAnnotation'),
+          closeButton: false,
+          buttons: {
+            'no': {
+              label: i18next.t('no'),
+              className: 'btn-default',
+              callback: function() {
+                return;
+              }
+            },
+            'yes': {
+              label: i18next.t('yes'),
+              className: 'btn-primary',
+              callback: function() {
+                var display = jQuery(elem).parents('.annotation-display');
+                var id = display.attr('data-anno-id');
+                var callback = function(){
+                  api.hide();
+                  display.remove();
+                };
+
+                _this.eventEmitter.publish('onAnnotationDeleted.' + _this.windowId, [id,callback]);
+              }
+            }
+          }
+        });
       });
 
       jQuery(selector + ' a.edit').on("click", function(event) {
@@ -208,9 +226,23 @@
         var display = jQuery(this).parents('.annotation-display');
         var id = display.attr('data-anno-id');
         var oaAnno = viewerParams.getAnnoFromRegion(id)[0];
-        _this.freezeQtip(api, oaAnno, viewerParams);
-        _this.removeAllEvents(api, viewerParams);
-        _this.addEditorEvents(api, viewerParams);
+        // Don't show built in editor if external is available
+        if (!_this.state.getStateProperty('availableExternalCommentsPanel')) {
+           _this.freezeQtip(api, oaAnno, viewerParams);
+           _this.removeAllEvents(api, viewerParams);
+           _this.addEditorEvents(api, viewerParams);
+        } else {
+          _this.eventEmitter.publish('annotationInEditMode.' + _this.windowId,[oaAnno]);
+          api.destroy();
+          jQuery(api.tooltip).remove();
+        }
+
+        _this.eventEmitter.publish('SET_ANNOTATION_EDITING.' + _this.windowId, {
+          "annotationId" : id,
+          "isEditable" : true,
+          "tooltip" : _this
+        });
+        _this.eventEmitter.publish('modeChange.' + _this.windowId, 'editingAnnotation');
       });
     },
 
@@ -228,9 +260,10 @@
         var display = jQuery(this).parents('.annotation-editor');
         var id = display.attr('data-anno-id');
         var oaAnno = viewerParams.getAnnoFromRegion(id)[0];
+
         _this.activeEditor.updateAnnotation(oaAnno);
-        viewerParams.onAnnotationSaved(oaAnno);
-        _this.unFreezeQtip(api, oaAnno, viewerParams);
+        _this.eventEmitter.publish('annotationEditSave.'+_this.windowId,[oaAnno]);
+
       });
 
       jQuery(selector + ' a.cancel').on("click", function(event) {
@@ -239,6 +272,9 @@
         var id = display.attr('data-anno-id');
         var oaAnno = viewerParams.getAnnoFromRegion(id)[0];
         _this.unFreezeQtip(api, oaAnno, viewerParams);
+
+        _this.eventEmitter.publish('annotationEditCancel.' + _this.windowId,[id]);
+
       });
     },
 
@@ -280,6 +316,7 @@
         }
         if (api.cache.hidden || !isTheSame) {
           api.disable(false);
+          api.cache.contentUpdated = false;
           _this.setTooltipContent(params.annotations);
           api.cache.origin = params.triggerEvent;
           api.reposition(params.triggerEvent, true);
@@ -295,6 +332,7 @@
       var _this = this;
       var api = jQuery(this.targetElement).qtip('api');
       if (api) {
+        api.cache.contentUpdated = true;
         api.set({'content.text': this.getViewerContent(annotations)});
         _this.eventEmitter.publish('tooltipViewerSet.' + this.windowId);
       }
@@ -334,7 +372,7 @@
           showDelete = annotation.endpoint.userAuthorize('delete', annotation);
         }
         htmlAnnotations.push({
-          annoText : annoText,
+          annoText : $.sanitizeHtml(annoText),
           tags : tags,
           id : annotation['@id'],
           username : username,
@@ -364,15 +402,16 @@
         'content.text': editorContainer,
         'hide.event': false
       });
-      _this.eventEmitter.publish('annotationEditorAvailable.' + this.windowId);
       //add rich text editor
       this.activeEditor = new this.editor(
         jQuery.extend({}, this.editorOptions, {
           annotation: oaAnno,
           windowId: this.windowId
         }));
-      this.activeEditor.show('form.annotation-tooltip');
+      this.activeEditor.show('form#annotation-editor-'+this.windowId);
+      _this.eventEmitter.publish('annotationEditorAvailable.' + this.windowId);
       jQuery(api.elements.tooltip).removeClass("qtip-viewer");
+      api.elements.tooltip.draggable();
       if (viewerParams.onEnterEditMode) {
         viewerParams.onEnterEditMode(api, oaAnno);
       }
@@ -394,7 +433,7 @@
     },
 
     //when this is being used to edit an existing annotation, insert them into the inputs
-    editorTemplate: Handlebars.compile([
+    editorTemplate: $.Handlebars.compile([
       '<form id="annotation-editor-{{windowId}}" class="annotation-editor annotation-tooltip" {{#if id}}data-anno-id="{{id}}"{{/if}}>',
       '<div>',
       // need to add a delete, if permissions allow
@@ -406,7 +445,7 @@
       '</form>'
     ].join('')),
 
-    viewerTemplate: Handlebars.compile([
+    viewerTemplate: $.Handlebars.compile([
       '<div class="all-annotations" id="annotation-viewer-{{windowId}}">',
       '{{#each annotations}}',
       '<div class="annotation-display annotation-tooltip" data-anno-id="{{id}}">',

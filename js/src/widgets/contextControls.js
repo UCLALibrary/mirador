@@ -18,22 +18,54 @@
 
     init: function() {
       var _this = this;
-
+      var showStrokeStyle = false,
+      showStrokeColor = false,
+      showFillColor = false;
+      this.availableAnnotationStylePickers.forEach(function(picker) {
+        if (picker === 'StrokeType') {
+          showStrokeStyle = true;
+        }
+        if (picker === 'FillColor') {
+          showFillColor = true;
+        }
+        if (picker === 'StrokeColor') {
+          showStrokeColor = true;
+        }
+      });
+      this.setBackground = {
+        'solid':function(el){
+          _this.setBackgroundImage(el,'border_type_1.png');
+        },
+        'dashed':function(el){
+          _this.setBackgroundImage(el, 'border_type_2.png');
+        },
+        'dotdashed':function(el){
+          _this.setBackgroundImage(el,  'border_type_3.png');
+        }
+      };
       var annotationProperties = this.canvasControls.annotations;
 
       if (annotationProperties.annotationLayer && this.annoEndpointAvailable) {
         this.annotationElement = jQuery(this.annotationTemplate({
           tools : _this.availableAnnotationTools,
           showEdit : annotationProperties.annotationCreation,
+          showStrokeStyle: showStrokeStyle,
+          showStrokeColor: showStrokeColor,
+          showFillColor: showFillColor,
           showRefresh : annotationProperties.annotationRefresh
         })).appendTo(this.container.find('.mirador-osd-annotation-controls'));
         this.annotationElement.hide();
-        this.setQtips(this.annotationElement);
+        this.setQtips(this.container.find('.mirador-osd-annotation-controls'));
         this.setBorderFillColorPickers();
+      }
+
+      if(showStrokeStyle){
+        this.addStrokeStylePicker();
       }
 
       if (this.canvasControls.imageManipulation.manipulationLayer) {
         this.manipulationElement = jQuery(this.manipulationTemplate({
+          filtersSupported: Modernizr.cssfilters,
           showRotate: this.canvasControls.imageManipulation.controls.rotate,
           showBrightness: this.canvasControls.imageManipulation.controls.brightness,
           showContrast: this.canvasControls.imageManipulation.controls.contrast,
@@ -41,7 +73,7 @@
           showGrayscale: this.canvasControls.imageManipulation.controls.grayscale,
           showInvert: this.canvasControls.imageManipulation.controls.invert
         })).appendTo(this.container.find('.mirador-manipulation-controls'));
-        this.setQtips(this.manipulationElement);
+        this.setQtips(this.container.find('.mirador-manipulation-controls'));
         this.manipulationElement.hide();
       }
 
@@ -49,7 +81,8 @@
     },
 
     setQtips: function(element) {
-      element.each(function() {
+      var _this = this;
+      element.find('a').each(function() {
         jQuery(this).qtip({
           content: {
             text: jQuery(this).attr('title'),
@@ -57,7 +90,8 @@
           position: {
             my: 'bottom center',
             at: 'top center',
-            viewport: true
+            viewport: true,
+            container: _this.qtipElement
           },
           style: {
             classes: 'qtip-dark qtip-shadow qtip-rounded'
@@ -66,104 +100,111 @@
       });
     },
 
+    addColorPicker:function(selector,options){
+      this.container.find(selector).spectrum(options);
+    },
+
+    getImagePath:function(imageName){
+      return this.state.getStateProperty('buildPath') + this.state.getStateProperty('imagesPath') + imageName;
+    },
+
+    setBackgroundImage:function(el,imageName){
+      el.css('background-image','url('+this.getImagePath(imageName)+')');
+    },
+
+    removeBackgroundImage:function(el){
+      el.css('background-image','');
+    },
+
+    addStrokeStylePicker:function(){
+      this.setBackground.solid(this.container.find('.mirador-line-type .solid'));
+      this.setBackground.dashed(this.container.find('.mirador-line-type .dashed'));
+      this.setBackground.dotdashed(this.container.find('.mirador-line-type .dotdashed'));
+    },
+
     setBorderFillColorPickers: function() {
       var _this = this;
-      _this.container.find(".borderColorPicker").spectrum({
+      var defaultBorderColor = _this.state.getStateProperty('drawingToolsSettings').strokeColor,
+      defaultFillColor = _this.state.getStateProperty('drawingToolsSettings').fillColor,
+      defaultAlpha = _this.state.getStateProperty('drawingToolsSettings').fillColorAlpha,
+      colorObj = tinycolor(defaultFillColor);
+      colorObj.setAlpha(defaultAlpha);
+
+      this.addColorPicker('.borderColorPicker',{
         showInput: true,
-        showInitial: true,
+        showInitial: false,
         showPalette: true,
+        showButtons: false,
         showSelectionPalette: true,
+        hideAfterPaletteSelect: true,
         appendTo: 'parent',
         containerClassName: 'borderColorPickerPop'+_this.windowId,
         preferredFormat: "rgb",
-        show: function(color) {
-          jQuery.data(document.body, 'borderColorPickerPop' + _this.windowId, color);
-        },
-        change: function(color) {
-          jQuery.data(document.body, 'borderColorPickerPop' + _this.windowId, color);
+        hide: function(color) {
+          _this.eventEmitter.publish('changeBorderColor.' + _this.windowId, color.toHexString());
+          jQuery(this).spectrum("set", color.toHexString());
         },
         move: function(color) {
-          jQuery.data(document.body, 'borderColorPickerPop' + _this.windowId, color);
+          _this.eventEmitter.publish('changeBorderColor.' + _this.windowId, color.toHexString());
         },
-        hide: function(color) {
-          color = jQuery.data(document.body, 'borderColorPickerPop' + _this.windowId);
-          if (color) {
-            _this.eventEmitter.publish('changeBorderColor.' + _this.windowId, color.toHexString());
-          }
+        show: function(color) {
+          _this.setColorPickerInCanvas('.borderColorPicker');
         },
         maxSelectionSize: 4,
+        color: defaultBorderColor,
         palette: [
-          ["black", "red", "green", "blue"],
-          ["white", "cyan", "magenta", "yellow"]
+          [defaultBorderColor, "black", "red", "green"],
+          ["white", "blue", "magenta", "yellow"]
         ]
       });
 
       _this.container.find(".borderColorPicker").next(".sp-replacer").prepend("<i class='material-icons'>border_color</i>");
+      // _this.container.find(".borderColorPicker").next(".sp-replacer").append('<i class="fa fa-caret-down dropdown-icon"></i>');
 
-      var borderPicker = jQuery('.borderColorPickerPop'+_this.windowId);
-
-      borderPicker.find(".sp-cancel").html('<i class="fa fa-times-circle-o fa-fw"></i>Cancel');
-      borderPicker.find(".sp-cancel").parent().append('<a class="sp-choose" href="#"><i class="fa fa-thumbs-o-up fa-fw"></i>Choose</a>');
-      borderPicker.find('button.sp-choose').hide();
-
-      borderPicker.find('a.sp-cancel').on('click', function() {
-        jQuery.data(document.body, 'borderColorPickerPop' + _this.windowId, null);
-      });
-
-      jQuery._data(borderPicker.find(".sp-cancel")[0], "events").click.reverse();
-
-      borderPicker.find('a.sp-choose').on('click',function(){
-        borderPicker.find('button.sp-choose').click();
-      });
-
-      _this.container.find(".fillColorPicker").spectrum({
+      _this.addColorPicker('.fillColorPicker',{
         showInput: true,
-        showInitial: true,
+        showInitial: false,
         showAlpha: true,
         showPalette: true,
+        showButtons: false,
         showSelectionPalette: true,
         appendTo: 'parent',
+        clickoutFiresChange: true,
         containerClassName: 'fillColorPickerPop'+_this.windowId,
         preferredFormat: "rgb",
-        show: function(color) {
-          jQuery.data(document.body, 'fillColorPickerPop' + _this.windowId, color);
-        },
-        change: function(color) {
-          jQuery.data(document.body, 'fillColorPickerPop' + _this.windowId, color);
+        hide: function(color) {
+          _this.eventEmitter.publish('changeFillColor.' + _this.windowId, [color.toHexString(), color.getAlpha()]);
+          jQuery(this).spectrum("set", color);
         },
         move: function(color) {
-          jQuery.data(document.body, 'fillColorPickerPop' + _this.windowId, color);
+          _this.eventEmitter.publish('changeFillColor.' + _this.windowId, [color.toHexString(), color.getAlpha()]);
         },
-        hide: function(color) {
-          color = jQuery.data(document.body, 'fillColorPickerPop' + _this.windowId);
-          if (color) {
-            _this.eventEmitter.publish('changeFillColor.' + _this.windowId, [color.toHexString(), color.getAlpha()]);
-          }
+        show: function(color) {
+          _this.setColorPickerInCanvas('.fillColorPicker');
         },
         maxSelectionSize: 4,
+        color: colorObj,
         palette: [
-          ["black", "red", "green", "blue"],
-          ["white", "cyan", "magenta", "yellow"]
+          [colorObj, "black", "red", "green"],
+          ["white", "blue", "magenta", "yellow"]
         ]
       });
 
       _this.container.find(".fillColorPicker").next(".sp-replacer").prepend("<i class='material-icons'>format_color_fill</i>");
+      // _this.container.find(".fillColorPicker").next(".sp-replacer").append('<i class="fa fa-caret-down dropdown-icon"></i>');
+    },
 
-      var fillPicker = jQuery('.fillColorPickerPop'+_this.windowId);
-
-      fillPicker.find(".sp-cancel").html('<i class="fa fa-times-circle-o fa-fw"></i>Cancel');
-      fillPicker.find(".sp-cancel").parent().append('<a class="sp-choose" href="#"><i class="fa fa-thumbs-o-up fa-fw"></i>Choose</a>');
-      fillPicker.find('button.sp-choose').hide();
-
-      fillPicker.find('a.sp-cancel').on('click', function() {
-        jQuery.data(document.body, 'fillColorPickerPop' + _this.windowId, null);
-      });
-
-      jQuery._data(fillPicker.find(".sp-cancel")[0], "events").click.reverse();
-
-      fillPicker.find('a.sp-choose').on('click',function(){
-        fillPicker.find('button.sp-choose').click();
-      });
+    setColorPickerInCanvas: function(selector) {
+      // check for the selector being out of canvas
+      var pickerContainer=this.container.find(selector).siblings('.sp-container').first(),
+      pickerOffset=pickerContainer.offset(),
+      windowWidth = this.state.windowsElements[this.windowId].width();
+      if (pickerContainer.width() + pickerOffset.left > windowWidth) {
+        pickerContainer.offset({
+          top: pickerOffset.top,
+          left: windowWidth - (pickerContainer.width())
+        });
+      }
     },
 
     annotationShow: function() {
@@ -184,62 +225,72 @@
 
     bindEvents: function() {
       var _this = this;
-      // this.container.find('.mirador-osd-back').on('click', function() {
-      //   _this.element.remove();
-      //   _this.element = jQuery(_this.template()).appendTo(_this.container);
-      //   _this.bindEvents();
-      // });
+      // for some reason using :not selector isn't working for mouseenter/mouseleave,
+      // so check for hud-disabled at the beginning instead
+      this.container.find('.mirador-line-type').on('mouseenter', function() {
+        if (jQuery(this).hasClass('hud-disabled')) {
+          return false;
+        }
+        _this.container.find('.type-list').stop().slideFadeToggle(300);
+      });
+      this.container.find('.mirador-line-type').on('mouseleave', function() {
+        if (jQuery(this).hasClass('hud-disabled')) {
+          return false;
+        }
+        _this.container.find('.type-list').stop().slideFadeToggle(300);
+      });
+      this.container.find('.mirador-line-type').find('ul li').on('click', function() {
+        if (jQuery(this).hasClass('hud-disabled')) {
+          return false;
+        }
+        var className = jQuery(this).find('i').attr('class').replace(/fa/, '').replace(/ /, '');
+        _this.removeBackgroundImage(_this.container.find('.mirador-line-type .border-type-image'));
+        _this.setBackground[className](_this.container.find('.mirador-line-type .border-type-image'));
+        _this.eventEmitter.publish('toggleBorderType.' + _this.windowId, className);
+      });
     },
 
-    annotationTemplate: Handlebars.compile([
+    annotationTemplate: $.Handlebars.compile([
                                    '{{#if showEdit}}',
-                                   '<a class="mirador-osd-edit-mode hud-control" role="button" aria-label="Make a new annotation using mouse">',
-                                   '<i class="fa fa-lg fa-edit"></i>',
-                                   '</a>',
-                                   '<a class="hud-control draw-tool" style="color:#abcdef;">',
-                                   '|',
+                                   '<a class="mirador-osd-pointer-mode hud-control selected" title="{{t "pointerTooltip"}}">',
+                                   '<i class="fa fa-mouse-pointer"></i>',
                                    '</a>',
                                    '{{#each tools}}',
-                                   '<a class="mirador-osd-{{this.logoClass}}-mode hud-control draw-tool" title="{{t this.tooltip}}">',
+                                   '<a class="mirador-osd-{{this.logoClass}}-mode hud-control mirador-osd-edit-mode" title="{{t this.tooltip}}">',
                                    '<i class="material-icons">{{this.logoClass}}</i>',
                                    '</a>',
                                    '{{/each}}',
-                                   '<a class="hud-control draw-tool" style="color:#abcdef;">',
-                                   '|',
+                                   '{{#if showStrokeStyle}}',
+                                   '<a class="hud-control hud-dropdown hud-disabled mirador-line-type" aria-label="{{t "borderTypeTooltip"}}" title="{{t "borderTypeTooltip"}}">',
+                                   '<i class="material-icons mirador-border-icon">create</i>',
+                                   '<i class="border-type-image solid"></i>',
+                                   '<i class="fa fa-caret-down dropdown-icon"></i>',
+                                   '<ul class="dropdown type-list">',
+                                   '<li><i class="fa solid"></i> {{t "solid"}}</li>',
+                                   '<li><i class="fa dashed"></i> {{t "dashed"}}</li>',
+                                   '<li><i class="fa dotdashed"></i> {{t "dotDashed"}}</li>',
+                                   '</ul>',
                                    '</a>',
-                                   '<a class="hud-control draw-tool" title="{{t "borderColorTooltip"}}">',
+                                   '{{/if}}',
+                                   '{{#if showStrokeColor}}',
+                                   '<a class="hud-control hud-dropdown hud-disabled mirador-osd-color-picker" title="{{t "borderColorTooltip"}}">',
                                    '<input type="text" class="borderColorPicker"/>',
                                    '</a>',
-                                   '<a class="hud-control draw-tool" title="{{t "fillColorTooltip"}}">',
+                                   '{{/if}}',
+                                   '{{#if showFillColor}}',
+                                   '<a class="hud-control hud-dropdown hud-disabled mirador-osd-color-picker" title="{{t "fillColorTooltip"}}">',
                                    '<input type="text" class="fillColorPicker"/>',
                                    '</a>',
-                                   '<a class="hud-control draw-tool" style="color:#abcdef;">',
-                                   '|',
-                                   '</a>',
-                                   '<a class="hud-control draw-tool mirador-osd-delete-mode">',
-                                   '<i class="fa fa-lg fa-trash-o"></i>',
-                                   '</a>',
-                                   '<a class="hud-control draw-tool mirador-osd-save-mode">',
-                                   '<i class="fa fa-lg fa-save"></i>',
-                                   '</a>',
+                                   '{{/if}}',
                                    '{{#if showRefresh}}',
-                                     '<a class="hud-control draw-tool mirador-osd-refresh-mode">',
+                                     '<a class="hud-control mirador-osd-refresh-mode">',
                                      '<i class="fa fa-lg fa-refresh"></i>',
                                      '</a>',
                                    '{{/if}}',
                                    '{{/if}}'
-                                   /*'<a class="mirador-osd-list hud-control">',
-                                   '<i class="fa fa-lg fa-list"></i>',
-                                   '</a>',*/
-                                   /*'<a class="mirador-osd-search hud-control" role="button">',
-                                   '<i class="fa fa-lg fa-search"></i>',
-                                   '</a>',*/
-                                   /*'<a class="mirador-osd-rect-tool hud-control" role="button">',
-                                   '<i class="fa fa-lg fa-gear"></i>',
-                                   '</a>',*/
     ].join('')),
 
-    manipulationTemplate: Handlebars.compile([
+    manipulationTemplate: $.Handlebars.compile([
                                    '{{#if showRotate}}',
                                    '<a class="hud-control mirador-osd-rotate-right" title="{{t "rotateRightTooltip"}}">',
                                    '<i class="fa fa-lg fa-rotate-right"></i>',
@@ -248,6 +299,8 @@
                                    '<i class="fa fa-lg fa-rotate-left"></i>',
                                    '</a>',
                                    '{{/if}}',
+
+                                '{{#if filtersSupported}}',
                                    '{{#if showBrightness}}',
                                    '<a class="hud-control mirador-osd-brightness" title="{{t "brightnessTooltip"}}">',
                                    '<i class="material-icons">wb_sunny</i>',
@@ -281,11 +334,12 @@
                                    '{{/if}}',
                                    '<a class="hud-control mirador-osd-reset" title="{{t "resetTooltip"}}">',
                                    '<i class="fa fa-lg fa-refresh"></i>',
-                                   '</a>'
+                                   '</a>',
+      '{{/if}}',
     ].join('')),
 
     // for accessibility, make sure to add aria-labels just like above
-    editorTemplate: Handlebars.compile([
+    editorTemplate: $.Handlebars.compile([
                                  '<div class="mirador-osd-context-controls hud-container">',
                                    '<a class="mirador-osd-back hud-control" role="button">',
                                    '<i class="fa fa-lg fa-arrow-left"></i>',

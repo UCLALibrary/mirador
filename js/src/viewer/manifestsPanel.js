@@ -99,7 +99,7 @@
         
         addManifestUrl: function(url) {
           var _this = this;
-          _this.eventEmitter.publish('ADD_MANIFEST_FROM_URL', url, "(Added from URL)");
+          _this.eventEmitter.publish('ADD_MANIFEST_FROM_URL', [url, "(Added from URL)"]);
         },
         
         togglePanel: function(event) {
@@ -143,7 +143,7 @@
           _this.element.find('#manifest-search').keyup();
         },
 
-        template: Handlebars.compile([
+        template: $.Handlebars.compile([
           '<div id="manifest-select-menu">',
           '<div class="container">',
             '<div class="manifest-panel-controls">',

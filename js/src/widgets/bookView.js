@@ -78,7 +78,7 @@
       }
     },
 
-    template: Handlebars.compile([
+    template: $.Handlebars.compile([
                                  '<div class="book-view">',
                                  '</div>'
     ].join('')),
@@ -92,11 +92,11 @@
         var dodgers = _this.element.find('.mirador-osd-toggle-bottom-panel, .mirador-pan-zoom-controls, .mirador-img-manipulation, .mirador-pan-zoom-toggle'); // added last two classes to support image manipulation
         var arrows = _this.element.find('.mirador-osd-next, .mirador-osd-previous');
         if (visible === true) {
-          dodgers.css({transform: 'translateY(-130px)'});
-          arrows.css({transform: 'translateY(-65px)'});
+          dodgers.addClass('bottom-panel-open');
+          arrows.addClass('bottom-panel-open');
         } else {
-          dodgers.css({transform: 'translateY(0)'});
-          arrows.css({transform: 'translateY(0)'});
+          dodgers.removeClass('bottom-panel-open');
+          arrows.removeClass('bottom-panel-open');
         }
       });
 
@@ -650,6 +650,7 @@
     },
 
     adjustWidth: function(className, hasClass) {
+      var _this = this;
       if (hasClass) {
         _this.eventEmitter.publish('REMOVE_CLASS.'+this.windowId, className);
       } else {

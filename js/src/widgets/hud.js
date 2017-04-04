@@ -31,16 +31,41 @@
         this.contextControls = new $.ContextControls({
           element: null,
           container: this.element.find('.mirador-osd-context-controls'),
+          qtipElement: this.qtipElement,
           mode: 'displayAnnotations',
           windowId: this.windowId,
           canvasControls: this.canvasControls,
           annoEndpointAvailable: this.annoEndpointAvailable,
           availableAnnotationTools: this.availableAnnotationTools,
+          availableAnnotationStylePickers: this.availableAnnotationStylePickers,
+          state: this.state,
           eventEmitter: this.eventEmitter
         });
       }
 
+      this.listenForActions();
       this.bindEvents();
+    },
+
+    listenForActions: function() {
+      var _this = this;
+      this.eventEmitter.subscribe('DISABLE_TOOLTIPS_BY_CLASS.' + this.windowId, function(event, className) {
+        _this.element.find(className).qtip('disable');
+      });
+
+      this.eventEmitter.subscribe('ENABLE_TOOLTIPS_BY_CLASS.' + this.windowId, function(event, className) {
+        _this.element.find(className).qtip('enable');
+      });
+
+      this.eventEmitter.subscribe('SET_STATE_MACHINE_POINTER.' + this.windowId, function(event) {
+        if (_this.annoState.current === 'none') {
+          _this.annoState.startup();
+        } else if (_this.annoState.current === 'off') {
+          _this.annoState.displayOn();
+        } else {
+          _this.annoState.choosePointer();
+        }
+      });
     },
 
     bindEvents: function() {
@@ -55,13 +80,14 @@
       //initial state is 'none'
       this.annoState = StateMachine.create({
         events: [
-          { name: 'startup',  from: 'none',  to: 'annoOff' },
-          { name: 'displayOn',  from: 'annoOff',  to: 'annoOnCreateOff' },
-          { name: 'refreshCreateOff',  from: 'annoOnCreateOff',  to: 'annoOnCreateOff' },
-          { name: 'createOn', from: ['annoOff','annoOnCreateOff'], to: 'annoOnCreateOn' },
-          { name: 'refreshCreateOn',  from: 'annoOnCreateOn',  to: 'annoOnCreateOn' },
-          { name: 'createOff',  from: 'annoOnCreateOn',    to: 'annoOnCreateOff' },
-          { name: 'displayOff', from: ['annoOnCreateOn','annoOnCreateOff'], to: 'annoOff' }
+          { name: 'startup', from: 'none', to: 'off' },
+          { name: 'displayOn', from: 'off', to: 'pointer'},
+          { name: 'displayOff', from: ['pointer', 'shape'], to: 'off'},
+          { name: 'choosePointer', from: ['pointer', 'shape'], to: 'pointer'},
+          { name: 'chooseShape', from: 'pointer', to: 'shape'},
+          { name: 'changeShape', from: 'shape', to: 'shape'},
+          { name: 'refresh', from: 'pointer', to: 'pointer'},
+          { name: 'refresh', from: 'shape', to: 'shape'}
         ],
         callbacks: {
           onstartup: function(event, from, to) {
@@ -76,46 +102,10 @@
                   _this.contextControls.annotationShow();
             }
             _this.eventEmitter.publish('modeChange.' + _this.windowId, 'displayAnnotations');
-            _this.eventEmitter.publish(('windowUpdated'), {
-              id: _this.windowId,
-              annotationState: to
-            });
-          },
-          onrefreshCreateOff: function(event, from, to) {
-            _this.eventEmitter.publish('modeChange.' + _this.windowId, 'displayAnnotations');
-            _this.eventEmitter.publish(('windowUpdated'), {
-              id: _this.windowId,
-              annotationState: to
-            });
-          },
-          oncreateOn: function(event, from, to) {
-            function enableEditingAnnotations() {
-              _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.mirador-osd-edit-mode', 'selected']);
-              _this.eventEmitter.publish('modeChange.' + _this.windowId, 'editingAnnotations');
-            }
-            if (_this.annoEndpointAvailable) {
-              if (from === "annoOff") {
-                _this.contextControls.annotationShow();
-                enableEditingAnnotations();
-              } else {
-                enableEditingAnnotations();
-              }
-            }
-            _this.eventEmitter.publish(('windowUpdated'), {
-              id: _this.windowId,
-              annotationState: to
-            });
-          },
-          onrefreshCreateOn: function(event, from, to) {
-            _this.eventEmitter.publish('modeChange.' + _this.windowId, 'editingAnnotations');
-            _this.eventEmitter.publish(('windowUpdated'), {
-              id: _this.windowId,
-              annotationState: to
-            });
-          },
-          oncreateOff: function(event, from, to) {
-            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-edit-mode', 'selected']);
-            _this.eventEmitter.publish('modeChange.' + _this.windowId, 'displayAnnotations');
+            _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.mirador-osd-pointer-mode', 'selected']);
+            _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.hud-dropdown', 'hud-disabled']);
+            _this.eventEmitter.publish('DISABLE_TOOLTIPS_BY_CLASS.'+_this.windowId, '.hud-dropdown');
+            _this.eventEmitter.publish('DEFAULT_CURSOR.' + _this.windowId);
             _this.eventEmitter.publish(('windowUpdated'), {
               id: _this.windowId,
               annotationState: to
@@ -124,6 +114,8 @@
           ondisplayOff: function(event, from, to) {
             if (_this.annoEndpointAvailable) {
               _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-edit-mode', 'selected']);
+              _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-pointer-mode', 'selected']);
+              _this.eventEmitter.publish('CANCEL_ACTIVE_ANNOTATIONS.'+_this.windowId);
               _this.contextControls.annotationHide();
             }
             _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-annotations-layer', 'selected']);
@@ -132,6 +124,51 @@
               id: _this.windowId,
               annotationState: to
             });
+          },
+          onchoosePointer: function(event, from, to) {
+            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-edit-mode', 'selected']);
+            _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.mirador-osd-pointer-mode', 'selected']);
+            _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.hud-dropdown', 'hud-disabled']);
+            _this.eventEmitter.publish('DISABLE_TOOLTIPS_BY_CLASS.'+_this.windowId, '.hud-dropdown');
+            _this.eventEmitter.publish('modeChange.' + _this.windowId, 'displayAnnotations');
+            _this.eventEmitter.publish('DEFAULT_CURSOR.' + _this.windowId);
+            _this.eventEmitter.publish(('windowUpdated'), {
+              id: _this.windowId,
+              annotationState: to
+            });
+          },
+          onchooseShape: function(event, from, to, shape) {
+            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-pointer-mode', 'selected']);
+            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-edit-mode', 'selected']);
+            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.hud-dropdown', 'hud-disabled']);
+            _this.eventEmitter.publish('ENABLE_TOOLTIPS_BY_CLASS.'+_this.windowId, '.hud-dropdown');
+            _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.mirador-osd-'+shape+'-mode', 'selected']);
+            _this.eventEmitter.publish('modeChange.' + _this.windowId, 'creatingAnnotation');
+            _this.eventEmitter.publish('CROSSHAIR_CURSOR.' + _this.windowId);
+            _this.eventEmitter.publish('toggleDrawingTool.'+_this.windowId, shape);
+
+            _this.eventEmitter.publish(('windowUpdated'), {
+              id: _this.windowId,
+              annotationState: to
+            });
+          },
+          onchangeShape: function(event, from, to, shape) {
+            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-pointer-mode', 'selected']);
+            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.mirador-osd-edit-mode', 'selected']);
+            _this.eventEmitter.publish('HUD_REMOVE_CLASS.'+_this.windowId, ['.hud-dropdown', 'hud-disabled']);
+            _this.eventEmitter.publish('ENABLE_TOOLTIPS_BY_CLASS.'+_this.windowId, '.hud-dropdown');
+            _this.eventEmitter.publish('HUD_ADD_CLASS.'+_this.windowId, ['.mirador-osd-'+shape+'-mode', 'selected']);
+            _this.eventEmitter.publish('CROSSHAIR_CURSOR.' + _this.windowId);
+            //don't need to trigger a mode change, just change tool
+            _this.eventEmitter.publish('toggleDrawingTool.'+_this.windowId, shape);
+
+            _this.eventEmitter.publish(('windowUpdated'), {
+              id: _this.windowId,
+              annotationState: to
+            });
+          },
+          onrefresh: function(event, from, to) {
+            //TODO
           }
         }
       });
@@ -169,7 +206,7 @@
       });
     },
 
-    template: Handlebars.compile([
+    template: $.Handlebars.compile([
                                  '<div class="mirador-hud">',
                                  '{{#if showNextPrev}}',
                                  '<a class="mirador-osd-previous hud-control ">',
@@ -177,9 +214,16 @@
                                  '</a>',
                                  '{{/if}}',
                                  '<div class="mirador-osd-context-controls hud-container">',
+                                 '{{#if showAnno}}',
+                                  '<div class="mirador-osd-annotation-controls">',
+                                  '<a class="mirador-osd-annotations-layer hud-control" role="button" title="{{t "annotationTooltip"}}" aria-label="{{t "annotationTooltip"}}">',
+                                  '<i class="fa fa-lg fa-comments"></i>',
+                                  '</a>',
+                                  '</div>',
+                                 '{{/if}}',
                                  '{{#if showImageControls}}',
                                   '<div class="mirador-manipulation-controls">',
-                                  '<a class="mirador-manipulation-toggle hud-control" role="button" aria-label="Toggle image manipulation">',
+                                  '<a class="mirador-manipulation-toggle hud-control" role="button" title="{{t "imageManipulationTooltip"}}" aria-label="{{t "imageManipulationTooltip"}}">',
                                   '<i class="material-icons">tune</i>',
                                   '</a>',
                                   '</div>',

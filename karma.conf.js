@@ -22,19 +22,24 @@ module.exports = function(config) {
       'js/lib/state-machine.min.js',
       'js/lib/tinymce.min.js',
       'js/lib/handlebars.js',
-      'js/lib/openseadragon.min.js',
+      'js/lib/openseadragon.js',
       'js/lib/d3.v3.min.js',
       'js/lib/pubsub.min.js',
       'js/lib/URI.min.js',
       'js/lib/mousetrap.min.js',
       'js/lib/isfahan.js',
-      'js/lib/paper-full.min.js',
+      'js/lib/paper-core.min.js',
       'js/lib/spectrum.js',
-      'js/lib/jquery.awesome-cursor.js',
       'js/lib/i18next.min.js',
-      'bower_components/sinon-server/index.js',
-      'bower_components/jasmine-jquery/lib/jasmine-jquery.js',
+      'js/lib/i18nextBrowserLanguageDetector.min.js',
+      'js/lib/i18nextXHRBackend.min.js',
+      'js/lib/modernizr.custom.js',
+      'js/lib/sanitize-html.min.js',
+      'node_modules/sinon/pkg/sinon.js',
+      'node_modules/jasmine-jquery/lib/jasmine-jquery.js',
       // app
+      'js/src/mirador.js', 
+      'js/src/utils/handlebars.js',
       'js/src/*.js',
       'js/src/viewer/*.js',
       'js/src/manifests/*.js',
@@ -43,28 +48,40 @@ module.exports = function(config) {
       'js/src/widgets/*.js',
       'js/src/utils/*.js',
       // spec
+      'spec/**/*.stub.js',
       'spec/**/*.js',
       {pattern: 'spec/data/*', watched: true, served: true, included: false},
+      {pattern: 'spec/locales/**', watched: true, served: true, included: false},
       {pattern: 'spec/fixtures/*json', watched: true, served: true, included: false},
     ],
 
 
     // list of files to exclude
-    exclude: [
-      'spec/mirador.test.js'
-    ],
+    // exclude: [
+    // This file holds the integration tests for Mirador
+    //   'spec/mirador.test.js'
+    // ],
 
 
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors: {
+      'js/src/**/*.js': ['coverage']
+    },
+
+    proxies: {
+      '/spec': 'http://localhost:9876/base/spec'
     },
 
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['spec'],
+    reporters: ['progress', 'coverage', 'coveralls'],
 
+    coverageReporter: {
+      type: 'lcov', // lcov or lcovonly are required for generating lcov.info files
+      dir: 'coverage/'
+    },
 
     // web server port
     port: 9876,

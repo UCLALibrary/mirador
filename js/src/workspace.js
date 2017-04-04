@@ -86,10 +86,8 @@
         }
       });
 
-      _this.eventEmitter.subscribe('windowRemoved', function(event, windowId) {
-        _this.windows = jQuery.grep(_this.windows, function(window) {
-          return window.id !== windowId;
-        });
+      _this.eventEmitter.subscribe('REMOVE_WINDOW', function(event, windowId){
+        _this.removeWindow(windowId);
       });
 
       _this.eventEmitter.subscribe('REMOVE_NODE', function(event, node){
@@ -935,19 +933,19 @@
 
       // Exit
       divs.exit()
-      .remove("div")
-      .each(function(d) {
-        var slotMap = _this.slots.reduce(function(map, temp_slot) {
-          if (d.id === temp_slot.slotID) {
-            map[d.id] = temp_slot;
-          }
-          return map;
-        }, {}),
-        slot = slotMap[d.id];
+        .remove("div")
+        .each(function(d) {
+          var slotMap = _this.slots.reduce(function(map, temp_slot) {
+            if (d.id === temp_slot.slotID) {
+              map[d.id] = temp_slot;
+            }
+            return map;
+          }, {}),
+              slot = slotMap[d.id];
 
-        if (slot && slot.window && !resetting) {
-          _this.eventEmitter.publish("windowRemoved", slot.window.id);
-        }
+          if (slot && slot.window && !resetting) {
+            _this.eventEmitter.publish('REMOVE_WINDOW', slot.window.id);
+          }
 
         // nullify the window parameter of old slots
         slot.window = null;
@@ -964,10 +962,10 @@
 
       function cell() {
         this
-        .style("left", function(d) { return d.x + "px"; })
-        .style("top", function(d) { return d.y + "px"; })
-        .style("width", function(d) { return Math.max(0, d.dx ) + "px"; })
-        .style("height", function(d) { return Math.max(0, d.dy ) + "px"; });
+          .style("left", function(d) { return d.x + "px"; })
+          .style("top", function(d) { return d.y + "px"; })
+          .style("width", function(d) { return Math.max(0, d.dx ) + "px"; })
+          .style("height", function(d) { return Math.max(0, d.dy ) + "px"; });
       }
 
       var root = jQuery.grep(_this.layout, function(node) { return !node.parent;})[0];
@@ -995,7 +993,7 @@
       function addSibling(node, indexDifference) {
         if (nodeIsNotRoot) {
           var siblingIndex = nodeIndex + indexDifference,
-          newSibling = _this.newNode(node.type, node);
+              newSibling = _this.newNode(node.type, node);
 
           node.parent.children.splice(siblingIndex, 0, newSibling);
           _this.layout.push(newSibling);
@@ -1008,7 +1006,7 @@
       }
 
       function mutateAndAdd(node, indexDifference) {
-        // Locally mutate the tree to accomodate a
+        // Locally mutate the tree to accommodate a
         // sibling of another kind, transforming
         // both the target node and its parent.
         var newParent = _this.newNode(node.type, node.parent);
@@ -1137,6 +1135,7 @@
       //delete targetSlot;
       _this.layoutDescription = root;
       _this.calculateLayout();
+      _this.eventEmitter.publish('slotRemoved',targetSlot);
     },
 
     newNode: function(type, parent) {
@@ -1172,22 +1171,21 @@
       // as many windows into places as can
       // fit.
       var _this = this,
-      deletedWindows;
+          deletedWindows;
 
       if (_this.windows.length > _this.slots.length) {
-        // splice modifies the original array and
-        // returns the deleted items,
-        // so we can just perform a forEach on the
-        // return value, and have the saveController
-        // remove these windows in response to the event
-        // (which otherwise it would not do).
+        // This issues the REMOVE_WINDOW action for
+        // the earliest windows for which a slot will
+        // not be available after the layout changes.
         //
-        // The event was not called in the calculateLayout
-        // function because we need the other windows to remain,
-        // so we filter them here.
-        _this.windows.splice(0, _this.windows.length -_this.slots.length).forEach(function(removedWindow){
-          _this.eventEmitter.publish('windowRemoved', removedWindow.id);
-        });
+        // We use slice, not splice, here because it is
+        // non-destructive. The actual state mutation will
+        // be handled in the action callback, since only
+        // actions should be allowed to mutate global state.
+        _this.windows.slice(0, _this.windows.length -_this.slots.length)
+          .forEach(function(removedWindow){
+            _this.eventEmitter.publish('REMOVE_WINDOW', removedWindow.id);
+          });
       }
 
       _this.windows.forEach(function(window) {
@@ -1249,56 +1247,64 @@
       windowConfig.state = _this.state;
       windowConfig.eventEmitter = _this.eventEmitter;
 
-      if (!targetSlot.window) {
-        windowConfig.slotAddress = targetSlot.layoutAddress;
-        windowConfig.id = windowConfig.id || $.genUUID();
-
-        _this.eventEmitter.publish("windowSlotAdded", {id: windowConfig.id, slotAddress: windowConfig.slotAddress});
-
-        //extend the windowConfig with the default settings
-        var mergedConfig = jQuery.extend(true, {}, _this.state.getStateProperty('windowSettings'), windowConfig);
-
-        //"rename" some keys in the merged object to align settings parameters with window parameters
-        if (mergedConfig.loadedManifest) {
-          // TODO: remove the second || operand, after our manifests are not named with a trailing .json
-          mergedConfig.manifest = _this.state.getStateProperty('manifests')[mergedConfig.loadedManifest] || _this.state.getStateProperty('manifests')[mergedConfig.loadedManifest + '.json'];
-          delete mergedConfig.loadedManifest;
-        }
-
-        if (mergedConfig.bottomPanel) {
-          mergedConfig.bottomPanelAvailable = mergedConfig.bottomPanel;
-          delete mergedConfig.bottomPanel;
-        }
-
-        if (mergedConfig.sidePanel) {
-          mergedConfig.sidePanelAvailable = mergedConfig.sidePanel;
-          delete mergedConfig.sidePanel;
-        }
-
-        if (mergedConfig.overlay) {
-          mergedConfig.overlayAvailable = mergedConfig.overlay;
-          delete mergedConfig.overlay;
-        }
-
-        // add lockGroups
-        mergedConfig.lockController = _this.lockController;
-
-        newWindow = new $.Window(mergedConfig);
-        _this.windows.push(newWindow);
-
-        targetSlot.window = newWindow;
-
-        _this.eventEmitter.publish("windowAdded", {id: windowConfig.id, slotAddress: windowConfig.slotAddress});
-
-        _this.eventEmitter.publish(('currentCanvasIDUpdated.' + windowConfig.id), windowConfig.currentCanvasID);
-      } else {
-        targetSlot.window.element.remove();
-        targetSlot.window.update(windowConfig);
-        _this.eventEmitter.publish(('currentCanvasIDUpdated.' + windowConfig.id), windowConfig.currentCanvasID);
-        // The target slot already has a window in it, so just update that window instead,
-        // using the appropriate saving functions, etc. This obviates the need changing the
-        // parent, slotAddress, setting a new ID, and so on.
+      if (targetSlot.window) {
+        _this.eventEmitter.publish('REMOVE_WINDOW', targetSlot.window.id);
       }
-    }
-  };
+
+      windowConfig.slotAddress = targetSlot.layoutAddress;
+      windowConfig.id = windowConfig.id || $.genUUID();
+
+      _this.eventEmitter.publish("windowSlotAdded", {id: windowConfig.id, slotAddress: windowConfig.slotAddress});
+
+      //extend the windowConfig with the default settings
+      var mergedConfig = jQuery.extend(true, {}, _this.state.getStateProperty('windowSettings'), windowConfig);
+      //"rename" some keys in the merged object to align settings parameters with window parameters
+      if (mergedConfig.loadedManifest) {
+        // TODO: remove the second || operand, after our manifests are not named with a trailing .json
+        mergedConfig.manifest = _this.state.getStateProperty('manifests')[mergedConfig.loadedManifest] || _this.state.getStateProperty('manifests')[mergedConfig.loadedManifest + '.json'];
+        delete mergedConfig.loadedManifest;
+      }
+
+      //"rename" some keys in the merged object to align settings parameters with window parameters
+      if (mergedConfig.hasOwnProperty('loadedManifest')) {
+        mergedConfig.manifest = _this.state.getStateProperty('manifests')[mergedConfig.loadedManifest];
+        delete mergedConfig.loadedManifest;
+      }
+
+      if (mergedConfig.hasOwnProperty('bottomPanel')) {
+        mergedConfig.bottomPanelAvailable = mergedConfig.bottomPanel;
+        delete mergedConfig.bottomPanel;
+      }
+
+      if (mergedConfig.hasOwnProperty('sidePanel')) {
+        mergedConfig.sidePanelAvailable = mergedConfig.sidePanel;
+        delete mergedConfig.sidePanel;
+      }
+
+      if (mergedConfig.hasOwnProperty('overlay')) {
+        mergedConfig.overlayAvailable = mergedConfig.overlay;
+        delete mergedConfig.overlay;
+      }
+
+      // add lockGroups
+      mergedConfig.lockController = _this.lockController;
+
+      newWindow = new $.Window(mergedConfig);
+      _this.windows.push(newWindow);
+
+      targetSlot.window = newWindow;
+
+      _this.eventEmitter.publish("windowAdded", {id: windowConfig.id, slotAddress: windowConfig.slotAddress});
+
+  },
+
+  removeWindow: function(windowId) {
+    var _this = this;
+
+    _this.windows = _this.windows.filter(function(window) {
+      return window.id !== windowId;
+    });
+    _this.eventEmitter.publish('windowRemoved', windowId);
+  }
+};
 }(Mirador));
