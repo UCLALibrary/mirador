@@ -4,15 +4,16 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-compress');
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-contrib-jshint');
+  grunt.loadNpmTasks("gruntify-eslint");
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-git-describe');
+  grunt.loadNpmTasks('grunt-contrib-less');
   grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-githooks');
-  // grunt.loadNpmTasks('jasmine-jquery');
 
   // ----------
   var distribution = 'build/mirador/mirador.js',
@@ -21,36 +22,37 @@ module.exports = function(grunt) {
 
   // libraries/plugins
   vendors = [
-    'js/lib/jquery.min.js',
-    'js/lib/jquery-migrate-3.0.0.min.js',
-    'js/lib/jquery-ui.min.js',
-    'js/lib/modal.js',
-    'js/lib/bootbox.js',
-    'js/lib/jquery.scrollTo.min.js',
+    'node_modules/jquery/dist/jquery.min.js',
+    'node_modules/jquery-migrate/dist/jquery-migrate.min.js',
+    'node_modules/jquery-ui-dist/jquery-ui.min.js',
+    'node_modules/bootstrap/js/modal.js',
+    'node_modules/bootstrap/js/transition.js',
+    'node_modules/bootbox/bootbox.js',
+    'node_modules/jquery.scrollto/jquery.scrollTo.min.js',
     'js/lib/jquery.qtip.min.js',
-    'js/lib/state-machine.min.js',
-    'js/lib/tinymce.min.js',
-    'js/lib/handlebars.js',
-    'js/lib/openseadragon.js',
-    'js/lib/d3.v3.min.js',
-    'js/lib/pubsub.min.js',
-    'js/lib/URI.min.js',
-    'js/lib/mousetrap.min.js',
+    'node_modules/javascript-state-machine/state-machine.min.js',
+    'node_modules/tinymce/tinymce.min.js',
+    'node_modules/handlebars/dist/handlebars.js',
+    'node_modules/openseadragon/build/openseadragon/openseadragon.js',
+    'node_modules/d3/d3.min.js',
+    'node_modules/jquery-plugin/dist/ba-tiny-pubsub.js',
+    'node_modules/urijs/src/URI.min.js',
+    'node_modules/mousetrap/mousetrap.min.js',
     'js/lib/isfahan.js',
-    'js/lib/paper-full.min.js',
-    'js/lib/spectrum.js',
-    'js/lib/i18next.min.js',
-    'js/lib/modernizr.custom.js'
-  ],
-
-  // libraries/plugins for running tests
-  specJs = [
-    'bower_components/jasmine-jquery/lib/jasmine-jquery.js',
-    'bower_components/sinon-server/index.js'
+    'node_modules/paper/dist/paper-core.min.js',
+    'node_modules/spectrum-colorpicker/spectrum.js',
+    'node_modules/i18next/i18next.min.js',
+    'node_modules/i18next-browser-languagedetector/i18nextBrowserLanguageDetector.min.js',
+    'node_modules/i18next-xhr-backend/i18nextXHRBackend.min.js',
+    'bower_components/simplePagination.js/jquery.simplePagination.js',
+    'js/lib/modernizr.custom.js',
+    'js/lib/sanitize-html.min.js'
   ],
 
   // source files
   sources = [
+    'js/src/mirador.js',
+    'js/src/utils/handlebars.js',
     'js/src/*.js',
     'js/src/viewer/*.js',
     'js/src/manifests/*.js',
@@ -58,14 +60,7 @@ module.exports = function(grunt) {
     'js/src/workspaces/*.js',
     'js/src/widgets/*.js',
     'js/src/utils/*.js'
-  ],
-
-  specs = ['spec/**/*js'];
-  exclude = [];
-
-  if (!grunt.option('full')) {
-    exclude.push('spec/mirador.test.js');
-  }
+  ];
 
   // ----------
   // Project configuration.
@@ -95,15 +90,23 @@ module.exports = function(grunt) {
         src: [
           'css/bootstrap.modals.css',
           'css/normalize.css',
-          'css/font-awesome.min.css',
+          'node_modules/font-awesome/css/font-awesome.min.css',
           'css/jquery-ui.min.css',
-          'css/layout-default-latest.css',
           'css/jquery.qtip.min.css',
-          'css/spectrum.css',
+          'node_modules/spectrum-colorpicker/spectrum.css',
           'css/mirador.css',
-          'css/material-icons.css'
+          'css/material-icons.css',
+          'bower_components/simplePagination.js/simplePagination.css'
         ],
         dest: 'build/mirador/css/mirador-combined.css'
+      }
+    },
+
+    less: {
+      compile: {
+        files: {
+          'css/mirador.css': 'css/mirador.less/main.less'
+        }
       }
     },
 
@@ -117,10 +120,11 @@ module.exports = function(grunt) {
     uglify: {
       options: {
         preserveComments: 'some',
-        mangle: false
+        mangle: false,
+        sourceMap: true
       },
       mirador: {
-        src: [ distribution ],
+        src: [vendors, sources],
         dest: minified
       }
     },
@@ -133,17 +137,17 @@ module.exports = function(grunt) {
           dest: 'build/mirador/'
         }, {
           expand: true,
-          cwd: 'css/',
+          cwd: 'node_modules/tinymce',
           src: 'themes/**',
           dest: 'build/mirador'
         }, {
           expand: true,
-          cwd: 'css/',
+          cwd: 'node_modules/tinymce',
           src: 'skins/**',
           dest: 'build/mirador'
         }, {
           expand: true,
-          cwd: 'css/',
+          cwd: 'node_modules/tinymce',
           src: 'plugins/**',
           dest: 'build/mirador'
         }, {
@@ -152,8 +156,14 @@ module.exports = function(grunt) {
           dest: 'build/mirador'
         }, {
           expand: true,
+          cwd: 'node_modules/font-awesome',
           src: 'fonts/*',
           dest: 'build/mirador'
+        }, {
+          expand: true,
+          cwd: 'node_modules/material-design-icons/iconfont',
+          src: 'MaterialIcons*',
+          dest: 'build/mirador/fonts'
         }, {
           src: 'js/lib/parse.min.js',
           dest: 'build/mirador/parse.min.js'
@@ -161,7 +171,7 @@ module.exports = function(grunt) {
           src: 'js/lib/ZeroClipboard.swf',
           dest: 'build/mirador/ZeroClipboard.swf'
         }, {
-	  expand: true,
+          expand: true,
           src: 'locales/**',
           dest: 'build/mirador'
         }]
@@ -191,7 +201,6 @@ module.exports = function(grunt) {
       server: {
         options: {
           port: 8000,
-          keepalive: true,
           base: '.'
         }
       }
@@ -200,7 +209,12 @@ module.exports = function(grunt) {
     watch: {
       all: {
         options: {
-          livereload: true
+          livereload: {
+            // Here we watch the files the sass task will compile to
+            // These files are sent to the live reload server after sass compiles to them
+            options: { livereload: true },
+            files: ['build/**/*']
+          }
         },
         files: [
           'Gruntfile.js',
@@ -209,10 +223,18 @@ module.exports = function(grunt) {
           'locales/*/*.json',
           'images/*',
           'css/*.css',
+          'css/mirador.less/**/*.less',
           'index.html'
         ],
         tasks: 'dev_build'
       }
+    },
+
+    eslint: {
+      options: {
+        silent: true
+      },
+      src: sources
     },
 
     jshint: {
@@ -224,10 +246,9 @@ module.exports = function(grunt) {
         jshintrc: '.jshintrc',
         globals: {
           Mirador: true
-        },
+        }
       },
       beforeconcat: sources
-
     },
 
     'git-describe': {
@@ -235,13 +256,6 @@ module.exports = function(grunt) {
         options: {
           prop: 'gitInfo'
         }
-      }
-    },
-
-    githooks: {
-      all: {
-        'pre-commit': 'jshint'
-        // 'post-checkout':
       }
     },
 
@@ -268,16 +282,19 @@ module.exports = function(grunt) {
       grunt.file.copy(abspath, dest);
     });
   });
+  // ----------
+  // Lint task
+  grunt.registerTask('lint', ['jshint', 'eslint'])
 
   // ----------
   // Build task.
   // Cleans out the build folder and builds the code and images into it, checking lint.
-  grunt.registerTask('build', [ 'clean:build', 'git-describe', 'jshint', 'concat', 'cssmin', 'copy' ]);
+  grunt.registerTask('build', [ 'clean:build', 'git-describe', 'lint', 'less', 'concat:css', 'uglify', 'cssmin', 'copy']);
 
   // ----------
   // Dev Build task.
   // Build, but skip the time-consuming and obscurantist minification and uglification.
-  grunt.registerTask('dev_build', [ 'clean:build', 'git-describe', 'jshint', 'concat', 'copy' ]);
+  grunt.registerTask('dev_build', [ 'clean:build', 'git-describe', 'lint', 'less', 'concat', 'copy']);
 
   // ----------
   // Package task.
@@ -297,11 +314,11 @@ module.exports = function(grunt) {
   // ----------
   // Connect task.
   // Runs server at specified port
-  grunt.registerTask('server', ['connect']);
+  grunt.registerTask('serve', ['dev_build', 'connect:server', 'watch']);
 
   // ----------
   // Runs this on travis.
   grunt.registerTask('ci', [
-                     'jshint'
+                     'lint'
   ]);
 };

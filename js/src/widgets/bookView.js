@@ -78,7 +78,7 @@
       }
     },
 
-    template: Handlebars.compile([
+    template: $.Handlebars.compile([
                                  '<div class="book-view">',
                                  '</div>'
     ].join('')),
@@ -328,6 +328,11 @@ bindEvents: function() {
               _this.osd.viewport.goHome(true);
             }
           };
+
+          if (_this.boundsToFocusOnNextOpen) {
+            _this.eventEmitter.publish('fitBounds.' + _this.windowId, _this.boundsToFocusOnNextOpen);
+            _this.boundsToFocusOnNextOpen = null;
+          }
 
           _this.osd.world.addHandler( "add-item", addItemHandler );
 

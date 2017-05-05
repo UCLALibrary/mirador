@@ -90,7 +90,7 @@
       }
     },
 
-    template: Handlebars.compile([
+    template: $.Handlebars.compile([
                                  '<div class="image-view">',
                                  '</div>'
     ].join('')),
@@ -680,6 +680,11 @@
           } else {
             // else reset bounds for this image
             _this.setBounds();
+          }
+
+          if (_this.boundsToFocusOnNextOpen) {
+            _this.eventEmitter.publish('fitBounds.' + _this.windowId, _this.boundsToFocusOnNextOpen);
+            _this.boundsToFocusOnNextOpen = null;
           }
 
           _this.addAnnotationsLayer(_this.elemAnno);

@@ -12,6 +12,8 @@
     return new $.Overlay(this, osdViewerId, windowId, state, eventEmitter);
   };
 
+  var FILL_COLOR_ALPHA_WORKAROUND = 0.00001;
+
   $.Overlay = function(viewer, osdViewerId, windowId, state, eventEmitter) {
     var drawingToolsSettings = state.getStateProperty('drawingToolsSettings');
     this.drawingToolsSettings = drawingToolsSettings;
@@ -34,6 +36,7 @@
       availableAnnotationDrawingTools: availableAnnotationDrawingTools,
       availableExternalCommentsPanel: availableExternalCommentsPanel,
       dashArray: [],
+      strokeWidth: 1,
       fixedShapeSize: drawingToolsSettings.fixedShapeSize,
       selectedColor: drawingToolsSettings.selectedColor || '#004c66',
       shapeHandleSize:drawingToolsSettings.shapeHandleSize,
@@ -50,6 +53,7 @@
     this.currentTool = null;
     // Default colors.
     this.dashArray = [];
+    this.strokeWidth = 1;
     this.strokeColor = drawingToolsSettings.strokeColor;
     this.fillColor = drawingToolsSettings.fillColor;
     this.fillColorAlpha = drawingToolsSettings.fillColorAlpha;
@@ -97,43 +101,65 @@
               center: _this.path.segments[0].point,
               radius: _this.hitOptions.tolerance / _this.paperScope.view.zoom,
               fillColor: _this.path.strokeColor,
-              strokeColor: _this.path.strokeColor
+              strokeColor: _this.path.strokeColor,
+              strokeWidth: _this.path.strokeWidth
             });
           }
         }
       };
-      var mouseTool = jQuery.data(document.body, 'draw_canvas_' + _this.windowId);
-      if (mouseTool) {
-        mouseTool.remove();
-      }
-      mouseTool = new this.paperScope.Tool();
-      mouseTool.overlay = this;
-      mouseTool.onMouseUp = _this.onMouseUp;
-      mouseTool.onMouseDrag = _this.onMouseDrag;
-      mouseTool.onMouseMove = _this.onMouseMove;
-      mouseTool.onMouseDown = _this.onMouseDown;
-      mouseTool.onDoubleClick = _this.onDoubleClick;
-      mouseTool.onKeyDown = function(event){};
-      jQuery.data(document.body, 'draw_canvas_' + _this.windowId, mouseTool);
 
+      // Key for saving mouse tool as data attribute
+      // TODO: It seems its main use is for destroy the old paperjs mouse tool
+      // when a new Overlay is instantiated. Maybe a better scheme can be
+      // devised in the future?
+      this.mouseToolKey = 'draw_canvas_' + _this.windowId;
+
+      this.setMouseTool();
       this.listenForActions();
+    },
+
+    /**
+     * Adds a Tool that handles mouse events for the paperjs scope.
+     */
+    setMouseTool: function() {
+      this.removeMouseTool();
+      this.paperScope.activate();
+
+      this.mouseTool = new this.paperScope.Tool();
+      this.mouseTool.overlay = this;
+      this.mouseTool.onMouseUp = this.onMouseUp;
+      this.mouseTool.onMouseDrag = this.onMouseDrag;
+      this.mouseTool.onMouseMove = this.onMouseMove;
+      this.mouseTool.onMouseDown = this.onMouseDown;
+      this.mouseTool.onDoubleClick = this.onDoubleClick;
+      this.mouseTool.onKeyDown = function(event){};
+    },
+
+    /**
+     * Removes the mouse Tool from the paperjs scope.
+     */
+    removeMouseTool: function() {
+      if (this.mouseTool) {
+        this.mouseTool.remove();
+      }
     },
 
     handleDeleteShapeEvent: function (event, shape) {
       var _this = this;
       new $.DialogBuilder(this.slotWindowElement).dialog({
-        message: i18n.t('deleteShape'),
+        message: i18next.t('deleteShape'),
         closeButton: false,
+        className: 'mirador-dialog',
         buttons: {
           'no': {
-            label: i18n.t('no'),
+            label: i18next.t('no'),
             className: 'btn-default',
             callback: function() {
               return;
             }
           },
           'yes': {
-            label: i18n.t('yes'),
+            label: i18next.t('yes'),
             className: 'btn-primary',
             callback: function() {
               _this.deleteShape(shape);
@@ -202,6 +228,9 @@
 
       this.eventsSubscriptions.push(_this.eventEmitter.subscribe('changeFillColor.' + _this.windowId, function(event, color, alpha) {
         _this.fillColor = color;
+        if(alpha === 0){
+          alpha = FILL_COLOR_ALPHA_WORKAROUND;
+        }
         _this.fillColorAlpha = alpha;
         if (_this.hoveredPath && _this.hoveredPath.closed) {
           _this.hoveredPath.fillColor = color;
@@ -213,13 +242,23 @@
       this.eventsSubscriptions.push(_this.eventEmitter.subscribe('toggleBorderType.' + _this.windowId, function (event, type) {
         if (type == 'solid') {
           _this.dashArray = [];
+          _this.strokeWidth = 1;
+        } else if (type == 'thick') {
+          _this.dashArray = [];
+          _this.strokeWidth = 3;
+        } else if (type == 'thickest') {
+          _this.dashArray = [];
+          _this.strokeWidth = 6;
         } else if (type == 'dashed') {
           _this.dashArray = [5, 5];
+          _this.strokeWidth = 1;
         } else if (type == 'dotdashed') {
           _this.dashArray = [2, 5, 7, 5];
+          _this.strokeWidth = 1;
         }
         if (_this.hoveredPath) {
           _this.hoveredPath.dashArray = _this.dashArray;
+          _this.hoveredPath.strokeWidth = _this.strokeWidth;
           _this.paperScope.view.draw();
         }
       }));
@@ -228,11 +267,12 @@
         var onAnnotationSaved = jQuery.Deferred();
         if (!_this.draftPaths.length) {
             new $.DialogBuilder(_this.slotWindowElement).dialog({
-              message: i18n.t('editModalSaveAnnotationWithNoShapesMsg'),
+              message: i18next.t('editModalSaveAnnotationWithNoShapesMsg'),
               closeButton: false,
+              className: 'mirador-dialog',
               buttons: {
                 success: {
-                  label: i18n.t('editModalBtnSaveWithoutShapes'),
+                  label: i18next.t('editModalBtnSaveWithoutShapes'),
                   className: 'btn-success',
                   callback: function () {
                     oaAnno.on = {
@@ -245,7 +285,7 @@
                   }
                 },
                 danger: {
-                  label: i18n.t('editModalBtnDeleteAnnotation'),
+                  label: i18next.t('editModalBtnDeleteAnnotation'),
                   className: 'btn-danger',
                   callback: function () {
                     _this.eventEmitter.publish('annotationDeleted.' + _this.windowId, [oaAnno['@id']]);
@@ -253,7 +293,7 @@
                   }
                 },
                 main: {
-                  label: i18n.t('cancel'),
+                  label: i18next.t('cancel'),
                   className: 'btn-default',
                   callback: function () {
                     onAnnotationSaved.reject();
@@ -262,19 +302,12 @@
               }
             });
         } else {
-          var svg = _this.getSVGString(_this.draftPaths);
-          oaAnno.on = {
-            "@type": "oa:SpecificResource",
-            "full": _this.state.getWindowObjectById(_this.windowId).canvasID,
-            "selector": {
-              "@type": "oa:SvgSelector",
-              "value": svg
-            },
-            "within": {
-              "@id": _this.state.getWindowObjectById(_this.windowId).loadedManifest,
-              "@type": "sc:Manifest"
-            }
-          };
+          var writeStrategy = new $.MiradorDualStrategy();
+          writeStrategy.buildAnnotation({
+            annotation: oaAnno,
+            window: _this.state.getWindowObjectById(_this.windowId),
+            overlay: _this
+          });
           //save to endpoint
           _this.eventEmitter.publish('annotationUpdated.' + _this.windowId, [oaAnno]);
           onAnnotationSaved.resolve();
@@ -319,26 +352,18 @@
         //should remove the styles added for newly created annotation
         for(var i=0;i<_this.draftPaths.length;i++){
           if(_this.draftPaths[i].data && _this.draftPaths[i].data.newlyCreated){
-            _this.draftPaths[i].strokeWidth /= _this.draftPaths[i].data.newlyCreatedStrokeFactor;
-            _this.draftPaths[i].data.currentStrokeValue /= _this.draftPaths[i].data.newlyCreatedStrokeFactor;
+            _this.draftPaths[i].strokeWidth = _this.draftPaths[i].data.strokeWidth; // TODO: removed newlyCreatedStrokeFactor stuff here
             delete _this.draftPaths[i].data.newlyCreated;
             delete _this.draftPaths[i].data.newlyCreatedStrokeFactor;
           }
         }
 
-        var svg = _this.getSVGString(_this.draftPaths);
-        oaAnno.on = {
-          "@type": "oa:SpecificResource",
-          "full": _this.state.getWindowObjectById(_this.windowId).canvasID,
-          "selector": {
-            "@type": "oa:SvgSelector",
-            "value": svg
-          },
-          "within": {
-            "@id": _this.state.getWindowObjectById(_this.windowId).loadedManifest,
-              "@type": "sc:Manifest"
-          }
-        };
+        var writeStrategy = new $.MiradorDualStrategy();
+        writeStrategy.buildAnnotation({
+          annotation: oaAnno,
+          window: _this.state.getWindowObjectById(_this.windowId),
+          overlay: _this
+        });
         //save to endpoint
         _this.eventEmitter.publish('annotationCreated.' + _this.windowId, [oaAnno, function() {
           // stuff that needs to be called after the annotation has been created on the backend
@@ -366,18 +391,19 @@
         };
         if (!immediate) {
           new $.DialogBuilder(_this.slotWindowElement).dialog({
-            message: i18n.t('cancelAnnotation'),
+            message: i18next.t('cancelAnnotation'),
             closeButton: false,
+            className: 'mirador-dialog',
             buttons: {
               'no': {
-                label: i18n.t('no'),
+                label: i18next.t('no'),
                 className: 'btn-default',
                 callback: function() {
                   return;
                 }
               },
               'yes': {
-                label: i18n.t('yes'),
+                label: i18next.t('yes'),
                 className: 'btn-primary',
                 callback: function() {
                   cancel();
@@ -679,9 +705,9 @@
           if(this.getTool(allItems[j]).onResize){
             this.getTool(allItems[j]).onResize(allItems[j],this);
           }
-          allItems[j].strokeWidth = allItems[j].data.currentStrokeValue / this.paperScope.view.zoom;
+          allItems[j].strokeWidth = allItems[j].data.strokeWidth / this.paperScope.view.zoom;
           if (allItems[j].style) {
-            allItems[j].style.strokeWidth = allItems[j].data.currentStrokeValue / this.paperScope.view.zoom;
+            allItems[j].style.strokeWidth = allItems[j].data.strokeWidth / this.paperScope.view.zoom;
           }
         }
       }
@@ -777,14 +803,17 @@
         name: shape.name
       });
 
-      cloned.data.defaultStrokeValue = 1;
-      cloned.data.editStrokeValue = 5;
-      cloned.data.currentStrokeValue = cloned.data.defaultStrokeValue;
-      cloned.strokeWidth = cloned.data.currentStrokeValue / this.paperScope.view.zoom;
+      cloned.data.strokeWidth = shape.data.strokeWidth || 1;
+      cloned.strokeWidth = cloned.data.strokeWidth / this.paperScope.view.zoom;
       cloned.strokeColor = shape.strokeColor;
       cloned.dashArray = shape.dashArray;
       if (shape.fillColor) {
         cloned.fillColor = shape.fillColor;
+
+        // workaround for paper js fill hit test
+        if(shape.fillColor.alpha === 0){
+          shape.fillColor.alpha = FILL_COLOR_ALPHA_WORKAROUND;
+        }
         if (shape.fillColor.alpha) {
           cloned.fillColor.alpha = shape.fillColor.alpha;
         }
@@ -811,12 +840,13 @@
       };
       var currentMode = this.mode;
       var currentPath = this.path;
+      var strokeWidth = this.strokeWidth;
       var strokeColor = this.strokeColor;
       var fillColor = this.fillColor;
-      var fillColorAlpha = this.fillColorAlpha;
+      var fillColorAlpha = this.fillColorAlpha || FILL_COLOR_ALPHA_WORKAROUND;
       this.strokeColor = this.state.getStateProperty('drawingToolsSettings').strokeColor;
       this.fillColor = this.state.getStateProperty('drawingToolsSettings').fillColor;
-      this.fillColorAlpha = this.state.getStateProperty('drawingToolsSettings').fillColorAlpha;
+      this.fillColorAlpha = this.state.getStateProperty('drawingToolsSettings').fillColorAlpha || FILL_COLOR_ALPHA_WORKAROUND;
       this.mode = 'create';
       this.path = rect.createShape(initialPoint, this);
       var eventData = {
@@ -830,6 +860,7 @@
       paperItems[0].data.annotation = annotation;
       this.updateSelection(false, paperItems[0]);
       this.strokeColor = strokeColor;
+      this.strokeWidth = strokeWidth;
       this.fillColor = fillColor;
       this.fillColorAlpha = fillColorAlpha;
       this.path = currentPath;
@@ -869,7 +900,7 @@
           if (shapeArray[idx].name == this.editedPaths[i].name) {
             shapeArray[idx].segments = this.editedPaths[i].segments;
             shapeArray[idx].name = this.editedPaths[i].name;
-            shapeArray[idx].strokeWidth = shapeArray[idx].data.currentStrokeValue / this.paperScope.view.zoom;
+            shapeArray[idx].strokeWidth = this.editedPaths[i].strokeWidth; // TODO: removed --> / this.paperScope.view.zoom;
             shapeArray[idx].strokeColor = this.editedPaths[i].strokeColor;
             shapeArray[idx].dashArray = this.editedPaths[i].dashArray;
             if (this.editedPaths[i].fillColor) {
@@ -880,7 +911,7 @@
             }
             if (this.editedPaths[i].style) {
               shapeArray[idx].style = this.editedPaths[i].style;
-              shapeArray[idx].style.strokeWidth = shapeArray[idx].data.currentStrokeValue / this.paperScope.view.zoom;
+              shapeArray[idx].style.strokeWidth = shapeArray[idx].data.strokeWidth / this.paperScope.view.zoom;
             }
             shapeArray[idx].closed = this.editedPaths[i].closed;
             shapeArray[idx].data.rotation = this.editedPaths[i].data.rotation;
@@ -1000,8 +1031,7 @@
       var newlyCreatedStrokeFactor = this.drawingToolsSettings.newlyCreatedShapeStrokeWidthFactor || 5;
       shape.data.newlyCreatedStrokeFactor = newlyCreatedStrokeFactor;
       shape.data.newlyCreated = true;
-      shape.data.currentStrokeValue *= newlyCreatedStrokeFactor;
-      shape.strokeWidth *= newlyCreatedStrokeFactor;
+      shape.strokeWidth = shape.data.strokeWidth * newlyCreatedStrokeFactor;
 
       this.hoveredPath = shape;
       this.segment = null;

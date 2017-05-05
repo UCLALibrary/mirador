@@ -51,7 +51,8 @@
         "BookView" : "fa fa-columns fa-lg fa-fw",
         "ScrollView" : "fa fa-ellipsis-h fa-lg fa-fw",
         "ThumbnailsView" : "fa fa-th fa-lg fa-rotate-90 fa-fw"
-      }
+      },
+      userButtons: null
     }, options);
 
     this.init();
@@ -150,9 +151,8 @@
       }
       templateData.currentFocusClass = _this.iconClasses[_this.viewType];
       templateData.showFullScreen = _this.fullScreen;
-
+      templateData.userButtons = _this.userButtons;
       templateData.synchronizedWindowGroups = this.state.getStateProperty('mainMenuSettings').buttons.synchronizedWindowGroups;
-
       _this.element = jQuery(this.template(templateData)).appendTo(_this.appendTo);
       this.element.find('.manifest-info .mirador-tooltip').each(function() {
         jQuery(this).qtip({
@@ -318,7 +318,18 @@
       }));
 
       _this.events.push(_this.eventEmitter.subscribe('SET_CURRENT_CANVAS_ID.' + this.id, function(event, canvasID) {
-        _this.setCurrentCanvasID(canvasID);
+        //_this.setCurrentCanvasID(canvasID);
+        if (typeof canvasID === "string") {
+          _this.setCurrentCanvasID(canvasID);
+        } else {
+          if (_this.canvasID !== canvasID.canvasID) {
+            // Order is important
+            _this.setNextCanvasBounds(canvasID.bounds);
+            _this.setCurrentCanvasID(canvasID.canvasID);
+          } else {
+            _this.eventEmitter.publish('fitBounds.' + _this.id, canvasID.bounds);
+          }
+        }
 
         if (_this.leading) {
           _this.eventEmitter.publish('syncWindowNavigationControls', {
@@ -621,7 +632,8 @@
       var _this = this,
       tocAvailable = _this.sidePanelOptions.toc,
       annotationsTabAvailable = _this.sidePanelOptions.annotations,
-      layersTabAvailable = _this.sidePanelOptions.layers,
+      layersTabAvailable = _this.sidePanelOptions.layersTabAvailable,
+      searchTabAvailable = _this.sidePanelOptions.searchTabAvailable,
       hasStructures = true;
 
       var structures = _this.manifest.getStructures();
@@ -639,6 +651,7 @@
               canvasID: _this.canvasID,
               layersTabAvailable: layersTabAvailable,
               tocTabAvailable: tocAvailable,
+              searchTabAvailable: searchTabAvailable,
               annotationsTabAvailable: annotationsTabAvailable,
               hasStructures: hasStructures
         });
@@ -757,7 +770,7 @@
       this.updateManifestInfo();
       this.updatePanelsAndOverlay(focusState);
       this.updateSidePanel();
-      _this.eventEmitter.publish("focusUpdated");
+      _this.eventEmitter.publish("focusUpdated" + _this.id, focusState);
       _this.eventEmitter.publish("windowUpdated", {
         id: _this.id,
         viewType: _this.viewType,
@@ -805,10 +818,13 @@
           canvasControls: this.canvasControls,
           annotationState : this.canvasControls.annotations.annotationState
         });
-      } else {
-        var view = this.focusModules.ImageView;
-        view.updateImage(canvasID);
-      }
+        } else {
+          var view = this.focusModules.ImageView;
+          if (this.boundsToFocusOnNextOpen) {
+            view.boundsToFocusOnNextOpen = this.boundsToFocusOnNextOpen;
+          }
+          view.updateImage(canvasID);
+        }
       this.toggleFocus('ImageView', 'ImageView');
     },
 
@@ -881,6 +897,12 @@
       _this.eventEmitter.publish(('currentCanvasIDUpdated.' + _this.id), canvasID);
     },
 
+    setNextCanvasBounds: function(bounds) {
+      if (bounds) {
+        this.boundsToFocusOnNextOpen = bounds;
+      }
+    },
+
     replaceWindow: function(newSlotAddress, newElement) {
       this.slotAddress = newSlotAddress;
       this.appendTo = newElement;
@@ -939,7 +961,7 @@
           _this.endpoint.set('dfd', dfd);
         } else {
           options.dfd = dfd;
-          options.windowIDwindowID = _this.id;
+          options.windowID = _this.id;
           options.imagesList = _this.imagesList;
           options.eventEmitter = _this.eventEmitter;
           _this.endpoint = new $[module](options);
@@ -1043,10 +1065,13 @@
     },
 
     // template should be based on workspace type
-    template: Handlebars.compile([
+    template: $.Handlebars.compile([
                                  '<div class="window">',
                                  '<div class="manifest-info">',
                                  '<div class="window-manifest-navigation">',
+                                 '{{#if userButtons}}',
+                                   '{{windowuserbtns userButtons}}',
+                                 '{{/if}}',
                                  '<a href="javascript:;" class="mirador-btn mirador-icon-view-type" role="button" title="{{t "viewTypeTooltip"}}" aria-label="{{t "viewTypeTooltip"}}">',
                                  '<i class="{{currentFocusClass}}"></i>',
                                  '<i class="fa fa-caret-down"></i>',
@@ -1113,7 +1138,7 @@
                                  '</ul>',
                                  '</a>',
                                  '{{/if}}',
-                                 '<h3 class="window-manifest-title" title="{{title}}" aria-label="{{title}}">{{title}}</h3>',
+                                 '<h3 class="window-manifest-title" title="{{{title}}}" aria-label="{{{title}}}">{{{title}}}</h3>',
                                  '</div>',
                                  '<div class="content-container">',
                                  '{{#if sidePanel}}',
@@ -1129,5 +1154,41 @@
                                  '</div>'
     ].join(''))
   };
+
+  var processUserButtons = function (buttons){
+    return buttons.map(function(button, index){
+      return processUserButton(button);
+    });
+  };
+
+  var processUserButton = function(button){
+    var $a = jQuery('<a>');
+    var $i = jQuery('<i>', {'class': 'fa fa-lg fa-fw'});
+    try {
+      if(!button.iconClass){
+        throw "userButtons must have an iconClass";
+      }
+      // add custom attributes to the button element
+      if(button.attributes){
+        $a.attr(button.attributes);
+      }
+      // add default class to the button element
+      $a.addClass('mirador-btn');
+      // add custom classes to the icon element
+      $i.addClass(button.iconClass);
+      // append the icon element to the button element
+      $a.append($i);
+      return $a.get(0).outerHTML;
+    }catch(error){
+      console && console.error && console.error(error);
+      return '';
+    }
+  };
+
+  $.Handlebars.registerHelper('windowuserbtns', function(userButtons){
+    return new $.Handlebars.SafeString(
+      processUserButtons(userButtons).join('')
+    );
+  });
 
 }(Mirador));
