@@ -24,7 +24,52 @@
       config.mainMenuSettings.buttons = {};
     }
 
-    this.init(jQuery.extend(true, {}, $.DEFAULT_SETTINGS, config));
+    // if a user used dot notation for nested settings, unpack
+    // e.g. windowSettings.canvasControls.annotations.annotationState
+    function index(previousValue,currentValue,currentIndex) {
+      var newObj = {};
+      newObj[currentValue] = previousValue;
+      return newObj;
+    }
+    jQuery.each(config, function(key, value) {
+      if (typeof key === "string" && key.indexOf('.') !== -1) {
+        var array = key.split('.').reverse();
+        var object = array.reduce(index, value);
+        delete config[key];
+        jQuery.extend(true, config, object);
+      }
+    });
+
+    /*
+    We want to deep copy/merge nested objects in the config, but array values should be overwritten
+    So, stringify arrays so extend overwrites them and then convert them back to arrays
+    */
+    function iterateStringify(object) {
+      for (var property in object) {
+        if (object.hasOwnProperty(property)) {
+          if (object[property] instanceof Array) {
+            object[property] = JSON.stringify(object[property]);
+          } else if (typeof object[property] === "object") {
+            iterateStringify(object[property]);
+          } else {}
+        }
+      }
+    }
+    function iterateParse(object) {
+      for (var property in object) {
+        if (object.hasOwnProperty(property)) {
+          if (typeof object[property] === "string" && object[property][0] === '[') {
+            object[property] = JSON.parse(object[property]);
+          } else if (typeof object[property] === "object") {
+            iterateParse(object[property]);
+          } else {}
+        }
+      }
+    }
+    iterateStringify(config);
+    var newConfig = jQuery.extend(true, {}, $.DEFAULT_SETTINGS, config);
+    iterateParse(newConfig);
+    this.init(newConfig);
   };
 
   $.SaveController.prototype = {
@@ -80,9 +125,10 @@
           }
         });
       }
+
       // see: http://html5demos.com/history and http://diveintohtml5.info/history.html
       // put history stuff here, for a great cross-browser demo, see: http://browserstate.github.io/history.js/demo/
-      //http://stackoverflow.com/questions/17801614/popstate-passing-popped-state-to-event-handler
+      // http://stackoverflow.com/questions/17801614/popstate-passing-popped-state-to-event-handler
 
       //also remove ?json bit so it's a clean URL
       var cleanURL = window.location.href.replace(window.location.search, "");
@@ -169,6 +215,10 @@
       // listen to existing events and use the
       // available data to update the appropriate
       // field in the stored config.
+
+      _this.eventEmitter.subscribe('manifestsPanelVisible.set', function(event, manifestPanelVisible) {
+        _this.set("manifestPanelVisible", manifestPanelVisible, {parent: "currentConfig"} );
+      });
 
       _this.eventEmitter.subscribe('windowUpdated', function(event, options) {
         var windowObjects = _this.currentConfig.windowObjects;

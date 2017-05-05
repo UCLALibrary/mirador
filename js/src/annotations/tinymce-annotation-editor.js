@@ -4,7 +4,11 @@
 
     jQuery.extend(this, {
       annotation: null,
-      windowId: null
+      windowId: null,
+      config: {
+        plugins: '',
+        toolbar: ''
+      }
     }, options);
 
     this.init();
@@ -42,11 +46,12 @@
         .prepend(this.editorMarkup);
       tinymce.init({
         selector: selector + ' textarea',
-        plugins: "image link media",
+        plugins: this.config.plugins,
         menubar: false,
         statusbar: false,
         toolbar_items_size: 'small',
-        toolbar: "bold italic | bullist numlist | link image media | removeformat",
+        toolbar: this.config.toolbar,
+        default_link_target:"_blank",
         setup: function(editor) {
           editor.on('init', function(args) {
             tinymce.execCommand('mceFocus', false, args.target.id);
@@ -131,7 +136,7 @@
       });
     },
 
-    editorTemplate: Handlebars.compile([
+    editorTemplate: $.Handlebars.compile([
       '<textarea class="text-editor" placeholder="{{t "comments"}}…">{{#if content}}{{content}}{{/if}}</textarea>',
       '<input id="tags-editor-{{windowId}}" class="tags-editor" placeholder="{{t "addTagsHere"}}…" {{#if tags}}value="{{tags}}"{{/if}}>'
     ].join(''))

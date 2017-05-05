@@ -20,7 +20,7 @@
       saveModule = jsonStorageEndpoint.module,
       saveOptions = jsonStorageEndpoint.options;
       this.storageModule = new $[saveModule](saveOptions);
-      
+
       this.bindEvents();
       this.listenForActions();
     },
@@ -62,7 +62,7 @@
       jQuery(this.element).show({effect: "slide", direction: "up", duration: 300, easing: "swing"});
     },
 
-    template: Handlebars.compile([
+    template: $.Handlebars.compile([
        '<div id="bookmark-panel">',
          '<h3>{{t "bookmarkTitle"}}</h3>',
          '<span>',

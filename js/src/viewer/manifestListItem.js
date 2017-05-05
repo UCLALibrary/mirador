@@ -36,7 +36,7 @@
       this.maxPreviewImagesWidth = this.resultsWidth - (this.repoWidth + this.margin + this.metadataWidth + this.margin + this.remainingWidth);
       this.maxPreviewImagesWidth = this.maxPreviewImagesWidth * 0.95;
 
-      Handlebars.registerHelper('pluralize', function(count, singular, plural) {
+      $.Handlebars.registerHelper('pluralize', function(count, singular, plural) {
         if (count === 1) {
           return singular;
         } else {
@@ -45,10 +45,10 @@
       });
 
       this.fetchTplData(this.manifestId);
-      
+
       if (_this.state.getStateProperty('preserveManifestOrder')) {
         if (this.appendTo.children().length === 0) {
-          this.element = jQuery(this.template(this.tplData)).prependTo(this.appendTo).hide().fadeIn('slow');          
+          this.element = jQuery(this.template(this.tplData)).prependTo(this.appendTo).hide().fadeIn('slow');
         } else {
           var liList = _this.appendTo.find('li');
           jQuery.each(liList, function(index, item) {
@@ -58,7 +58,7 @@
               if (current <= prev && (next > current || isNaN(next)) ) {
                 _this.element = jQuery(_this.template(_this.tplData)).insertBefore(jQuery(item)).hide().fadeIn('slow');
                 return false;
-              } else if (current > prev && (current < next || isNaN(next))) {                
+              } else if (current > prev && (current < next || isNaN(next))) {
                 _this.element = jQuery(_this.template(_this.tplData)).insertAfter(jQuery(item)).hide().fadeIn('slow');
                 return false;
               }
@@ -93,12 +93,7 @@
           if (typeof manifest.logo['@id'] !== 'undefined')
             return manifest.logo['@id'];
         }
-        if (_this.tplData.repository === '(Added from URL)') {
-          repo = '';
-        }
-        var imageName = _this.state.getStateProperty('repoImages')[repo || 'other'] || _this.state.getStateProperty('repoImages').other;
-
-        return _this.state.getStateProperty('buildPath') + _this.state.getStateProperty('logosPath') + imageName;
+        return '';
       })();
 
       for ( var i=0; i < manifest.sequences[0].canvases.length; i++) {
@@ -194,10 +189,15 @@
         if (newMaxPreviewWidth < _this.maxPreviewImagesWidth ) {
           while (_this.imagesTotalWidth >= newMaxPreviewWidth) {
             image = _this.tplData.images.pop();
-            _this.imagesTotalWidth -= (image.width + _this.margin);
 
-            //remove image from dom
-            _this.element.find('img[data-image-id="'+image.id+'"]').remove();
+            if (image) {
+              _this.imagesTotalWidth -= (image.width + _this.margin);
+
+              //remove image from dom
+              _this.element.find('img[data-image-id="'+image.id+'"]').remove();
+            } else {
+              break;
+            }
           }
           //check if need to add ellipsis
           if (_this.remaining === 0 && _this.allImages.length - _this.tplData.images.length > 0) {
@@ -235,6 +235,7 @@
           }
         }
         _this.maxPreviewImagesWidth = newMaxPreviewWidth;
+        _this.eventEmitter.publish('manifestListItemRendered');
     },
 
     hide: function() {
@@ -245,14 +246,18 @@
       var _this = this;
     },
 
-    template: Handlebars.compile([
+    template: $.Handlebars.compile([
       '<li data-index-number={{index}}>',
       '<div class="repo-image">',
+        '{{#if repoImage}}',
         '<img src="{{repoImage}}" alt="repoImg">',
+        '{{else}}',
+        '<span class="default-logo"></span>',
+        '{{/if}}',
       '</div>',
       '<div class="select-metadata">',
         '<div class="manifest-title">',
-          '<h3 title="{{label}}">{{label}}</h3>',
+          '<h3 title="{{{label}}}">{{{label}}}</h3>',
         '</div>',
         '<div class="item-info">',
           '<div class="item-info-row">',
