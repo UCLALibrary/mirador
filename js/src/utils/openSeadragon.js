@@ -23,10 +23,14 @@
           clickToZoom: false
         },
         zoomPerClick: 1.1,
-        zoomPerScroll: 1.1
+        zoomPerScroll: 1.1,
+
+        // 5 mins should be long enough
+        timeout: 300000
       }, options)
 
     );
+
 
     var ts;
     var pixelsPerMeter;
