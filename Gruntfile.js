@@ -70,7 +70,7 @@ module.exports = function(grunt) {
     pkg: grunt.file.readJSON('package.json'),
 
     clean: {
-      build: ['build'],
+      build: ['mirador'],
       release: {
         src: [releaseRoot],
         options: {
@@ -173,7 +173,7 @@ module.exports = function(grunt) {
           archive: 'mirador.zip'
         },
         files: [
-          { expand: true, cwd: 'build/', src: ['mirador/**'] }
+          { expand: true, cwd: 'mirador/', src: ['**'] }
         ]
       },
       tar: {
@@ -181,7 +181,7 @@ module.exports = function(grunt) {
           archive: 'mirador.tar'
         },
         files: [
-          { expand: true, cwd: 'build/', src: [ 'mirador/**' ] }
+          { expand: true, cwd: 'mirador/', src: [ '**' ] }
         ]
       }
     },
@@ -202,7 +202,7 @@ module.exports = function(grunt) {
             // Here we watch the files the sass task will compile to
             // These files are sent to the live reload server after sass compiles to them
             options: { livereload: true },
-            files: ['build/**/*']
+            files: ['**/*']
           }
         },
         files: [
@@ -255,7 +255,7 @@ module.exports = function(grunt) {
   // Copy:release task.
   // Copies the contents of the build folder into the release folder.
   grunt.registerTask('copy:release', function() {
-    grunt.file.recurse('build', function(abspath, rootdir, subdir, filename) {
+    grunt.file.recurse('mirador', function(abspath, rootdir, subdir, filename) {
       var dest = releaseRoot +
         (subdir ? subdir + '/' : '/') +
         filename;
