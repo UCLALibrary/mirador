@@ -843,6 +843,7 @@
      */
     selectChoiceImage: function(id) {
       var _this = this;
+      var alternateImages;
 
       /*
        * Adds a new tiled image to OSD.
@@ -863,19 +864,29 @@
         });
       };
 
+      /*
+       * Removes the old image from the OSD viewer, so that a new one can be displayed.
+       * Called when the OSD add-item event is fired.
+       */
+      var removeOldImage = function() {
+        // remove the old canvas
+        _this.osd.world.removeItem(_this.osd.world.getItemAt(0));
+
+        // update data model
+        _this.choiceImageIDs[_this.canvasID] = id;
+
+        // remove this handler, so that we don't accidentally remove anything unintentionally
+        _this.osd.removeHandler('add-item', removeOldImage);
+      };
+
       if (_this.imageChoice['default'].label === id) {
-        addAlternateImages([_this.imageChoice['default'].data]);
+        alternateImages = [_this.imageChoice['default'].data];
       }
-      else
-      {
-        addAlternateImages(_this.imageChoice.item.filter(function(e) { return e.label === id ? true : false; }).map(function(v) { return v.data; }));
+      else {
+        alternateImages = _this.imageChoice.item.filter(function(e) { return e.label === id ? true : false; }).map(function(v) { return v.data; });
       }
-
-      // remove the old canvas
-      _this.osd.world.removeItem(_this.osd.world.getItemAt(0));
-
-      // update data model
-      _this.choiceImageIDs[_this.canvasID] = id;
+      _this.osd.addHandler('add-item', removeOldImage);
+      addAlternateImages(alternateImages);
     },
 
     //TODO reuse annotationsLayer with IIIFManifestLayouts
