@@ -1,25 +1,36 @@
-[![Build Status](https://travis-ci.org/ProjectMirador/mirador.svg?branch=master)](https://travis-ci.org/ProjectMirador/mirador?branch=master)
-[![Stories in Ready](https://badge.waffle.io/ProjectMirador/mirador.svg?label=ready&title=Ready)](http://waffle.io/iiif/mirador)
+# [Mirador](http://projectmirador.org/) &middot; [![Build status](https://travis-ci.org/ProjectMirador/mirador.svg?branch=master)](https://travis-ci.org/ProjectMirador/mirador?branch=master) [![Coverage status](https://coveralls.io/repos/github/ProjectMirador/mirador/badge.svg?branch=master&upToDate=true)](https://coveralls.io/github/ProjectMirador/mirador?branch=master&upToDate=true) [![Waffle.io stories in ready](https://img.shields.io/waffle/label/ProjectMirador/mirador/ready.svg)](http://waffle.io/iiif/mirador)
 
-# Mirador
 ![mirador banner](http://projectmirador.github.io/mirador/img/banner.jpg)
-**Mirador is a multi-repository, configurable, extensible, and easy-to-integrate viewer and annotation creation and comparison environment for IIIF resources, ranging from deep-zooming artwork, to complex manuscript objects. It provides a tiling windowed environment for comparing multiple image-based resources, synchronised structural and visual navigation of content using openSeadragon, Open Annotation compliant annotation creation and viewing on deep-zoomable canvases, metadata display, bookreading, and bookmarking.**
+Mirador is a configurable, extensible, and easy-to-integrate image viewer, which enables image annotation and comparison of images from repositories dispersed around the world. Mirador has been optimized to display resources from repositories that support the [International Image Interoperability Framework](http://iiif.io) (IIIF) APIs. It provides a tiling windowed environment for comparing multiple image-based resources, synchronized structural and visual navigation of content using [OpenSeadragon](https://openseadragon.github.io), [OpenAnnotation](http://www.openannotation.org)-compliant annotation creation and viewing on deep-zoomable canvases, metadata display, book reading, bookmarking and more.
 
-### [See a Demo](http://projectmirador.org/demo/)
-### [Getting Started](http://projectmirador.org/docs/docs/getting-started.html)
+See a live demo here: http://projectmirador.org/demo.
 
-### Run in Development
-Mirador uses [node.js](http://nodejs.org/) and a build system to assemble, test, and manage the development resources. If you have never used these tools before, you may need to install them.
+## Installation
 
- 1. Install Node, if you haven't already (available at the link above)  
- 1. Clone the mirador repository (if you haven't already done so above)
- 1. On the command line, go into the mirador folder
- 1. Install all dependencies with `npm install`. Run `npm start'.
+You can find the latest release [here](https://github.com/ProjectMirador/mirador/releases/latest). For configuration details and examples, see the [Getting Started guide](http://projectmirador.org/docs/docs/getting-started.html).
+
+## Development Environment Setup
+
+Mirador uses [Node](http://nodejs.org/) and [Grunt](https://gruntjs.com/) to assemble, test, and manage the development resources. If you have never used these tools before, you'll need to install them before proceeding.
+
+Once that's done, clone the repository and do the following to start up a local development server:
+
+```bash
+cd mirador
+npm install
+npm start
+```
  
-### Run Tests
-`npm test`
+To run the automated tests:
 
-For more information, see the [Docs](http://projectmirador.org/docs/docs/getting-started.html), submit an [issue](https://github.com/projectmirador/mirador/issues), or ask on [slack](http://bit.ly/iiif-slack).
+```bash
+npm test
+```
 
-### Project Diagnostics
- [![Coverage Status](https://coveralls.io/repos/github/ProjectMirador/mirador/badge.svg?branch=master&upToDate=true)](https://coveralls.io/github/ProjectMirador/mirador?branch=master&upToDate=true)
+## Contributing
+
+See [this guide](CONTRIBUTING.md) for more information.
+
+## Help
+
+For additional help, see the [docs](http://projectmirador.org/docs/docs/index.html), submit an [issue](https://github.com/projectmirador/mirador/issues), or ask a question in the `mirador` channel in the [IIIF Slack](http://bit.ly/iiif-slack).
