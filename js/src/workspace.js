@@ -1,3 +1,4 @@
+/*jshint scripturl:true*/
 (function($) {
 
   $.Workspace = function(options) {
@@ -6,6 +7,7 @@
       workspaceSlotCls: 'slot',
       focusedSlot:      null,
       slots:            [],
+      snapGroups: { groups: [], byWindow: {}, windowGraph: new $.Graph() },
       windows:          [],
       appendTo:         null,
       layoutDescription:    null,
@@ -28,7 +30,26 @@
       //   return;
       // }
 
+      // get the z-index stacking order of windows and dragHandles
+      // must do this before calling calculateLayout, since that function will
+      // overwrite the saved stacking order
+      // TODO: fix that
+      // stackingOrder is formatted as { "windows": [], "dragHandles": [] }
+      var stackingOrder = this.state.getStateProperty('stackingOrder');
+
       this.calculateLayout();
+
+      this.restoreSnapGroups();
+      this.renderDragHandles();
+      if (stackingOrder !== undefined) {
+        // Mash the two arrays together and sort them based on zIndex
+        var sortedAndCombinedStackingOrder = stackingOrder.windows
+          .concat(stackingOrder.dragHandles)
+          .sort(function(a, b) {
+            return a.zIndex - b.zIndex;
+          });
+        this.restoreStackingOrder(sortedAndCombinedStackingOrder);
+      }
 
       this.bindEvents();
       this.listenForActions();
@@ -98,6 +119,36 @@
       _this.eventEmitter.subscribe('RESET_WORKSPACE_LAYOUT', function(event, options) {
         _this.resetLayout(options.layoutDescription);
       });
+
+      /*
+       * Adds a flexible slot to the workspace when flexible desktop is enabled.
+       */
+      _this.eventEmitter.subscribe('ADD_FLEXIBLE_SLOT', function(event) {
+        // splitRight on the rigthtmost slot
+        _this.splitRight(_this.slots[_this.slots.length - 1]);
+      });
+
+      /*
+       * Adds a draghandle DOM element (for moving multiple snapped windows) to the workspace,
+       * and a new snapgroup under the covers.
+       */
+      _this.eventEmitter.subscribe('ADD_DRAG_HANDLE', function(event) {
+        _this.createSnapGroup();
+        _this.renderDragHandles();
+        _this.saveSnapGroupState();
+      });
+
+      _this.eventEmitter.subscribe('BROWSER_VIEWPORT_RESIZED', function(event) {
+        _this.resizeDraggableBoundingBoxes();
+      });
+
+      _this.eventEmitter.subscribe('ADD_DUPLICATE_WINDOW', function(event, config) {
+        // add blank slot
+        _this.eventEmitter.publish('ADD_FLEXIBLE_SLOT');
+        config.slotAddress = _this.getAvailableSlot().layoutAddress;
+        // instantiate the blank slot
+        _this.eventEmitter.publish('ADD_WINDOW', config);
+      });
     },
 
     bindEvents: function() {
@@ -125,9 +176,110 @@
       _this.eventEmitter.publish(prop + '.set', value);
     },
 
-    calculateLayout: function(resetting) {
+    /*
+     * Calculates and sets the layout of the workspace.
+     * This method is made much more complicated due to the requirements of the flexible workspace.
+     * Mirador uses a package called Isfahan (also developed by Stanford University Libraries) to
+     * manage the slot (window) layout of the workspace. In the original code that ships with Mirador,
+     * the workspace slots are laid out in a grid so that each of them always have identical dimensions.
+     *
+     * For the flexible workspace, there is no such requirement of uniformity of dimensions or conformance
+     * to a grid layout. However, Isfahan describes the layout in a way that is expected by many other
+     * parts of the code, so instead of ripping it out completely, I've "sidestepped" the part of it that
+     * I don't want (specifically, it's setting of position and dimensions of the windows).
+     *
+     * Basically, each time this function is called:
+     *
+     * 1) the subset of nodes in the layoutDescription object whose position and dimensions that we want to
+     * save are saved in the _this.slotCoordinates object
+     * 2) Isfahan is called to alter the layoutDescription object
+     * 3) the subset of nodes in the layoutDescription object whose data we saved in step 1 are restored
+     * using said data
+     *
+     * To make things more complicated, this is not the only function that writes to _this.slotCoordinates (the resizestop and dragstop callbacks for '.layout-slot's also do). The rule is this:
+     *
+     * Whatever is stored in _this.slotCoordinates before Isfahan is called represents what will be the
+     * end state of the workspace when this function returns.
+     *
+     * @param {boolean} resetting
+     *   Passed in from Workspace.resetLayout (not used with flex workspace)
+     * @param {Array} draggedIDs
+     *   List of slot IDs that have just finished dragging
+     * @param {Array} resizedIDs
+     *   List of slot IDs that have just finished resizing
+     */
+    calculateLayout: function(resetting, draggedIDs, resizedIDs) {
       var _this = this,
-          layout;
+          layout,
+          divs,
+          slotY = 50, // used if browser viewport is really tiny
+          slotDX = _this.state.getStateProperty('flexibleWorkspace').newWindowWidth,
+          slotDY = _this.state.getStateProperty('flexibleWorkspace').newWindowHeight,
+
+          children,
+          child,
+          tscKey,
+
+          // will call $.bringToFront() on these
+          newNodesBringToFront = [];
+
+      /*
+       * Saves the slotCoordinates from the given layout node,
+       * called before Isfahan resets everything.
+       *
+       * @param {Object} node A layout node to save the settings of.
+       */
+      function saveToSlotCoordinates(node) {
+        var tscKey = node.id,
+            areDragging = draggedIDs !== undefined && draggedIDs.indexOf(tscKey) !== -1,
+            areNotDragging = draggedIDs === undefined || draggedIDs.indexOf(tscKey) === -1,
+            areNotResizing = resizedIDs === undefined || resizedIDs.indexOf(tscKey) === -1;
+        if (node.x && node.y && node.dx && node.dy) {
+          // tscKey is the key to use for _this.slotCoordinates (tsc)
+          if (!_this.slotCoordinates[tscKey]) {
+            _this.slotCoordinates[tscKey] = {};
+          }
+
+          // if we are dragging, the width and height of the window have not changed,
+          // so save what we already have in the current node of _this.layoutDescription
+          if (areDragging) {
+            _this.slotCoordinates[tscKey].dx = node.dx;
+            _this.slotCoordinates[tscKey].dy = node.dy;
+          }
+          // if we are neither resizing or dragging the current node,
+          // _this.layoutDescription already contains the correct data for the current node,
+          // so save all of it
+          if (areNotDragging && areNotResizing) {
+            _this.slotCoordinates[tscKey].x = node.x;
+            _this.slotCoordinates[tscKey].y = node.y;
+            _this.slotCoordinates[tscKey].dx = node.dx;
+            _this.slotCoordinates[tscKey].dy = node.dy;
+          }
+        }
+      }
+      // Step 1
+      // if we have already generated a layout, either restoring from localStorage or using the one from
+      // this session
+      if ($.DEFAULT_SETTINGS.flexibleWorkspace && typeof _this.layoutDescription === 'object') {
+        if (!_this.slotCoordinates) {
+          // need to initialize in case we are restoring a saved workspace
+          _this.slotCoordinates = {};
+        }
+
+        // this means we've initialized the workspace already, and need to save what we've got
+        if (_this.layoutDescription.id) {
+          children = _this.layoutDescription.children;
+          if (children !== undefined) { // then it is array
+            children.forEach(saveToSlotCoordinates);
+          }
+          else {
+            // one window
+            saveToSlotCoordinates(_this.layoutDescription);
+          }
+        }
+      }
+      // Step 2
+      // use Isfahan for everything but the slot window dimensions. Will restore them from _this.slotCoordinates
 
       _this.layout = layout = new Isfahan({
         containerId: _this.element.attr('id'),
@@ -136,12 +288,59 @@
         padding: 3
       });
 
+      // Step 3
+      // if flex workspace is enabled, go through the layout obj and restore the saved coordinates
+      if ($.DEFAULT_SETTINGS.flexibleWorkspace) {
+
+        var windowDims = $.getBrowserViewportDimensions();
+        xField = windowDims.x - slotDX;
+        yField = windowDims.y - slotDY;
+
+        children = _this.layout[0].children !== undefined ? _this.layout[0].children : _this.layout;
+children.forEach(function(child, j) {
+          tscKey = child.id;
+
+          // if _this.slotCoordinates doesnt have anything for this children item, new window
+          if (!_this.slotCoordinates[tscKey]) {
+            _this.slotCoordinates[tscKey] = {};
+            if (_this.state.getStateProperty('flexibleWorkspace').newWindowPosition === 'center') {
+                _this.slotCoordinates[tscKey].x = Math.floor(xField/2);
+            } else if (_this.state.getStateProperty('flexibleWorkspace').newWindowPosition === 'random') {
+                _this.slotCoordinates[tscKey].x = Math.floor(Math.random() * xField);
+            }
+            // ensure draggable part of slot (header) is visible
+            // account for height of mainMenu
+
+            if (windowDims.y + 100 < slotDY) {
+                _this.slotCoordinates[tscKey].y = slotY;
+            } else {
+                if (_this.state.getStateProperty('flexibleWorkspace').newWindowPosition === 'center') {
+                    _this.slotCoordinates[tscKey].y = Math.floor(yField/2);
+                } else if (_this.state.getStateProperty('flexibleWorkspace').newWindowPosition === 'random') {
+
+                    _this.slotCoordinates[tscKey].y = Math.floor(Math.random() * yField);
+                }
+
+            }
+            _this.slotCoordinates[tscKey].dx = slotDX;
+            _this.slotCoordinates[tscKey].dy = slotDY;
+
+newNodesBringToFront.push(tscKey);
+          }
+          // restore the layout object
+          child.x = _this.slotCoordinates[tscKey].x;
+          child.y = _this.slotCoordinates[tscKey].y;
+          child.dx = _this.slotCoordinates[tscKey].dx;
+          child.dy = _this.slotCoordinates[tscKey].dy;
+        });
+      }
+
       var data = layout.filter( function(d) {
         return !d.children;
       });
 
       // Data Join.
-      var divs = d3.select("#" + _this.element.attr('id')).selectAll(".layout-slot")
+      divs = d3.select("#" + _this.element.attr('id')).selectAll(".layout-slot")
             .data(data, function(d) { return d.id; });
 
       // Implicitly updates the existing elements.
@@ -169,7 +368,75 @@
             state: _this.state,
             eventEmitter: _this.eventEmitter
           }));
+
+        // bring to front
+        if (newNodesBringToFront.indexOf(d.id) !== -1) {
+          $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
+        }
+        _this.updateConnectivityGraphAndClasses({option: 'addWindow', eltName: d.id});
+
+        jQuery(this)
+        .draggable({
+          containment: $.getWorkspaceBoundingBox('layout-slot.ui-draggable'),
+          handle: '.manifest-info',
+          stack: '.layout-slot, .drag-handle',
+          snap: '.layout-slot, .drag-handle',
+          //snapMode: 'outer',
+          stop: function(event, ui) {
+            // save slot left/top to localstorage, so that they aren't overwritten by calculateLayout
+            var id = ui.helper[0].attributes['data-layout-slot-id'].value;
+            _this.slotCoordinates[id].x = ui.position.left;
+            _this.slotCoordinates[id].y = ui.position.top;
+
+            var slotIDs = [id];
+            _this.calculateLayout(undefined, slotIDs, undefined);
+
+            // update the connectivity graph based on the snappedTargets
+            // re-assign snapGroup class (remove or add) for each affected node
+            var st = _this.getSnapTargets.call(this, _this);
+            _this.updateConnectivityGraphAndClasses(jQuery.extend({option: 'dragWindow'}, st));
+            _this.saveSnapGroupState();
+          }
+        })
+        .resizable({
+          handles: "n, e, s, w, ne, nw, se, sw"
+        })
+        .on('resizestop', function(event, ui) {
+          // save slot height/width to localstorage, so that they aren't overwritten by calculateLayout
+          var id = ui.helper[0].attributes['data-layout-slot-id'].value;
+          _this.slotCoordinates[id].dx = ui.size.width;
+_this.slotCoordinates[id].dy = ui.size.height;
+          // save position too since we might be changing the top/left value
+          _this.slotCoordinates[id].x = ui.position.left;
+          _this.slotCoordinates[id].y = ui.position.top;
+
+          var slotIDs = [id];
+          _this.calculateLayout(undefined, undefined, slotIDs);
+
+          // fit image choice menu to the new window size
+_this.eventEmitter.publish('fitImageChoiceMenu');
         });
+      })
+      .on('click', function(d) {
+        // check if this window has a handle associated with it
+        var dh = _this.snapGroups.windowGraph.getDragHandle(d.id);
+        if (dh !== undefined) {
+          // bring the handle of the window and all elements connected to the handle to the top
+          $.bringEltToTop.call(document.getElementById(dh), '.layout-slot, .drag-handle');
+          jQuery('.layout-slot.' + dh).each(function(i, e) {
+            $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
+          });
+        }
+        else {
+          // Bring clicked window to the top
+          $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
+        }
+        // save zIndex ordering of elements
+        _this.saveStackingOrder();
+
+        d3.event.stopPropagation();
+
+      });
 
       // Exit
       divs.exit()
@@ -190,6 +457,15 @@
           // nullify the window parameter of old slots
           slot.window = null;
           _this.slots.splice(_this.slots.indexOf(slot), 1);
+
+
+          // remove it from the slotCoordinates var
+          if (_this.slotCoordinates[d.id]) {
+            delete _this.slotCoordinates[d.id];
+          }
+          _this.updateConnectivityGraphAndClasses({option: 'removeWindow', eltName: d.id});
+          _this.saveSnapGroupState();
+
         });
 
       function cell() {
@@ -210,11 +486,16 @@
       } else {
         _this.eventEmitter.publish('SHOW_REMOVE_SLOT');
       }
+
+
+      // save zIndex ordering of elements
+      _this.saveStackingOrder();
     },
 
     split: function(targetSlot, direction) {
       var _this = this,
-          node = jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; })[0];
+      nodeList = jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; }),
+      node = ($.DEFAULT_SETTINGS.flexibleWorkspace && _this.slots.length === 1 && nodeList.length === 2) ? nodeList[1] : nodeList[0],
       nodeIndex = node.parent ? node.parent.children.indexOf(node) : 0,
       nodeIsNotRoot = node.parent;
 
@@ -335,7 +616,8 @@
     removeNode: function(targetSlot) {
       // de-mutate the tree structure.
       var _this = this,
-          node = jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; })[0],
+          filter = jQuery.grep(_this.layout, function(node) { return node.id === targetSlot.slotID; }),
+          node = ($.DEFAULT_SETTINGS.flexibleWorkspace && filter.length > 1) ? filter[1] : filter[0],
           nodeIndex = node.parent.children.indexOf(node),
           parentIndex,
           remainingNode,
@@ -520,15 +802,501 @@
 
       _this.eventEmitter.publish("windowAdded", {id: windowConfig.id, slotAddress: windowConfig.slotAddress});
 
-  },
+    },
 
-  removeWindow: function(windowId) {
-    var _this = this;
+    removeWindow: function(windowId) {
+      var _this = this;
 
-    _this.windows = _this.windows.filter(function(window) {
-      return window.id !== windowId;
-    });
-    _this.eventEmitter.publish('windowRemoved', windowId);
-  }
+      _this.windows = _this.windows.filter(function(window) {
+        return window.id !== windowId;
+      });
+      _this.eventEmitter.publish('windowRemoved', windowId);
+    },
+
+    // reset the draggable area bounding boxes when the browser viewport is resized
+    resizeDraggableBoundingBoxes: function() {
+      ['layout-slot.ui-draggable', 'drag-handle.ui-draggable'].forEach(function(i) {
+        jQuery('.' + i).draggable('option', 'containment', $.getWorkspaceBoundingBox(i));
+      });
+    },
+
+    /*
+     * Get the number of snapgroups.
+     */
+    countSnapGroups: function() {
+      return this.snapGroups.groups.length;
+    },
+
+    /*
+     * Creates a new snapGroup and returns its UUID.
+     */
+    createSnapGroup: function() {
+      var id = $.genUUID();
+      this.snapGroups.groups.push({
+        'name': 'snap-group-' + id,
+        'windows': [],
+        'left': undefined,
+        'top': undefined
+      });
+      return id;
+    },
+
+    /*
+     * Deletes the snapGroup with the given name.
+     *
+     * @param {string} sgname Name of the snapGroup to remove.
+     */
+    deleteSnapGroup: function(sgname) {
+      var _this = this;
+
+      // remove from byWindow all key-value pairs that have sgname
+      jQuery.each(_this.snapGroups.byWindow, function(k, v) {
+        if (v === sgname) {
+          delete _this.snapGroups.byWindow[k];
+        }
+      });
+      // remove from groups
+      this.snapGroups.groups = this.snapGroups.groups.filter(function(e) {
+        return e.name === sgname ? false : true;
+      });
+    },
+
+    /*
+     * Add a window to the snapGroup.
+     *
+     * @param {Array} windowNamesList A list of the data-layout-slot-id strings of windows to add
+     * @param {string} sgname Name of snapGroup
+     */
+    addToSnapGroup: function(windowNamesList, sgname) {
+      // add to windows array of the snapGroup object
+      var _this = this;
+      windowNamesList.forEach(function(f) {
+        if (_this.snapGroups.byWindow[f] === undefined) {
+          _this.getSnapGroupObject(sgname).windows.push(f);
+          // add to byWindow
+          _this.snapGroups.byWindow[f] = sgname;
+        }
+      });
+    },
+
+    /*
+     * Remove a window from its snapGroup.
+     *
+     * @param {Array} windowNamesList A list of the data-layout-slot-id strings of windows to remove
+     */
+    removeFromSnapGroup: function(windowNamesList) {
+      // remove from windows array of the snapGroup object
+      var _this = this;
+      windowNamesList.forEach(function(f) {
+        var sg = _this.getSnapGroupNameOfWindow(f);
+        if (sg) {
+          sg = _this.getSnapGroupObject(sg);
+          sg.windows = sg.windows.filter(function(e) {
+            return e !== f;
+          });
+          // remove from byWindow
+          delete _this.snapGroups.byWindow[f];
+        }
+      });
+    },
+
+    /*
+     * Get the name of the snapGroup that the window with given name belongs to.
+     *
+     * @param {string} windowName The data-layout-slot-id of the window to find the snapGroup of
+     * @return {string}
+     */
+    getSnapGroupNameOfWindow: function(windowName) {
+      return this.snapGroups.byWindow[windowName];
+    },
+
+    /*
+     * Gets the snapGroup object that has the given name, or undefined if there is none.
+     *
+     * @param {string} sgname Name of snapGroup to find.
+     * @return {Array | undefined}
+     */
+    getSnapGroupObject: function(sgname) {
+      var sglist = this.snapGroups.groups.filter(function(elt) {
+        return elt.name === sgname;
+      });
+      if (sglist.length === 1) {
+        return sglist[0];
+      }
+      else {
+        return undefined;
+      }
+    },
+
+    /*
+     * Saves the snapGroup state to localStorage.
+     */
+    saveSnapGroupState: function() {
+      this.eventEmitter.publish('snapGroupStateChanged', this.snapGroups);
+    },
+
+    /*
+     * Restores the snapGroup state from localStorage.
+     */
+    restoreSnapGroups: function() {
+      var reviver = function(k, v) {
+        if (k === 'windowGraph') {
+          // value is a $.Graph object
+          return new $.Graph(v.node_list);
+        }
+        else { return v; }
+        };
+      var savedSettings = this.state.getStateProperty('snapGroupState');
+      if (savedSettings !== undefined) {
+        this.snapGroups = JSON.parse(savedSettings, reviver);
+        jQuery.each(this.snapGroups.byWindow, function(k, v) {
+          jQuery('[data-layout-slot-id="'+ k +'"]').addClass(v);
+        });
+      }
+    },
+
+    isInSnapGroup: function(windowName, sgname) {
+      return this.snapGroups.byWindow[windowName] === sgname;
+    },
+
+    updateDragHandlePosition: function(sgname, pos) {
+      var sg = this.getSnapGroupObject(sgname);
+      sg.left = pos.left + 'px';
+      sg.top = pos.top + 'px';
+    },
+
+    /*
+     * returns:
+     * {
+     *   thisElt
+     *   targetElts (can be heterogeneous!) {
+     *     windows:
+     *     dragHangle:
+     * }
+     */
+    getSnapTargets: function(that) {
+      /**
+       * Get the name of the snap group that corresponds to a give jQuery selection.
+       *
+       * @param {jQuery selection} selection A jQuery selection that can contain layout-slots
+       *     and drag-handles.
+       * @return {false | Array} This returns either false or a one-element array.
+       */
+      function extractSnapGroupName(selection) {
+        var re = '^snap-group-',
+            reObj = new RegExp(re);
+        function getDragHandleId(selection) {
+          var id;
+          if (selection.length > 0) {
+            id = selection[0].id;
+            return reObj.test(id) ? [id] : false;
+          }
+          return false;
+        }
+
+        return selection.filter('.layout-slot').toArray().reduce(function(p, c) {
+          if (p !== false) {
+            return p;
+          } else {
+            return jQuery(c).hasClassRegEx(re);
+          }
+        }, false) || getDragHandleId(selection.filter('.drag-handle'));
+      }
+      // Get the possible snap targets, then pull out only the snap targets that are "snapping"
+      // thisSnapGroup and targetSnapGroup will either be single-element lists, or false
+      var snapTargets = jQuery(this).data('ui-draggable').snapElements,
+          snappedTargets = jQuery.map(snapTargets, function(element) {
+            return element.snapping ? element.item : null;
+          }),
+          thisElt = jQuery(this),
+          thisSlotID = thisElt.attr('data-layout-slot-id'),
+          thisSnapGroup = extractSnapGroupName(thisElt),
+          targetElts = jQuery(snappedTargets),
+          targetSlotIDs = targetElts.filter('.layout-slot').map(function(i, e) {
+            return jQuery(e).attr('data-layout-slot-id');
+          }).toArray(),
+          targetHandleID = targetElts.filter('.drag-handle').attr('id');
+
+      return {
+        thisSlotID: thisSlotID,
+        thisSnapGroup: thisSnapGroup !== false ? thisSnapGroup[0] : undefined,
+        targetSlotIDs: targetSlotIDs,
+        targetHandleID: targetHandleID,
+      };
+    },
+
+    /**
+     * Updates the snap-group classes on the DOM elements,
+     * and updates the data model to reflect the DOM state.
+     *
+     * Called by the drag-stop events on elements with classes drag-handle and layout-slot.
+     *
+     * @param {Object} that Reference to a Workspace object
+     * NOTE: this function is called so that {this} refers to the DOM element that has stopped dragging
+     */
+    updateConnectivityGraphAndClasses: function(st) {
+      var _this = this,
+          wg = _this.snapGroups.windowGraph,
+          oldConnectedSlots,
+          newConnectedSlots,
+          oldSnapGroup,
+          newSnapGroup,
+          enteringSlots,
+          exitingSlots;
+
+      switch (st.option) {
+        case 'addWindow':
+          wg.addNode(st.eltName, []);
+          break;
+        case 'dragWindow':
+          // get list of nodes that were connected to the window before dragging
+          oldConnectedSlots = wg.getConnectedComponent(st.thisSlotID);
+          // update the graph
+          wg.updateNodeEdges(st.thisSlotID, st.targetSlotIDs);
+          // get new list of connected windows
+          newConnectedSlots = wg.getConnectedComponent(st.thisSlotID);
+
+          // if thisElement was connected to a drag handle before the move, remove it
+          if (st.thisSnapGroup !== undefined) {
+            // remove old handle if it exists on thisSlot
+            wg.removeDragHandle(st.thisSnapGroup, [st.thisSlotID]);
+            // remove the class if the windows are no longer connected to that old drag handle
+            // so, either connected to 1) a different handle, or 2) none at all
+            exitingSlots = oldConnectedSlots.filter(function(e) {
+              return wg.getDragHandle(e) !== st.thisSnapGroup;
+            });
+            // update date model and DOM
+            this.removeFromSnapGroup(exitingSlots);
+            this.reassignClasses(st.thisSnapGroup, [], exitingSlots);
+          }
+          // if this window is now adjacent to the drag handle, add it to the node
+          if (st.targetHandleID !== undefined) {
+            wg.addDragHandle(st.targetHandleID, [st.thisSlotID]);
+          }
+          newSnapGroup = wg.getDragHandle(st.thisSlotID);
+          // if targetElts contains a drag handle, add it to the node
+          if (newSnapGroup !== undefined) {
+            // update date model and DOM
+            this.addToSnapGroup(newConnectedSlots, newSnapGroup);
+            this.reassignClasses(newSnapGroup, newConnectedSlots, []);
+          }
+          break;
+        case 'dragHandle':
+          // make sure that there aren't any drag handles already connected
+          if (wg.getDragHandle(st.targetSlotIDs[0]) !== undefined && wg.getDragHandle(st.targetSlotIDs[0]) !== st.thisSnapGroup) {
+            alert('Only one drag handle per group!');
+            // TODO: move handle to previous position
+            return;
+          }
+enteringSlots = st.targetSlotIDs.reduce(function(p, c) {
+            return _.union(p, wg.getConnectedComponent(c));
+          }, []);
+          wg.addDragHandle(st.thisSnapGroup, st.targetSlotIDs);
+          // for each window connected to the target elements, update data model and DOM
+          this.addToSnapGroup(enteringSlots, st.thisSnapGroup);
+          this.reassignClasses(st.thisSnapGroup, enteringSlots, []);
+          break;
+        case 'removeWindow':
+          // get list of windows connected to the window that is being removed
+          oldConnectedSlots = wg.getConnectedComponent(st.eltName);
+          // all windows connected to st.eltName will have same drag handle
+          oldSnapGroup = wg.getDragHandle(st.eltName);
+          // delete window from the graph
+          wg.removeNode(st.eltName);
+          newConnectedSlots = _.difference(oldConnectedSlots, [st.eltName]);
+          // remove the slots that are no longer connected to the drag handle
+          exitingSlots = newConnectedSlots.filter(function(e) {
+return wg.getDragHandle(e) !== oldSnapGroup;
+          });
+          // update data model and DOM
+          this.removeFromSnapGroup(exitingSlots);
+          this.reassignClasses(oldSnapGroup, [], exitingSlots);
+          break;
+        case 'removeHandle':
+          // remove drag handle from graph, and update DOM (data model was updated by caller)
+          wg.removeDragHandle(st.eltName);
+          this.reassignClasses(st.eltName, [], jQuery('.' + st.eltName));
+          break;
+      }
+    },
+
+    /* Add or remove classes based on graph
+     * @param {string} name Name of class
+     * @param {Array | jQuery} enter Nodes to add to that class. Can be either a list of ids or jQuery selection
+     * @param {Array | jQuery} exit Nodes to remove from that class. Can be either a list of ids or jQuery selection
+     */
+    reassignClasses: function(name, enter, exit) {
+      var reduceFn = function(p, c) {
+        return p.add(jQuery('[data-layout-slot-id="'+ c +'"]'));
+      };
+
+      var a = enter instanceof jQuery ? enter : enter.reduce(reduceFn, jQuery());
+      var b = exit instanceof jQuery ? exit : exit.reduce(reduceFn, jQuery());
+      a.addClass(name);
+      b.removeClass(name);
+    },
+
+    /**
+     * Use d3 to render the dragHandles.
+     */
+    renderDragHandles: function() {
+      // TODO: change the d3.select to use '#workspace-XXX-XX-XXXX'
+      var _this = this,
+          n = _this.countSnapGroups(),
+          assocSnapGroup;
+
+      handles = d3.select('.workspace-container').selectAll('.drag-handle').data(_this.snapGroups.groups, function(d) {
+        // binds data to element by id, so that when an item is removed from _this.snapGroups,
+        // the DOM element with corresponding #id is removed, instead of the most recently added element
+        return d.name;
+      }),
+      handlesDiv = handles.enter().append('div')
+        .attr('id', function(d) { return d.name; })
+        .classed({'drag-handle': true})
+        .style({
+          'background-color': 'red',
+          'border-top-left-radius': '8px',
+          'border-top-right-radius': '8px',
+          'height': '25px',
+          'position': 'absolute',
+          'width': '100px'
+        })
+        .on('click', function(d) {
+          // Bring clicked window to the top, along with any slots that are connected to it
+          $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
+          d3.event.stopPropagation();
+
+          _this.getSnapGroupObject(d.name).windows.forEach(function(e) {
+            $.bringEltToTop.call(jQuery('[data-layout-slot-id="'+ e +'"]')[0], '.layout-slot, .drag-handle');
+            d3.event.stopPropagation();
+          });
+          // save zIndex order
+          _this.saveStackingOrder();
+        })
+        .each(function(d) {
+          // make this a draggable element that can drag multiple other draggable elements
+          jQuery(this).draggable({
+            containment: $.getWorkspaceBoundingBox('drag-handle.ui-draggable'),
+            multiple: {
+              items: function getSelectedItems() {
+                return jQuery('.ui-draggable.' + d.name + ', #' + d.name);
+              },
+              beforeStart: jQuery.noop,
+              stack: '.layout-slot, .drag-handle'
+            },
+            snap: '.layout-slot',
+            snapMode: 'outer',
+            stop: function(event, ui) {
+              // save coordinates of associated slots before calculating layout
+              var dragHandle = ui.helper[0];
+              var slotIDs = [];
+              jQuery('.' + dragHandle.id).each(function(i, val) {
+                var dlsi = val.attributes['data-layout-slot-id'].value;
+                slotIDs.push(dlsi);
+                // write to slotCoordinates
+                _this.slotCoordinates[dlsi].x = val.offsetLeft;
+                _this.slotCoordinates[dlsi].y = val.offsetTop;
+              });
+              _this.calculateLayout(undefined, slotIDs, undefined);
+              // TODO:
+              // if there are any snappedTargets
+              //   update the connectivity graph
+              //   re-assign snapGroup class (remove or add) for each affected node
+              var st = _this.getSnapTargets.call(this, _this);
+              if (st.targetSlotIDs.length > 0) {
+                _this.updateConnectivityGraphAndClasses(jQuery.extend({option: 'dragHandle'}, st));
+              }
+              _this.updateDragHandlePosition(dragHandle.id, jQuery(dragHandle).position());
+              _this.saveSnapGroupState();
+            }
+          });
+          // set the position of the new dragHandle
+          assocSnapGroup = _this.getSnapGroupObject(d.name);
+          if (assocSnapGroup.left === undefined && assocSnapGroup.top === undefined) {
+            // new dragHandle, so give it the defaults and update the data model
+            var windowDims = $.getBrowserViewportDimensions(),
+                ll = Math.floor((windowDims.x - 100)/2),
+                tt = Math.floor((windowDims.y - 25)/2);
+            d3.select(this).style({'left': ll + 'px', 'top': tt + 'px'});
+            _this.updateDragHandlePosition(d.name, {'left': ll, 'top': tt});
+            // bring it to front
+            $.bringEltToTop.call(this, '.layout-slot, .drag-handle');
+          }
+          else {
+            // restoring a dragHandle, so set only the style
+            d3.select(this).style({'left': assocSnapGroup.left, 'top': assocSnapGroup.top});
+          }
+        }),
+      handlesDivA = handlesDiv.append('a')
+        .attr('href', 'javascript:;')
+        .classed({'drag-handle-remove': true})
+        .on('click', function(d) {
+          _this.deleteSnapGroup(d.name);
+          _this.renderDragHandles();
+          d3.event.stopPropagation();
+        });
+      handlesDivA.append('i')
+        .attr('float', 'left')
+        .classed({'fa fa-times': true})
+        .style('padding', '4px');
+      handles.exit().remove('div')
+        .each(function(d) {
+          _this.updateConnectivityGraphAndClasses({option: 'removeHandle', eltName: d.name});
+          _this.saveSnapGroupState();
+
+          // de-register the removed dragHandle's layout-slots
+          //jQuery('.layout-slot.' + d.name).removeClass(d.name);
+      });
+    },
+
+    /*
+     * Publishes the z-index ordering of workspace elements to the savecontroller,
+     * so that it can be restored later.
+     */
+    saveStackingOrder: function() {
+      var _this = this;
+      _this.eventEmitter.publish("stackingOrderChanged",
+        {
+          windows: _this.windows.map(function(e) {
+            return {
+              id: e.element.closest('.layout-slot').attr('data-layout-slot-id'),
+              zIndex: e.element.css('zIndex'),
+              type: 'window'
+            };
+          }),
+          dragHandles: jQuery('.drag-handle').toArray().map(function(e) {
+            return {
+              id: e.id,
+              zIndex: jQuery(e).css('zIndex'),
+              type: 'dragHandle'
+            };
+          })
+        }
+      );
+    },
+
+    /*
+     * Restores the workspace according to the saved ordering of workspace elements.
+     *
+     * @param {Array} orderedElements
+     *   Array of objects containing id and z-index for each window and drag-handle,
+     *   sorted in increasing z-index order.
+     */
+    restoreStackingOrder: function(orderedElements) {
+      var _this = this,
+      selector;
+      // Bring each element to the top of the stack, in order
+      // For some reason this works better than just setting z-indexes manually
+      jQuery.each(orderedElements, function(i, e) {
+        // Choose the appropriate CSS selector based on the type of node
+        if (e.type === 'window') {
+          selector = '[data-layout-slot-id="' + e.id + '"]';
+        } else if (e.type === 'dragHandle') {
+          selector = '#' + e.id;
+        }
+        $.bringEltToTop.call(jQuery(selector), '.layout-slot, .drag-handle');
+      });
+    }
+
 };
 }(Mirador));

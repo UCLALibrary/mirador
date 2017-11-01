@@ -174,6 +174,7 @@
       templateData.currentFocusClass = _this.iconClasses[_this.viewType];
       templateData.showFullScreen = _this.fullScreen;
       templateData.userButtons = _this.userButtons;
+      templateData.flexibleWorkspace = !!_this.state.getStateProperty('flexibleWorkspace');
       _this.element = jQuery(this.template(templateData)).appendTo(_this.appendTo);
       this.element.find('.manifest-info .mirador-tooltip').each(function() {
         jQuery(this).qtip({
@@ -459,7 +460,6 @@
       jQuery(document).on("webkitfullscreenchange mozfullscreenchange fullscreenchange", function() {
         _this.toggleFullScreen();
       });
-
     },
 
     bindAnnotationEvents: function() {
@@ -1030,6 +1030,20 @@
       this.element.find('.add-slot-above').on('click', function() {
         _this.eventEmitter.publish('SPLIT_UP_FROM_WINDOW', _this.id);
       });
+
+      this.element.find('.add-duplicate-window').on('click', function(event) {
+        // get info of the current window to duplicate
+        var windowConfig = {
+          canvasID: _this.canvasID,
+          manifest: _this.manifest,
+          viewType: _this.currentImageMode,
+          choiceImageIDs: _this.choiceImageIDs,
+          slotAddress: null
+        };
+
+        // to workspace
+        _this.eventEmitter.publish('ADD_DUPLICATE_WINDOW', windowConfig);
+      });
     },
 
     // template should be based on workspace type
@@ -1080,6 +1094,7 @@
       '<li class="new-object-option"><i class="fa fa-refresh fa-lg fa-fw"></i> {{t "newObject"}}</li>',
       '<hr class="menu-divider"/>',
       '{{/if}}',
+      /*
       '{{#if layoutOptions.slotRight}}',
       '<li class="add-slot-right"><i class="fa fa-arrow-circle-right fa-lg fa-fw"></i> {{t "addSlotRight"}}</li>',
       '{{/if}}',
@@ -1091,6 +1106,10 @@
       '{{/if}}',
       '{{#if layoutOptions.slotBelow}}',
       '<li class="add-slot-below"><i class="fa fa-arrow-circle-down fa-lg fa-fw"></i> {{t "addSlotBelow"}}</li>',
+      '{{/if}}',
+      */
+      '{{#if flexibleWorkspace}}',
+      '<li class="add-duplicate-window"><i class="fa fa-copy fa-lg fa-fw"></i> {{t "addDuplicateWindow"}}</li>',
       '{{/if}}',
       '</ul>',
       '</a>',

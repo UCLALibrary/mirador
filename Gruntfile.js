@@ -1,5 +1,8 @@
 module.exports = function(grunt) {
 
+  // required to avoid errors with underscore's template engine
+  grunt.template.addDelimiters('square', '[%', '%]');
+
   // ----------
   grunt.loadNpmTasks('grunt-contrib-compress');
   grunt.loadNpmTasks('grunt-contrib-concat');
@@ -50,7 +53,10 @@ module.exports = function(grunt) {
     'js/lib/sanitize-html.min.js',
     'node_modules/iiif-evented-canvas/dist/iiif-evented-canvas.umd.min.js',
     'node_modules/iiif-layout-functions/dist/iiif-layout-functions.umd.min.js',
-    'node_modules/select2/dist/js/select2.full.min.js'
+    'node_modules/select2/dist/js/select2.full.min.js',
+    'js/lib/jquery.hasClassRegEx.js',
+    'node_modules/underscore/underscore-min.js',
+    'js/lib/jquery-ui.drag-multiple.min.js'
   ],
 
   // source files
@@ -84,10 +90,12 @@ module.exports = function(grunt) {
     concat: {
       js: {
         options: {
-          banner: '//! <%= pkg.name %> <%= pkg.version %>\n' + '//! Built on <%= grunt.template.today("yyyy-mm-dd") %>\n',
-          process: true
+          banner: '//! [%= pkg.name %] [%= pkg.version %]\n' + '//! Built on [%= grunt.template.today("yyyy-mm-dd") %]\n',
+          process: {
+            delimiters: 'square'
+          }
         },
-        src:  [ "<banner>" ].concat(vendors, sources),
+        src:  [ "[banner]" ].concat(vendors, sources),
         dest: distribution
       },
       css: {

@@ -41,7 +41,10 @@
             this.element.append(this.template({
                 mainMenuCls: this.mainMenuCls,
                 showBookmark : this.state.getStateProperty('mainMenuSettings').buttons.bookmark,
-                showLayout : this.state.getStateProperty('mainMenuSettings').buttons.layout,
+                showLayout : this.state.getStateProperty('mainMenuSettings').buttons.layout && !this.state.getStateProperty('flexibleWorkspace'),
+                showAddWindow : !!this.state.getStateProperty('flexibleWorkspace'),
+                showAddDragHandle : !!this.state.getStateProperty('flexibleWorkspace'),
+
                 showOptions: this.state.getStateProperty('mainMenuSettings').buttons.options,
                 showFullScreenViewer : this.state.getStateProperty('mainMenuSettings').buttons.fullScreenViewer,
                 userButtons: this.state.getStateProperty('mainMenuSettings').userButtons,
@@ -110,6 +113,13 @@
             this.element.find('.fullscreen-viewer').on('click', function() {
               _this.eventEmitter.publish('TOGGLE_FULLSCREEN');
             });
+
+            this.element.find('.add-flexible-slot').on('click', function() {
+                _this.eventEmitter.publish('ADD_FLEXIBLE_SLOT');
+            });
+            this.element.find('.add-drag-handle').on('click', function() {
+                _this.eventEmitter.publish('ADD_DRAG_HANDLE');
+            });
         },
 
         template: $.Handlebars.compile([
@@ -133,10 +143,26 @@
             '</a>',
           '</li>',
         '{{/if}}',*/
+        /*
         '{{#if showLayout}}',
           '<li>',
             '<a href="javascript:;" class="change-layout mainmenu-button" title="{{t "changeLayoutTooltip"}}" aria-label="{{t "changeLayoutTooltip"}}">',
               '<span class="fa fa-th-large fa-lg fa-fw"></span> {{t "changeLayout"}}',
+            '</a>',
+          '</li>',
+        '{{/if}}',
+        */
+        '{{#if showAddWindow}}',
+          '<li>',
+            '<a href="javascript:;" class="add-flexible-slot mainmenu-button" title="{{t "addWindowTooltip"}}">',
+              '<span class="fa fa-th-large fa-lg fa-fw"></span> {{t "addWindow"}}',
+            '</a>',
+          '</li>',
+        '{{/if}}',
+        '{{#if showAddDragHandle}}',
+          '<li>',
+            '<a href="javascript:;" class="add-drag-handle mainmenu-button" title="{{t "addDragHandleTooltip"}}">',
+              '<span class="fa fa-suitcase fa-lg fa-fw"></span> {{t "addDragHandle"}}',
             '</a>',
           '</li>',
         '{{/if}}',

@@ -78,6 +78,7 @@
     "select2": "^4.0.3",
     "spectrum-colorpicker": "^1.8.0",
     "tinymce": "^4.1.7",
+    "underscore": "1.6.0",
     "urijs": "^1.16.1"
   },
   "engine": "node < 7.0.0"

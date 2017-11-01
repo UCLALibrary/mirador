@@ -34,6 +34,11 @@
     'data' : [],
 
     'layout': '1x1',
+    'flexibleWorkspace': {
+        'newWindowWidth': 750,
+        'newWindowHeight': 750,
+        'newWindowPosition': 'center', // or 'random'
+    },
 
     'openManifestsPage' : false, //defaults to false, whether or not Mirador should display the manifests page,
                                 //only valid if no windowObjects have been initialized

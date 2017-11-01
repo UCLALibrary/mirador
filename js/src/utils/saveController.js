@@ -371,6 +371,15 @@
       // user navigating history, for the purpose of popping the
       // history entry back off.
 
+      /*
+       * Saves the snapGroup state to the saveController whenever it changes.
+       * Published by Workspace.
+       *
+       * @param {Object} snapGroupState The state object for snapGroups
+       */
+      _this.eventEmitter.subscribe('snapGroupStateChanged', function(event, snapGroupState) {
+        _this.set('snapGroupState', JSON.stringify(snapGroupState), {parent: "currentConfig"});
+      });
     },
 
     cleanup: function(obj) {
