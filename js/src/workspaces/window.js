@@ -1011,8 +1011,9 @@
         _this.eventEmitter.publish('ADD_ITEM_FROM_WINDOW', _this.id);
       });
 
-      this.element.find('.remove-object-option').on('click', function() {
+      this.element.find('.remove-object-option').on('click', function(event) {
         _this.eventEmitter.publish('REMOVE_SLOT_FROM_WINDOW', _this.id);
+        event.stopPropagation();
       });
 
       this.element.find('.add-slot-right').on('click', function() {
@@ -1043,6 +1044,7 @@
 
         // to workspace
         _this.eventEmitter.publish('ADD_DUPLICATE_WINDOW', windowConfig);
+        event.stopPropagation();
       });
     },
 
