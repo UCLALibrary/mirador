@@ -165,6 +165,28 @@
         jQuery(_this.osd.canvas).css("cursor", "pointer");
       });
       //Related to Annotations HUD
+ 
+      // UCLA
+      _this.eventEmitter.subscribe('image-status-updated' + this.windowId, function(event, imageResource) {
+
+        if (imageResource.getImageType() === 'main' && imageResource.getStatus() === 'drawn') {
+          _this.hideLoadingIndicator();
+        } else if (imageResource.getImageType() === 'main' && imageResource.getStatus() === 'requested') {
+          _this.showLoadingIndicator();
+        }
+      });
+    },
+
+    showLoadingIndicator: function() {
+      if (this.osd.getOverlayById('loading-indicator-' + this.windowId) === null) {
+        var loadingSpinnerOverlay = jQuery('<div id="loading-indicator-' + this.windowId + '" class="loading-indicator"><i class="fa fa-circle-o-notch fa-spin fa-5x fa-fw"></i></div>', document)[0];
+        this.osd.addOverlay(loadingSpinnerOverlay, this.osd.viewport.getCenter(), OpenSeadragon.OverlayPlacement.CENTER);
+      }
+      // Otherwise, overlay is already showing.
+    },
+
+    hideLoadingIndicator: function() {
+      this.osd.removeOverlay('loading-indicator-' + this.windowId);
     },
 
     bindEvents: function() {
@@ -775,6 +797,8 @@
       _this.osd.addHandler('pan', $.debounce(function(){
         _this.setBounds();
       }, 500));
+
+      _this.showLoadingIndicator();
     },
 
     //TODO reuse annotationsLayer with IIIFManifestLayouts
