@@ -35,9 +35,14 @@
 
     'layout': '1x1',
     'flexibleWorkspace': {
-        'newWindowWidth': 750,
-        'newWindowHeight': 750,
-        'newWindowPosition': 'center', // or 'random'
+        'minWindowSize': 240,
+        'maxWindowSize': 720,
+
+        'minScreenSize': 320,
+        'maxScreenSize': 960,
+
+        'newWindowPosition': 'random', // or 'center'
+        'newDragHandlePosition': 'random', // or 'center'
     },
 
     'openManifestsPage' : false, //defaults to false, whether or not Mirador should display the manifests page,

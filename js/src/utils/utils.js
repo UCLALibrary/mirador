@@ -285,22 +285,50 @@
     return {x:x,y:y};
   };
 
+  /*
+   * Returns an object containing the pixel dimensions of the workspace.
+   *
+   * @returns {Object}
+   */
+  $.getWorkspaceDimensions= function() {
+    return {
+      x: jQuery('.workspace-container').width(),
+      y: jQuery('.workspace-container').height()
+    };
+  };
+
+  /*
+   * Returns an array of the form [left, top, width, height]
+   *
+   * @returns {Array}
+   */
+  // TODO: rename to getWorkspaceDragRegion
   $.getWorkspaceBoundingBox = function(elt) {
     var manifestInfoHeight = jQuery('.manifest-info').height(),
-        workspaceTop = jQuery('.mirador-viewer').offset().top,
+        workspaceTop = jQuery('.workspace-container').offset().top,
+        workspaceLeft = jQuery('.workspace-container').offset().left,
+        workspaceHeight = jQuery('.workspace-container').height(),
+        workspaceWidth = jQuery('.workspace-container').width(),
 
         // magic vars because no drag handles may be present at some time
         dragHandleWidth = 100,
-        dragHandleHeight = 25,
-        dimensions = $.getBrowserViewportDimensions(),
-        x = dimensions.x,
-        y = dimensions.y;
+        dragHandleHeight = 25;
+
     if (elt === 'drag-handle.ui-draggable') {
       // must drag drag-handle within browser viewport
-      return [0, workspaceTop, x - dragHandleWidth, y - dragHandleHeight];
+      return [
+          workspaceLeft,
+          workspaceTop,
+          workspaceLeft + workspaceWidth - dragHandleWidth,
+          workspaceTop + workspaceHeight - dragHandleHeight
+      ];
     } else if (elt === 'layout-slot.ui-draggable') {
       // can drag window horizontally off the screen if desired
-      return [-x, workspaceTop, 2*x, y - manifestInfoHeight];
+      return [
+          -workspaceWidth,
+          workspaceTop,
+          2*workspaceWidth,
+          workspaceTop + workspaceHeight - manifestInfoHeight];
     } else {
       throw '$.getWorkspaceBoundingBox: unknown element type "' + elt + '"';
     }

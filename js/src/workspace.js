@@ -177,6 +177,29 @@
     },
 
     /*
+     * Calculates what new window size should be based on the screen size (browser viewport size).
+     *
+     * @returns {number}
+     */
+    calculateNewWindowDimensions: function() {
+      var viewportDims = $.getWorkspaceDimensions(),
+          smallestDim = Math.min(viewportDims.x, viewportDims.y),
+          minW = this.state.getStateProperty('flexibleWorkspace').minWindowSize,
+          maxW = this.state.getStateProperty('flexibleWorkspace').maxWindowSize,
+          minS = this.state.getStateProperty('flexibleWorkspace').minScreenSize,
+          maxS = this.state.getStateProperty('flexibleWorkspace').maxScreenSize,
+          rate = (maxW - minW) / (maxS - minS);
+
+      if (smallestDim < minS) {
+        return minW;
+      } else if (smallestDim > maxS) {
+        return maxW;
+      } else {
+        return minW + rate * (smallestDim - minS);
+      }
+    },
+
+    /*
      * Calculates and sets the layout of the workspace.
      * This method is made much more complicated due to the requirements of the flexible workspace.
      * Mirador uses a package called Isfahan (also developed by Stanford University Libraries) to
@@ -212,9 +235,10 @@
       var _this = this,
           layout,
           divs,
+          newWindowDims = _this.calculateNewWindowDimensions(),
           slotY = 50, // used if browser viewport is really tiny
-          slotDX = _this.state.getStateProperty('flexibleWorkspace').newWindowWidth,
-          slotDY = _this.state.getStateProperty('flexibleWorkspace').newWindowHeight,
+          slotDX = newWindowDims,
+          slotDY = newWindowDims,
 
           children,
           child,
@@ -292,9 +316,9 @@
       // if flex workspace is enabled, go through the layout obj and restore the saved coordinates
       if ($.DEFAULT_SETTINGS.flexibleWorkspace) {
 
-        var windowDims = $.getBrowserViewportDimensions();
-        xField = windowDims.x - slotDX;
-        yField = windowDims.y - slotDY;
+        var workspaceDims = $.getWorkspaceDimensions(),
+            xField = Math.max(0, workspaceDims.x - slotDX),
+            yField = Math.max(0, workspaceDims.y - slotDY);
 
         children = _this.layout[0].children !== undefined ? _this.layout[0].children : _this.layout;
 children.forEach(function(child, j) {
@@ -305,27 +329,15 @@ children.forEach(function(child, j) {
             _this.slotCoordinates[tscKey] = {};
             if (_this.state.getStateProperty('flexibleWorkspace').newWindowPosition === 'center') {
                 _this.slotCoordinates[tscKey].x = Math.floor(xField/2);
+                _this.slotCoordinates[tscKey].y = Math.floor(yField/2);
             } else if (_this.state.getStateProperty('flexibleWorkspace').newWindowPosition === 'random') {
                 _this.slotCoordinates[tscKey].x = Math.floor(Math.random() * xField);
-            }
-            // ensure draggable part of slot (header) is visible
-            // account for height of mainMenu
-
-            if (windowDims.y + 100 < slotDY) {
-                _this.slotCoordinates[tscKey].y = slotY;
-            } else {
-                if (_this.state.getStateProperty('flexibleWorkspace').newWindowPosition === 'center') {
-                    _this.slotCoordinates[tscKey].y = Math.floor(yField/2);
-                } else if (_this.state.getStateProperty('flexibleWorkspace').newWindowPosition === 'random') {
-
-                    _this.slotCoordinates[tscKey].y = Math.floor(Math.random() * yField);
-                }
-
+                _this.slotCoordinates[tscKey].y = Math.floor(Math.random() * yField);
             }
             _this.slotCoordinates[tscKey].dx = slotDX;
             _this.slotCoordinates[tscKey].dy = slotDY;
 
-newNodesBringToFront.push(tscKey);
+            newNodesBringToFront.push(tscKey);
           }
           // restore the layout object
           child.x = _this.slotCoordinates[tscKey].x;
@@ -1214,9 +1226,16 @@ return wg.getDragHandle(e) !== oldSnapGroup;
           assocSnapGroup = _this.getSnapGroupObject(d.name);
           if (assocSnapGroup.left === undefined && assocSnapGroup.top === undefined) {
             // new dragHandle, so give it the defaults and update the data model
-            var windowDims = $.getBrowserViewportDimensions(),
-                ll = Math.floor((windowDims.x - 100)/2),
-                tt = Math.floor((windowDims.y - 25)/2);
+            var windowDims = $.getWorkspaceBoundingBox('drag-handle.ui-draggable'),
+                ll, tt;
+            if (_this.state.getStateProperty('flexibleWorkspace').newDragHandlePosition === 'center') {
+                ll = Math.floor((windowDims[2] - 100)/2);
+                tt = Math.floor((windowDims[3] - 25)/2);
+            } else if (_this.state.getStateProperty('flexibleWorkspace').newDragHandlePosition === 'random') {
+                ll = Math.floor(Math.random() * windowDims[2]);
+                tt = Math.floor(Math.random() * windowDims[3]);
+            }
+
             d3.select(this).style({'left': ll + 'px', 'top': tt + 'px'});
             _this.updateDragHandlePosition(d.name, {'left': ll, 'top': tt});
             // bring it to front
