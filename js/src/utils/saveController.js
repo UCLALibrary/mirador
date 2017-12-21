@@ -9,7 +9,8 @@
       historySize: null, // wishful thinking for later.
       sessionID: null,
       slots: [],
-      eventEmitter: null
+      eventEmitter: null,
+      localStorageQuotaExceptionThrown: false
     });
 
     // error check - removes invalid annotation tools
@@ -421,7 +422,15 @@
       // localStorage is a key:value store that
       // only accepts strings.
 
-      localStorage.setItem(_this.sessionID, JSON.stringify(_this.cleanup(_this.currentConfig)));
+      try {
+        localStorage.setItem(_this.sessionID, JSON.stringify(_this.cleanup(_this.currentConfig)));
+      } catch (e) {
+        if (e instanceof DOMException && !_this.localStorageQuotaExceptionThrown) {
+          alert("Please report the following information to 'https://sinai-lib.atlassian.net/browse/PAL-11'\n\n:" + e.toString());
+          _this.localStorageQuotaExceptionThrown = true;
+        }
+        throw e;
+      }
     }
 
   };
