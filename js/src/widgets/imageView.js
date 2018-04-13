@@ -97,6 +97,10 @@
       } else {
         _this.eventEmitter.publish('SET_BOTTOM_PANEL_VISIBILITY.' + this.windowId, null);
       }
+
+      // show image manipulation controls on init
+      this.hud.manipulationState.startup(this);
+      this.hud.manipulationState.displayOn(this);
     },
 
     template: $.Handlebars.compile([
