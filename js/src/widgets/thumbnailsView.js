@@ -65,9 +65,17 @@
         width = _this.thumbInfo.thumbsHeight;
         thumbnailUrl = $.getThumbnailForCanvas(canvas, width);
 
+        var title = $.JsonLd.getTextValue(canvas.label),
+        canvasThumbnailLabelTransform = _this.state.getStateProperty('canvasThumbnailLabelTransform');
+        if (canvasThumbnailLabelTransform) {
+            var match = canvasThumbnailLabelTransform[0];
+            var replace = canvasThumbnailLabelTransform[1];
+            title = title.replace(new RegExp(match), replace);
+        }
+
         return {
           thumbUrl: thumbnailUrl,
-          title:    $.JsonLd.getTextValue(canvas.label),
+          title:    title,
           id:       canvas['@id'],
           width:    width,
           highlight: _this.currentImgIndex === index ? 'highlight' : ''

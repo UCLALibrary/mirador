@@ -238,7 +238,13 @@
     'lockController' : {
       'lockProfile' : 'lazyZoom',
       'notifyMaxMin' : true
-    }
+    },
+
+    // transformation to apply to canvas.label, specified as an array to be fed to
+    //   canvas.label.replace(new RegExp(array[0]), array[1])
+    //
+    // either false or [regexpMatchString, regexpReplaceString]
+    'canvasThumbnailLabelTransform': false
   };
 
 }(Mirador));
