@@ -94,13 +94,16 @@
 
       var sessionID = window.location.hash.substring(1); // will return empty string if none exists, causing the or statement below to evaluate to false, generating a new sesssionID.
 
-      if (sessionID) {
-        this.sessionID =  sessionID;
-      } else {
-        this.sessionID = $.genUUID(); // might want a cleaner thing for the url.
+      var saveSessionSafe = config.saveSessionSafe;
+      if (!saveSessionSafe) {
+        if (sessionID) {
+          this.sessionID =  sessionID;
+        } else {
+          this.sessionID = $.genUUID(); // might want a cleaner thing for the url.
+        }
       }
 
-      if (localStorage.getItem(this.sessionID)) {
+      if ((!saveSessionSafe && localStorage.getItem(this.sessionID)) || (saveSessionSafe && sessionID === 'saved-session')) {
         this.currentConfig = JSON.parse(localStorage.getItem(sessionID));
       } else {
         var paramURL = window.location.search.substring(1);
@@ -113,6 +116,11 @@
           this.currentConfig = config;
         }
       }
+
+      if (saveSessionSafe) {
+        this.sessionID = sessionID = 'saved-session';
+      }
+
       //remove empty hashes from config
       this.currentConfig.windowObjects = jQuery.map(this.currentConfig.windowObjects, function(value, index) {
         if (Object.keys(value).length === 0) return null;
@@ -425,11 +433,15 @@
       try {
         localStorage.setItem(_this.sessionID, JSON.stringify(_this.cleanup(_this.currentConfig)));
       } catch (e) {
-        if (e instanceof DOMException && !_this.localStorageQuotaExceptionThrown) {
-          alert("Please report the following information to 'https://sinai-lib.atlassian.net/browse/PAL-11'\n\n:" + e.toString());
-          _this.localStorageQuotaExceptionThrown = true;
+        if (e instanceof DOMException) {
+          if (!_this.localStorageQuotaExceptionThrown) {
+            console.error(e.toString());
+            console.error('Please make room in this browser\'s LocalStorage entry for ' + window.location.hostname + ' by deleting UUID-keyed entries (saved workspaces) that are no longer needed. See https://github.com/ProjectMirador/mirador/issues/746 and https://sinai-lib.atlassian.net/browse/PAL-11 for more information.');
+            _this.localStorageQuotaExceptionThrown = true;
+          }
+        } else {
+          throw e;
         }
-        throw e;
       }
     }
 
