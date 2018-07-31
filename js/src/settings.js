@@ -70,6 +70,7 @@
       },
       "sidePanelVisible" : true, //whether or not to make the side panel visible in this window on load. This setting is dependent on sidePanel being true
       "overlay" : true, //whether or not to make the metadata overlay available/visible in this window
+      "overlayManifestLink" : true, //whether or not to display a link to the currently viewed IIIF manifest in the metadata overlay
       "canvasControls": { // The types of controls available to be displayed on a canvas
         "annotations" : {
           "annotationLayer" : true, //whether or not to make annotation layer available in this window
