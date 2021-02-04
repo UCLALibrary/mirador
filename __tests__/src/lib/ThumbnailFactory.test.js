@@ -15,27 +15,11 @@ function createImageSubject(jsonld, iiifOpts) {
   return getThumbnail(new Resource(jsonld, {}), iiifOpts);
 }
 
-/** */
-function iiifService(url, props = {}, serviceProps = {}) {
-  return ({
-    id: 'arbitrary-url',
-    ...props,
-    service: [
-      {
-        id: url,
-        profile: 'level0',
-        type: 'ImageService3',
-        ...serviceProps,
-      },
-    ],
-  });
-}
-
 describe('getThumbnail', () => {
   const url = 'http://example.com';
-  const iiifLevel0Service = iiifService(url, {}, { profile: 'level0' });
-  const iiifLevel1Service = iiifService(url, { height: 2000, width: 1000 }, { profile: 'level1' });
-  const iiifLevel2Service = iiifService(url, { height: 2000, width: 1000 }, { profile: 'level2' });
+  const iiifLevel0Service = { id: url, profile: 'level0', type: 'ImageService3' };
+  const iiifLevel1Service = { id: url, profile: 'level1', type: 'ImageService3' };
+  const iiifLevel2Service = { id: url, profile: 'level2', type: 'ImageService3' };
 
   describe('with a thumbnail', () => {
     it('return the thumbnail and metadata', () => {
@@ -43,7 +27,16 @@ describe('getThumbnail', () => {
     });
 
     it('return the IIIF service of the thumbnail', () => {
-      expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel1Service })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+      expect(createSubject({
+        '@id': 'xyz',
+        '@type': 'Whatever',
+        thumbnail: {
+          height: 2000,
+          id: 'arbitrary-url',
+          service: [iiifLevel1Service],
+          width: 1000,
+        },
+      })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     describe('with image size constraints', () => {
@@ -52,19 +45,46 @@ describe('getThumbnail', () => {
       });
 
       it('does nothing with a IIIF level 0 service', () => {
-        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel0Service }, { maxWidth: 50 })).toEqual({ url: 'arbitrary-url' });
+        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { id: 'arbitrary-url', service: [iiifLevel0Service] } }, { maxWidth: 50 })).toEqual({ url: 'arbitrary-url' });
       });
 
       it('calculates constraints for a IIIF level 1 service', () => {
-        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel1Service }, { maxWidth: 150 })).toEqual({ height: 300, url: `${url}/full/150,/0/default.jpg`, width: 150 });
+        expect(createSubject({
+          '@id': 'xyz',
+          '@type': 'Whatever',
+          thumbnail: {
+            height: 2000,
+            id: 'arbitrary-url',
+            service: [iiifLevel1Service],
+            width: 1000,
+          },
+        }, { maxWidth: 150 })).toEqual({ height: 300, url: `${url}/full/150,/0/default.jpg`, width: 150 });
       });
 
       it('calculates constraints for a IIIF level 2 service', () => {
-        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel2Service }, { maxHeight: 200, maxWidth: 150 })).toEqual({ height: 200, url: `${url}/full/!150,200/0/default.jpg`, width: 100 });
+        expect(createSubject({
+          '@id': 'xyz',
+          '@type': 'Whatever',
+          thumbnail: {
+            height: 2000,
+            id: 'arbitrary-url',
+            service: [iiifLevel2Service],
+            width: 1000,
+          },
+        }, { maxHeight: 200, maxWidth: 150 })).toEqual({ height: 200, url: `${url}/full/!150,200/0/default.jpg`, width: 100 });
       });
 
       it('applies a minumum size to image constraints to encourage asset reuse', () => {
-        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel2Service }, { maxHeight: 100, maxWidth: 100 })).toEqual({ height: 120, url: `${url}/full/!120,120/0/default.jpg`, width: 60 });
+        expect(createSubject({
+          '@id': 'xyz',
+          '@type': 'Whatever',
+          thumbnail: {
+            height: 2000,
+            id: 'arbitrary-url',
+            service: [iiifLevel2Service],
+            width: 1000,
+          },
+        }, { maxHeight: 100, maxWidth: 100 })).toEqual({ height: 120, url: `${url}/full/!120,120/0/default.jpg`, width: 60 });
       });
     });
   });
@@ -79,8 +99,8 @@ describe('getThumbnail', () => {
     describe('with a level 0 IIIF service', () => {
       it('returns the image', () => {
         expect(createImageSubject({
-          ...iiifLevel0Service,
           id: 'xyz',
+          service: [iiifLevel0Service],
           type: 'Image',
         })).toEqual({ url: 'xyz' });
       });
@@ -93,8 +113,11 @@ describe('getThumbnail', () => {
           { height: 1000, width: 1000 },
         ];
         const obj = {
-          ...(iiifService(url, {}, { profile: 'level0', sizes })),
           id: 'xyz',
+          service: [{
+            ...iiifLevel0Service,
+            sizes,
+          }],
           type: 'Image',
         };
 
@@ -106,17 +129,27 @@ describe('getThumbnail', () => {
     describe('with a IIIF service', () => {
       it('prefers the image service over a non-IIIF thumbnail', () => {
         expect(createImageSubject({
-          ...iiifLevel1Service,
+          height: 2000,
           id: 'xyz',
+          service: [iiifLevel1Service],
           thumbnail: { '@id': 'some-url', height: 70, width: 50 },
           type: 'Image',
+          width: 1000,
         })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
       it('prefers a IIIF thumbnail over the image service', () => {
         expect(createImageSubject({
-          ...(iiifService('some-url', {}, { profile: 'level1' })),
           id: 'xyz',
-          thumbnail: { ...iiifLevel1Service },
+          service: [{
+            ...iiifLevel1Service,
+            id: 'some-url',
+          }],
+          thumbnail: {
+            height: 2000,
+            id: 'arbitrary-url',
+            service: [iiifLevel1Service],
+            width: 1000,
+          },
           type: 'Image',
         })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
@@ -125,7 +158,15 @@ describe('getThumbnail', () => {
 
   describe('with a canvas', () => {
     it('uses the thumbnail', () => {
-      expect(createSubject({ ...canvas.__jsonld, thumbnail: { ...iiifLevel1Service } })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+      expect(createSubject({
+        ...canvas.__jsonld,
+        thumbnail: {
+          height: 2000,
+          id: 'arbitrary-url',
+          service: [iiifLevel1Service],
+          width: 1000,
+        },
+      })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     it('uses the first image resource', () => {
@@ -137,7 +178,12 @@ describe('getThumbnail', () => {
     it('uses the thumbnail', () => {
       const manifestWithThumbnail = Utils.parseManifest({
         ...manifest.__jsonld,
-        thumbnail: { ...iiifLevel1Service },
+        thumbnail: {
+          height: 2000,
+          id: 'arbitrary-url',
+          service: [iiifLevel1Service],
+          width: 1000,
+        },
       });
 
       expect(getThumbnail(manifestWithThumbnail)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
@@ -170,7 +216,12 @@ describe('getThumbnail', () => {
             type: 'Manifest',
           },
         ],
-        thumbnail: { ...iiifLevel1Service },
+        thumbnail: {
+          height: 2000,
+          id: 'arbitrary-url',
+          service: [iiifLevel1Service],
+          width: 1000,
+        },
         type: 'Collection',
       });
       expect(getThumbnail(collection)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
