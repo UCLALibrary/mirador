@@ -1,14 +1,9 @@
-import { ManifestResource, Resource, Utils } from 'manifesto.js/dist-esmodule';
+import { Canvas, Resource, Utils } from 'manifesto.js/dist-esmodule';
 import getThumbnail from '../../../src/lib/ThumbnailFactory';
 import fixture from '../../fixtures/version-2/019.json';
 
 const manifest = Utils.parseManifest(fixture);
 const canvas = manifest.getSequences()[0].getCanvases()[0];
-
-/** */
-function createSubject(jsonld, iiifOpts) {
-  return getThumbnail(new ManifestResource(jsonld, {}), iiifOpts);
-}
 
 /** */
 function createImageSubject(jsonld, iiifOpts) {
@@ -23,12 +18,12 @@ describe('getThumbnail', () => {
 
   describe('with a thumbnail', () => {
     it('return the thumbnail and metadata', () => {
-      const obj = { '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url, height: 70, width: 50 } };
-      expect(createSubject(obj)).toEqual({ height: 70, url, width: 50 });
+      const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url, height: 70, width: 50 } });
+      expect(getThumbnail(myCanvas)).toEqual({ height: 70, url, width: 50 });
     });
 
     it('return the IIIF service of the thumbnail', () => {
-      const obj = {
+      const myCanvas = new Canvas({
         '@id': 'xyz',
         '@type': 'Whatever',
         thumbnail: {
@@ -37,23 +32,23 @@ describe('getThumbnail', () => {
           service: [iiifLevel1Service],
           width: 1000,
         },
-      };
-      expect(createSubject(obj)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+      });
+      expect(getThumbnail(myCanvas)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     describe('with image size constraints', () => {
       it('does nothing with a static resource', () => {
-        const obj = { '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url } };
-        expect(createSubject(obj, { maxWidth: 50 })).toEqual({ url });
+        const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url } });
+        expect(getThumbnail(myCanvas, { maxWidth: 50 })).toEqual({ url });
       });
 
       it('does nothing with a IIIF level 0 service', () => {
-        const obj = { '@id': 'xyz', '@type': 'Whatever', thumbnail: { id: 'arbitrary-url', service: [iiifLevel0Service] } };
-        expect(createSubject(obj, { maxWidth: 50 })).toEqual({ url: 'arbitrary-url' });
+        const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { id: 'arbitrary-url', service: [iiifLevel0Service] } });
+        expect(getThumbnail(myCanvas, { maxWidth: 50 })).toEqual({ url: 'arbitrary-url' });
       });
 
       it('calculates constraints for a IIIF level 1 service', () => {
-        const obj = {
+        const myCanvas = new Canvas({
           '@id': 'xyz',
           '@type': 'Whatever',
           thumbnail: {
@@ -62,12 +57,12 @@ describe('getThumbnail', () => {
             service: [iiifLevel1Service],
             width: 1000,
           },
-        };
-        expect(createSubject(obj, { maxWidth: 150 })).toEqual({ height: 300, url: `${url}/full/150,/0/default.jpg`, width: 150 });
+        });
+        expect(getThumbnail(myCanvas, { maxWidth: 150 })).toEqual({ height: 300, url: `${url}/full/150,/0/default.jpg`, width: 150 });
       });
 
       it('calculates constraints for a IIIF level 2 service', () => {
-        const obj = {
+        const myCanvas = new Canvas({
           '@id': 'xyz',
           '@type': 'Whatever',
           thumbnail: {
@@ -76,12 +71,12 @@ describe('getThumbnail', () => {
             service: [iiifLevel2Service],
             width: 1000,
           },
-        };
-        expect(createSubject(obj, { maxHeight: 200, maxWidth: 150 })).toEqual({ height: 200, url: `${url}/full/!150,200/0/default.jpg`, width: 100 });
+        });
+        expect(getThumbnail(myCanvas, { maxHeight: 200, maxWidth: 150 })).toEqual({ height: 200, url: `${url}/full/!150,200/0/default.jpg`, width: 100 });
       });
 
       it('applies a minumum size to image constraints to encourage asset reuse', () => {
-        const obj = {
+        const myCanvas = new Canvas({
           '@id': 'xyz',
           '@type': 'Whatever',
           thumbnail: {
@@ -90,8 +85,8 @@ describe('getThumbnail', () => {
             service: [iiifLevel2Service],
             width: 1000,
           },
-        };
-        expect(createSubject(obj, { maxHeight: 100, maxWidth: 100 })).toEqual({ height: 120, url: `${url}/full/!120,120/0/default.jpg`, width: 60 });
+        });
+        expect(getThumbnail(myCanvas, { maxHeight: 100, maxWidth: 100 })).toEqual({ height: 120, url: `${url}/full/!120,120/0/default.jpg`, width: 60 });
       });
     });
   });
@@ -169,7 +164,7 @@ describe('getThumbnail', () => {
 
   describe('with a canvas', () => {
     it('uses the thumbnail', () => {
-      const obj = {
+      const myCanvas = new Canvas({
         ...canvas.__jsonld,
         thumbnail: {
           height: 2000,
@@ -177,8 +172,8 @@ describe('getThumbnail', () => {
           service: [iiifLevel1Service],
           width: 1000,
         },
-      };
-      expect(createSubject(obj)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+      });
+      expect(getThumbnail(myCanvas)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     it('uses the first image resource', () => {
