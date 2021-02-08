@@ -39,32 +39,32 @@ describe('getThumbnail', () => {
 
   describe('with a thumbnail', () => {
     it('return the thumbnail and metadata', () => {
-      expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url, height: 70, width: 50 } })).toMatchObject({ height: 70, url, width: 50 });
+      expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url, height: 70, width: 50 } })).toEqual({ height: 70, url, width: 50 });
     });
 
     it('return the IIIF service of the thumbnail', () => {
-      expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel1Service })).toMatchObject({ url: `${url}/full/,120/0/default.jpg` });
+      expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel1Service })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     describe('with image size constraints', () => {
       it('does nothing with a static resource', () => {
-        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url } }, { maxWidth: 50 })).toMatchObject({ url });
+        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url } }, { maxWidth: 50 })).toEqual({ url });
       });
 
       it('does nothing with a IIIF level 0 service', () => {
-        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel0Service }, { maxWidth: 50 })).toMatchObject({ url: 'arbitrary-url' });
+        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel0Service }, { maxWidth: 50 })).toEqual({ url: 'arbitrary-url' });
       });
 
       it('calculates constraints for a IIIF level 1 service', () => {
-        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel1Service }, { maxWidth: 150 })).toMatchObject({ height: 300, url: `${url}/full/150,/0/default.jpg`, width: 150 });
+        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel1Service }, { maxWidth: 150 })).toEqual({ height: 300, url: `${url}/full/150,/0/default.jpg`, width: 150 });
       });
 
       it('calculates constraints for a IIIF level 2 service', () => {
-        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel2Service }, { maxHeight: 200, maxWidth: 150 })).toMatchObject({ height: 200, url: `${url}/full/!150,200/0/default.jpg`, width: 100 });
+        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel2Service }, { maxHeight: 200, maxWidth: 150 })).toEqual({ height: 200, url: `${url}/full/!150,200/0/default.jpg`, width: 100 });
       });
 
       it('applies a minumum size to image constraints to encourage asset reuse', () => {
-        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel2Service }, { maxHeight: 100, maxWidth: 100 })).toMatchObject({ height: 120, url: `${url}/full/!120,120/0/default.jpg`, width: 60 });
+        expect(createSubject({ '@id': 'xyz', '@type': 'Whatever', thumbnail: iiifLevel2Service }, { maxHeight: 100, maxWidth: 100 })).toEqual({ height: 120, url: `${url}/full/!120,120/0/default.jpg`, width: 60 });
       });
     });
   });
@@ -72,7 +72,7 @@ describe('getThumbnail', () => {
   describe('with an image resource', () => {
     describe('without a IIIF service', () => {
       it('uses the thumbnail', () => {
-        expect(createImageSubject({ '@id': 'xyz', '@type': 'Image', thumbnail: { '@id': url, height: 70, width: 50 } })).toMatchObject({ height: 70, url, width: 50 });
+        expect(createImageSubject({ '@id': 'xyz', '@type': 'Image', thumbnail: { '@id': url, height: 70, width: 50 } })).toEqual({ height: 70, url, width: 50 });
       });
     });
 
@@ -82,7 +82,7 @@ describe('getThumbnail', () => {
           ...iiifLevel0Service,
           id: 'xyz',
           type: 'Image',
-        })).toMatchObject({ url: 'xyz' });
+        })).toEqual({ url: 'xyz' });
       });
 
       it('uses embedded sizes to find an appropriate size', () => {
@@ -93,13 +93,13 @@ describe('getThumbnail', () => {
           { height: 1000, width: 1000 },
         ];
         const obj = {
-          ...(iiifService('some-url', {}, { profile: 'level0', sizes })),
+          ...(iiifService(url, {}, { profile: 'level0', sizes })),
           id: 'xyz',
           type: 'Image',
         };
 
         expect(createImageSubject(obj, { maxHeight: 120, maxWidth: 120 }))
-          .toMatchObject({ height: 125, width: 125 });
+          .toEqual({ height: 125, url: `${url}/full/125,125/0/default.jpg`, width: 125 });
       });
     });
 
@@ -110,7 +110,7 @@ describe('getThumbnail', () => {
           id: 'xyz',
           thumbnail: { '@id': 'some-url', height: 70, width: 50 },
           type: 'Image',
-        })).toMatchObject({ url: `${url}/full/,120/0/default.jpg` });
+        })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
       it('prefers a IIIF thumbnail over the image service', () => {
         expect(createImageSubject({
@@ -118,18 +118,18 @@ describe('getThumbnail', () => {
           id: 'xyz',
           thumbnail: { ...iiifLevel1Service },
           type: 'Image',
-        })).toMatchObject({ url: `${url}/full/,120/0/default.jpg` });
+        })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
     });
   });
 
   describe('with a canvas', () => {
     it('uses the thumbnail', () => {
-      expect(createSubject({ ...canvas.__jsonld, thumbnail: { ...iiifLevel1Service } })).toMatchObject({ url: `${url}/full/,120/0/default.jpg` });
+      expect(createSubject({ ...canvas.__jsonld, thumbnail: { ...iiifLevel1Service } })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     it('uses the first image resource', () => {
-      expect(getThumbnail(canvas)).toMatchObject({ url: 'https://stacks.stanford.edu/image/iiif/hg676jb4964%2F0380_796-44/full/,120/0/default.jpg' });
+      expect(getThumbnail(canvas)).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/hg676jb4964%2F0380_796-44/full/,120/0/default.jpg', width: 170 });
     });
   });
 
@@ -140,16 +140,16 @@ describe('getThumbnail', () => {
         thumbnail: { ...iiifLevel1Service },
       });
 
-      expect(getThumbnail(manifestWithThumbnail)).toMatchObject({ url: `${url}/full/,120/0/default.jpg` });
+      expect(getThumbnail(manifestWithThumbnail)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     it('uses the startCanvas', () => {
       const manifestWithStartCanvas = Utils.parseManifest({ ...manifest.__jsonld, start: { id: 'https://purl.stanford.edu/fr426cg9537/iiif/canvas/fr426cg9537_1' } });
-      expect(getThumbnail(manifestWithStartCanvas)).toMatchObject({ url: 'https://stacks.stanford.edu/image/iiif/fr426cg9537%2FSC1094_s3_b14_f17_Cats_1976_0005/full/,120/0/default.jpg' });
+      expect(getThumbnail(manifestWithStartCanvas)).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/fr426cg9537%2FSC1094_s3_b14_f17_Cats_1976_0005/full/,120/0/default.jpg', width: 176 });
     });
 
     it('uses the first canvas', () => {
-      expect(getThumbnail(manifest)).toMatchObject({ url: 'https://stacks.stanford.edu/image/iiif/hg676jb4964%2F0380_796-44/full/,120/0/default.jpg' });
+      expect(getThumbnail(manifest)).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/hg676jb4964%2F0380_796-44/full/,120/0/default.jpg', width: 170 });
     });
   });
 
@@ -173,7 +173,7 @@ describe('getThumbnail', () => {
         thumbnail: { ...iiifLevel1Service },
         type: 'Collection',
       });
-      expect(getThumbnail(collection)).toMatchObject({ url: `${url}/full/,120/0/default.jpg` });
+      expect(getThumbnail(collection)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     it('uses the first manifest', () => {
@@ -194,7 +194,7 @@ describe('getThumbnail', () => {
         ],
         type: 'Collection',
       });
-      expect(getThumbnail(collection)).toMatchObject({ url: 'https://example.org/manifest1/thumbnail.jpg' });
+      expect(getThumbnail(collection)).toEqual({ url: 'https://example.org/manifest1/thumbnail.jpg' });
     });
   });
 });
