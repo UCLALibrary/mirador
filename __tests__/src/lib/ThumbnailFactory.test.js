@@ -5,11 +5,6 @@ import fixture from '../../fixtures/version-2/019.json';
 const manifest = Utils.parseManifest(fixture);
 const canvas = manifest.getSequences()[0].getCanvases()[0];
 
-/** */
-function createImageSubject(jsonld, iiifOpts) {
-  return getThumbnail(new Resource(jsonld, {}), iiifOpts);
-}
-
 describe('getThumbnail', () => {
   const url = 'http://example.com';
   const iiifLevel0Service = { id: url, profile: 'level0', type: 'ImageService3' };
@@ -94,56 +89,54 @@ describe('getThumbnail', () => {
   describe('with an image resource', () => {
     describe('without a IIIF service', () => {
       it('uses the thumbnail', () => {
-        const obj = { '@id': 'xyz', '@type': 'Image', thumbnail: { '@id': url, height: 70, width: 50 } };
-        expect(createImageSubject(obj)).toEqual({ height: 70, url, width: 50 });
+        const myImage = new Resource({ '@id': 'xyz', '@type': 'Image', thumbnail: { '@id': url, height: 70, width: 50 } });
+        expect(getThumbnail(myImage)).toEqual({ height: 70, url, width: 50 });
       });
     });
 
     describe('with a level 0 IIIF service', () => {
       it('returns the image', () => {
-        const obj = {
+        const myImage = new Resource({
           id: 'xyz',
           service: [iiifLevel0Service],
           type: 'Image',
-        };
-        expect(createImageSubject(obj)).toEqual({ url: 'xyz' });
+        });
+        expect(getThumbnail(myImage)).toEqual({ url: 'xyz' });
       });
 
       it('uses embedded sizes to find an appropriate size', () => {
-        const sizes = [
-          { height: 25, width: 25 },
-          { height: 100, width: 100 },
-          { height: 125, width: 125 },
-          { height: 1000, width: 1000 },
-        ];
-        const obj = {
+        const myImage = new Resource({
           id: 'xyz',
           service: [{
             ...iiifLevel0Service,
-            sizes,
+            sizes: [
+              { height: 25, width: 25 },
+              { height: 100, width: 100 },
+              { height: 125, width: 125 },
+              { height: 1000, width: 1000 },
+            ],
           }],
           type: 'Image',
-        };
-
-        expect(createImageSubject(obj, { maxHeight: 120, maxWidth: 120 }))
+        });
+        expect(getThumbnail(myImage, { maxHeight: 120, maxWidth: 120 }))
           .toEqual({ height: 125, url: `${url}/full/125,125/0/default.jpg`, width: 125 });
       });
     });
 
     describe('with a IIIF service', () => {
       it('prefers the image service over a non-IIIF thumbnail', () => {
-        const obj = {
+        const myImage = new Resource({
           height: 2000,
           id: 'xyz',
           service: [iiifLevel1Service],
           thumbnail: { '@id': 'some-url', height: 70, width: 50 },
           type: 'Image',
           width: 1000,
-        };
-        expect(createImageSubject(obj)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+        });
+        expect(getThumbnail(myImage)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
       it('prefers a IIIF thumbnail over the image service', () => {
-        const obj = {
+        const myImage = new Resource({
           id: 'xyz',
           service: [{
             ...iiifLevel1Service,
@@ -156,8 +149,8 @@ describe('getThumbnail', () => {
             width: 1000,
           },
           type: 'Image',
-        };
-        expect(createImageSubject(obj)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+        });
+        expect(getThumbnail(myImage)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
     });
   });
