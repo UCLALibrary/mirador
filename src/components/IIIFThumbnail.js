@@ -4,7 +4,7 @@ import 'intersection-observer'; // polyfill needed for Safari
 import Typography from '@material-ui/core/Typography';
 import IntersectionObserver from '@researchgate/react-intersection-observer';
 import classNames from 'classnames';
-import getThumbnail from '../lib/ThumbnailFactory';
+import ThumbnailFactory from '../lib/ThumbnailFactory';
 
 /**
  * Uses InteractionObserver to "lazy" load canvas thumbnails that are in view.
@@ -114,7 +114,7 @@ export class IIIFThumbnail extends Component {
 
     if (thumbnail) return thumbnail;
 
-    const image = getThumbnail(resource, { maxHeight, maxWidth });
+    const image = new ThumbnailFactory(resource, { maxHeight, maxWidth }).get();
 
     if (image && image.url) return image;
 

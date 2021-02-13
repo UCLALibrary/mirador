@@ -1,11 +1,18 @@
 import { Canvas, Resource, Utils } from 'manifesto.js/dist-esmodule';
-import getThumbnail from '../../../src/lib/ThumbnailFactory';
+import ThumbnailFactory from '../../../src/lib/ThumbnailFactory';
 import fixture from '../../fixtures/version-2/019.json';
 
 const manifest = Utils.parseManifest(fixture);
 const canvas = manifest.getSequences()[0].getCanvases()[0];
 
-describe('getThumbnail', () => {
+/**
+ * Helper method to simplify the syntax a bit for testing purposes.
+ */
+function getThumbnail(resource, iiifOpts) {
+  return new ThumbnailFactory(resource, iiifOpts).get();
+}
+
+describe('ThumbnailFactory', () => {
   const url = 'http://example.com';
   const iiifLevel0Service = { id: url, profile: 'level0', type: 'ImageService3' };
   const iiifLevel1Service = { id: url, profile: 'level1', type: 'ImageService3' };

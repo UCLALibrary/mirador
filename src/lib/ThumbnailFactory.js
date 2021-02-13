@@ -258,9 +258,4 @@ class ThumbnailFactory {
   }
 }
 
-/** */
-function getBestThumbnail(resource, iiifOpts) {
-  return new ThumbnailFactory(resource, iiifOpts).get();
-}
-
-export default getBestThumbnail;
+export default ThumbnailFactory;
