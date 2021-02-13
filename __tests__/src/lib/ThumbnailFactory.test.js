@@ -1,9 +1,8 @@
-import { Canvas, Resource, Utils } from 'manifesto.js/dist-esmodule';
+import {
+  Canvas, Resource, Service, Utils,
+} from 'manifesto.js/dist-esmodule';
 import ThumbnailFactory from '../../../src/lib/ThumbnailFactory';
 import fixture from '../../fixtures/version-2/019.json';
-
-const manifest = Utils.parseManifest(fixture);
-const canvas = manifest.getSequences()[0].getCanvases()[0];
 
 /**
  * Helper method to simplify the syntax a bit for testing purposes.
@@ -13,6 +12,9 @@ function getThumbnail(resource, iiifOpts) {
 }
 
 describe('ThumbnailFactory', () => {
+  const manifest = Utils.parseManifest(fixture);
+  const canvas = manifest.getSequences()[0].getCanvases()[0];
+
   const url = 'http://example.com';
   const iiifLevel0Service = { id: url, profile: 'level0', type: 'ImageService3' };
   const iiifLevel1Service = { id: url, profile: 'level1', type: 'ImageService3' };
@@ -274,6 +276,41 @@ describe('ThumbnailFactory', () => {
         type: 'Collection',
       });
       expect(getThumbnail(collection)).toEqual({ url: 'https://example.org/manifest1/thumbnail.jpg' });
+    });
+  });
+
+  describe('selectBestImageSize', () => {
+    const targetWidth = 120;
+    const targetHeight = 120;
+
+    it('selects the smallest size larger than the target, if one is available', () => {
+      const sizes = [
+        { height: 75, width: 75 },
+        { height: 150, width: 150 },
+        { height: 300, width: 300 },
+      ];
+      const service = new Service({
+        ...iiifLevel0Service,
+        sizes,
+      });
+
+      expect(ThumbnailFactory.selectBestImageSize(service, targetWidth * targetHeight))
+        .toEqual(sizes[1]);
+    });
+
+    it('selects the largest size smaller than the target, if none larger are available', () => {
+      const sizes = [
+        { height: 25, width: 25 },
+        { height: 50, width: 50 },
+        { height: 75, width: 75 },
+      ];
+      const service = new Service({
+        ...iiifLevel0Service,
+        sizes,
+      });
+
+      expect(ThumbnailFactory.selectBestImageSize(service, targetWidth * targetHeight))
+        .toEqual(sizes[2]);
     });
   });
 });
