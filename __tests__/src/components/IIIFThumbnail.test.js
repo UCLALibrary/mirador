@@ -92,9 +92,4 @@ describe('IIIFThumbnail', () => {
       ),
     ).toBe(true);
   });
-
-  it('renders children', () => {
-    wrapper = createWrapper({ children: <span id="hi" />, thumbnail });
-    expect(wrapper.find('span').length).toEqual(1);
-  });
 });

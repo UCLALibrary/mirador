@@ -132,7 +132,6 @@ export class IIIFThumbnail extends Component {
    */
   render() {
     const {
-      children,
       classes,
       imagePlaceholder,
       labelled,
@@ -162,14 +161,12 @@ export class IIIFThumbnail extends Component {
             </Typography>
           </div>
         )}
-        {children}
       </div>
     );
   }
 }
 
 IIIFThumbnail.propTypes = {
-  children: PropTypes.node,
   classes: PropTypes.objectOf(PropTypes.string),
   imagePlaceholder: PropTypes.string,
   label: PropTypes.string,
@@ -187,7 +184,6 @@ IIIFThumbnail.propTypes = {
 };
 
 IIIFThumbnail.defaultProps = {
-  children: null,
   classes: {},
   // Transparent "gray"
   imagePlaceholder: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mMMDQmtBwADgwF/Op8FmAAAAABJRU5ErkJggg==',
