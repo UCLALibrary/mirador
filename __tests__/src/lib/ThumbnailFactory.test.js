@@ -179,9 +179,30 @@ describe('ThumbnailFactory', () => {
     it('uses the first image resource', () => {
       expect(getThumbnail(canvas)).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/hg676jb4964%2F0380_796-44/full/,120/0/default.jpg', width: 170 });
     });
+
+    it('uses the width and height of a thumbnail without a IIIF Image API service', () => {
+      const myCanvas = new Canvas({
+        ...canvas.__jsonld,
+        thumbnail: {
+          height: 240,
+          id: 'arbitrary-url',
+          width: 180,
+        },
+      });
+      expect(getThumbnail(myCanvas)).toEqual({ height: 240, url: 'arbitrary-url', width: 180 });
+    });
   });
 
   describe('with a manifest', () => {
+    it('does nothing with a plain URL', () => {
+      const manifestWithThumbnail = Utils.parseManifest({
+        ...manifest.__jsonld,
+        thumbnail: url,
+      });
+
+      expect(getThumbnail(manifestWithThumbnail, { maxWidth: 50 })).toEqual({ url });
+    });
+
     it('uses the thumbnail', () => {
       const manifestWithThumbnail = Utils.parseManifest({
         ...manifest.__jsonld,
