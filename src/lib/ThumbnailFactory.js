@@ -147,22 +147,21 @@ class ThumbnailFactory {
     const aspectRatio = resource.getWidth()
       && resource.getHeight()
       && (resource.getWidth() / resource.getHeight());
+    const target = (requestedMaxWidth && requestedMaxHeight)
+      ? requestedMaxWidth * requestedMaxHeight
+      : maxHeight * maxWidth;
+    const closestSize = ThumbnailFactory.selectBestImageSize(service, target);
 
-    // just bail to a static image, even though sizes might provide something better
-    if (isLevel0ImageProfile(service)) {
-      const target = (requestedMaxWidth && requestedMaxHeight)
-        ? requestedMaxWidth * requestedMaxHeight
-        : maxHeight * maxWidth;
-      const closestSize = ThumbnailFactory.selectBestImageSize(service, target);
-
-      /** Bail if the best available size is the full size.. maybe we'll get lucky with the @id */
-      if (!closestSize && !service.getProperty('height') && !service.getProperty('width')) {
-        return ThumbnailFactory.staticImageUrl(resource);
-      }
-
+    if (closestSize) {
+      // Embedded service advertises an appropriate size
       width = closestSize.width;
       height = closestSize.height;
       size = `${width},${height}`;
+    } else if (isLevel0ImageProfile(service)) {
+      /** Bail if the best available size is the full size.. maybe we'll get lucky with the @id */
+      if (!service.getProperty('height') && !service.getProperty('width')) {
+        return ThumbnailFactory.staticImageUrl(resource);
+      }
     } else if (requestedMaxHeight && requestedMaxWidth) {
       // IIIF level 2, no problem.
       if (isLevel2ImageProfile(service)) {
