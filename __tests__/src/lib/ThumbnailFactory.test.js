@@ -193,6 +193,28 @@ describe('ThumbnailFactory', () => {
       });
       expect(getThumbnail(myCanvas)).toEqual({ height: 240, url: 'arbitrary-url', width: 180 });
     });
+
+    it('uses embedded sizes of a IIIF Image API service to find an appropriate size', () => {
+      const myCanvas = new Canvas({
+        ...canvas.__jsonld,
+        thumbnail: {
+          height: 100,
+          id: 'arbitrary-url',
+          service: [{
+            ...iiifLevel2Service,
+            sizes: [
+              { height: 25, width: 25 },
+              { height: 100, width: 100 },
+              { height: 125, width: 125 },
+              { height: 1000, width: 1000 },
+            ],
+          }],
+          width: 100,
+        },
+      });
+      expect(getThumbnail(myCanvas, { maxHeight: 120, maxWidth: 120 }))
+        .toEqual({ height: 125, url: `${url}/full/125,125/0/default.jpg`, width: 125 });
+    });
   });
 
   describe('with a manifest', () => {
