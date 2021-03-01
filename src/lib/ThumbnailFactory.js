@@ -63,7 +63,10 @@ class ThumbnailFactory {
 
   /** */
   static staticImageUrl(resource) {
-    return { height: resource.getProperty('height'), url: resource.id, width: resource.getProperty('width') };
+    if (resource.getProperty('height') && resource.getProperty('width')) {
+      return { height: resource.getProperty('height'), url: resource.id, width: resource.getProperty('width') };
+    }
+    return { url: resource.id };
   }
 
   /**

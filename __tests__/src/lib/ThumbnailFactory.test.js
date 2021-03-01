@@ -22,7 +22,13 @@ describe('ThumbnailFactory', () => {
 
   describe('with a thumbnail', () => {
     it('return the thumbnail and metadata', () => {
-      const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Canvas', thumbnail: { '@id': url, height: 70, width: 50 } });
+      const myCanvas = new Canvas({
+        '@id': 'xyz',
+        '@type': 'Canvas',
+        height: 700,
+        thumbnail: { '@id': url, height: 70, width: 50 },
+        width: 500,
+      });
       expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 70, url, width: 50 });
     });
 
@@ -30,24 +36,38 @@ describe('ThumbnailFactory', () => {
       const myCanvas = new Canvas({
         '@id': 'xyz',
         '@type': 'Canvas',
+        height: 2000,
         thumbnail: {
           height: 2000,
           id: 'arbitrary-url',
           service: [iiifLevel1Service],
           width: 1000,
         },
+        width: 1000,
       });
       expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     describe('with image size constraints', () => {
       it('does nothing with a static resource', () => {
-        const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Canvas', thumbnail: { '@id': url } });
+        const myCanvas = new Canvas({
+          '@id': 'xyz',
+          '@type': 'Canvas',
+          height: 700,
+          thumbnail: { '@id': url },
+          width: 500,
+        });
         expect(getThumbnail(myCanvas, { maxWidth: 50 })).toEqual({ url });
       });
 
       it('does nothing with a IIIF level 0 service', () => {
-        const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Canvas', thumbnail: { id: 'arbitrary-url', service: [iiifLevel0Service] } });
+        const myCanvas = new Canvas({
+          '@id': 'xyz',
+          '@type': 'Canvas',
+          height: 700,
+          thumbnail: { id: 'arbitrary-url', service: [iiifLevel0Service] },
+          width: 500,
+        });
         expect(getThumbnail(myCanvas, { maxWidth: 50 })).toEqual({ url: 'arbitrary-url' });
       });
 
@@ -55,12 +75,14 @@ describe('ThumbnailFactory', () => {
         const myCanvas = new Canvas({
           '@id': 'xyz',
           '@type': 'Canvas',
+          height: 2000,
           thumbnail: {
             height: 2000,
             id: 'arbitrary-url',
             service: [iiifLevel1Service],
             width: 1000,
           },
+          width: 1000,
         });
         expect(getThumbnail(myCanvas, { maxWidth: 150 })).toEqual({ height: 300, url: `${url}/full/150,/0/default.jpg`, width: 150 });
       });
@@ -69,12 +91,14 @@ describe('ThumbnailFactory', () => {
         const myCanvas = new Canvas({
           '@id': 'xyz',
           '@type': 'Canvas',
+          height: 2000,
           thumbnail: {
             height: 2000,
             id: 'arbitrary-url',
             service: [iiifLevel2Service],
             width: 1000,
           },
+          width: 1000,
         });
         expect(getThumbnail(myCanvas, { maxHeight: 200, maxWidth: 150 })).toEqual({ height: 200, url: `${url}/full/!150,200/0/default.jpg`, width: 100 });
       });
@@ -83,12 +107,14 @@ describe('ThumbnailFactory', () => {
         const myCanvas = new Canvas({
           '@id': 'xyz',
           '@type': 'Canvas',
+          height: 2000,
           thumbnail: {
             height: 2000,
             id: 'arbitrary-url',
             service: [iiifLevel2Service],
             width: 1000,
           },
+          width: 1000,
         });
         expect(getThumbnail(myCanvas, { maxHeight: 100, maxWidth: 100 })).toEqual({ height: 120, url: `${url}/full/!120,120/0/default.jpg`, width: 60 });
       });
@@ -168,12 +194,14 @@ describe('ThumbnailFactory', () => {
     it('uses the thumbnail', () => {
       const myCanvas = new Canvas({
         ...canvas.__jsonld,
+        height: 2000,
         thumbnail: {
           height: 2000,
           id: 'arbitrary-url',
           service: [iiifLevel1Service],
           width: 1000,
         },
+        width: 1000,
       });
       expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
@@ -185,11 +213,13 @@ describe('ThumbnailFactory', () => {
     it('uses the width and height of a thumbnail without a IIIF Image API service', () => {
       const myCanvas = new Canvas({
         ...canvas.__jsonld,
+        height: 800,
         thumbnail: {
           height: 240,
           id: 'arbitrary-url',
           width: 180,
         },
+        width: 600,
       });
       expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 240, url: 'arbitrary-url', width: 180 });
     });
@@ -197,6 +227,7 @@ describe('ThumbnailFactory', () => {
     it('uses embedded sizes of a IIIF Image API service to find an appropriate size', () => {
       const myCanvas = new Canvas({
         ...canvas.__jsonld,
+        height: 800,
         thumbnail: {
           height: 100,
           id: 'arbitrary-url',
@@ -211,6 +242,7 @@ describe('ThumbnailFactory', () => {
           }],
           width: 100,
         },
+        width: 800,
       });
       expect(getThumbnail(myCanvas, { maxHeight: 120, maxWidth: 120 }))
         .toEqual({ height: 125, url: `${url}/full/125,125/0/default.jpg`, width: 125 });
