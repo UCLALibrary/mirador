@@ -23,7 +23,7 @@ describe('ThumbnailFactory', () => {
   describe('with a thumbnail', () => {
     it('return the thumbnail and metadata', () => {
       const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Canvas', thumbnail: { '@id': url, height: 70, width: 50 } });
-      expect(getThumbnail(myCanvas)).toEqual({ height: 70, url, width: 50 });
+      expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 70, url, width: 50 });
     });
 
     it('return the IIIF service of the thumbnail', () => {
@@ -37,7 +37,7 @@ describe('ThumbnailFactory', () => {
           width: 1000,
         },
       });
-      expect(getThumbnail(myCanvas)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+      expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     describe('with image size constraints', () => {
@@ -99,7 +99,7 @@ describe('ThumbnailFactory', () => {
     describe('without a IIIF service', () => {
       it('uses the thumbnail', () => {
         const myImage = new Resource({ '@id': 'xyz', '@type': 'Image', thumbnail: { '@id': url, height: 70, width: 50 } });
-        expect(getThumbnail(myImage)).toEqual({ height: 70, url, width: 50 });
+        expect(getThumbnail(myImage, { maxHeight: 120 })).toEqual({ height: 70, url, width: 50 });
       });
     });
 
@@ -110,7 +110,7 @@ describe('ThumbnailFactory', () => {
           service: [iiifLevel0Service],
           type: 'Image',
         });
-        expect(getThumbnail(myImage)).toEqual({ url: 'xyz' });
+        expect(getThumbnail(myImage, { maxHeight: 120 })).toEqual({ url: 'xyz' });
       });
 
       it('uses embedded sizes to find an appropriate size', () => {
@@ -142,7 +142,7 @@ describe('ThumbnailFactory', () => {
           type: 'Image',
           width: 1000,
         });
-        expect(getThumbnail(myImage)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+        expect(getThumbnail(myImage, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
       it('prefers a IIIF thumbnail over the image service', () => {
         const myImage = new Resource({
@@ -159,7 +159,7 @@ describe('ThumbnailFactory', () => {
           },
           type: 'Image',
         });
-        expect(getThumbnail(myImage)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+        expect(getThumbnail(myImage, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
     });
   });
@@ -175,11 +175,11 @@ describe('ThumbnailFactory', () => {
           width: 1000,
         },
       });
-      expect(getThumbnail(myCanvas)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+      expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     it('uses the first image resource', () => {
-      expect(getThumbnail(canvas)).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/hg676jb4964%2F0380_796-44/full/,120/0/default.jpg', width: 170 });
+      expect(getThumbnail(canvas, { maxHeight: 120 })).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/hg676jb4964%2F0380_796-44/full/,120/0/default.jpg', width: 170 });
     });
 
     it('uses the width and height of a thumbnail without a IIIF Image API service', () => {
@@ -191,7 +191,7 @@ describe('ThumbnailFactory', () => {
           width: 180,
         },
       });
-      expect(getThumbnail(myCanvas)).toEqual({ height: 240, url: 'arbitrary-url', width: 180 });
+      expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 240, url: 'arbitrary-url', width: 180 });
     });
 
     it('uses embedded sizes of a IIIF Image API service to find an appropriate size', () => {
@@ -243,11 +243,11 @@ describe('ThumbnailFactory', () => {
 
     it('uses the startCanvas', () => {
       const manifestWithStartCanvas = Utils.parseManifest({ ...manifest.__jsonld, start: { id: 'https://purl.stanford.edu/fr426cg9537/iiif/canvas/fr426cg9537_1' } });
-      expect(getThumbnail(manifestWithStartCanvas)).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/fr426cg9537%2FSC1094_s3_b14_f17_Cats_1976_0005/full/,120/0/default.jpg', width: 176 });
+      expect(getThumbnail(manifestWithStartCanvas, { maxHeight: 120 })).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/fr426cg9537%2FSC1094_s3_b14_f17_Cats_1976_0005/full/,120/0/default.jpg', width: 176 });
     });
 
     it('uses the first canvas', () => {
-      expect(getThumbnail(manifest)).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/hg676jb4964%2F0380_796-44/full/,120/0/default.jpg', width: 170 });
+      expect(getThumbnail(manifest, { maxHeight: 120 })).toEqual({ height: 120, url: 'https://stacks.stanford.edu/image/iiif/hg676jb4964%2F0380_796-44/full/,120/0/default.jpg', width: 170 });
     });
   });
 
@@ -276,7 +276,7 @@ describe('ThumbnailFactory', () => {
         },
         type: 'Collection',
       });
-      expect(getThumbnail(collection)).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+      expect(getThumbnail(collection, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
     });
 
     it('uses the first manifest', () => {
@@ -297,7 +297,7 @@ describe('ThumbnailFactory', () => {
         ],
         type: 'Collection',
       });
-      expect(getThumbnail(collection)).toEqual({ url: 'https://example.org/manifest1/thumbnail.jpg' });
+      expect(getThumbnail(collection, { maxHeight: 120 })).toEqual({ url: 'https://example.org/manifest1/thumbnail.jpg' });
     });
   });
 
