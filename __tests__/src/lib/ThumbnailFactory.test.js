@@ -22,14 +22,14 @@ describe('ThumbnailFactory', () => {
 
   describe('with a thumbnail', () => {
     it('return the thumbnail and metadata', () => {
-      const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url, height: 70, width: 50 } });
+      const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Canvas', thumbnail: { '@id': url, height: 70, width: 50 } });
       expect(getThumbnail(myCanvas)).toEqual({ height: 70, url, width: 50 });
     });
 
     it('return the IIIF service of the thumbnail', () => {
       const myCanvas = new Canvas({
         '@id': 'xyz',
-        '@type': 'Whatever',
+        '@type': 'Canvas',
         thumbnail: {
           height: 2000,
           id: 'arbitrary-url',
@@ -42,19 +42,19 @@ describe('ThumbnailFactory', () => {
 
     describe('with image size constraints', () => {
       it('does nothing with a static resource', () => {
-        const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { '@id': url } });
+        const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Canvas', thumbnail: { '@id': url } });
         expect(getThumbnail(myCanvas, { maxWidth: 50 })).toEqual({ url });
       });
 
       it('does nothing with a IIIF level 0 service', () => {
-        const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Whatever', thumbnail: { id: 'arbitrary-url', service: [iiifLevel0Service] } });
+        const myCanvas = new Canvas({ '@id': 'xyz', '@type': 'Canvas', thumbnail: { id: 'arbitrary-url', service: [iiifLevel0Service] } });
         expect(getThumbnail(myCanvas, { maxWidth: 50 })).toEqual({ url: 'arbitrary-url' });
       });
 
       it('calculates constraints for a IIIF level 1 service', () => {
         const myCanvas = new Canvas({
           '@id': 'xyz',
-          '@type': 'Whatever',
+          '@type': 'Canvas',
           thumbnail: {
             height: 2000,
             id: 'arbitrary-url',
@@ -68,7 +68,7 @@ describe('ThumbnailFactory', () => {
       it('calculates constraints for a IIIF level 2 service', () => {
         const myCanvas = new Canvas({
           '@id': 'xyz',
-          '@type': 'Whatever',
+          '@type': 'Canvas',
           thumbnail: {
             height: 2000,
             id: 'arbitrary-url',
@@ -82,7 +82,7 @@ describe('ThumbnailFactory', () => {
       it('applies a minumum size to image constraints to encourage asset reuse', () => {
         const myCanvas = new Canvas({
           '@id': 'xyz',
-          '@type': 'Whatever',
+          '@type': 'Canvas',
           thumbnail: {
             height: 2000,
             id: 'arbitrary-url',
