@@ -1,6 +1,4 @@
-import {
-  Canvas, Resource, Service, Utils,
-} from 'manifesto.js/dist-esmodule';
+import { Canvas, Service, Utils } from 'manifesto.js/dist-esmodule';
 import ThumbnailFactory from '../../../src/lib/ThumbnailFactory';
 import fixture from '../../fixtures/version-2/019.json';
 
@@ -124,23 +122,48 @@ describe('ThumbnailFactory', () => {
   describe('with an image resource', () => {
     describe('without a IIIF service', () => {
       it('uses the thumbnail', () => {
-        const myImage = new Resource({ '@id': 'xyz', '@type': 'Image', thumbnail: { '@id': url, height: 70, width: 50 } });
-        expect(getThumbnail(myImage, { maxHeight: 120 })).toEqual({ height: 70, url, width: 50 });
+        const myImage = { '@id': 'xyz', '@type': 'sc:Image', thumbnail: { '@id': url, height: 70, width: 50 } };
+        const myCanvas = new Canvas({
+          '@id': 'abc',
+          '@type': 'sc:Canvas',
+          height: 700,
+          images: [{
+            '@id': 'def',
+            '@type': 'oa:Annotation',
+            motivation: 'sc:painting',
+            on: 'abc',
+            resource: myImage,
+          }],
+          width: 500,
+        });
+        expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 70, url, width: 50 });
       });
     });
 
     describe('with a level 0 IIIF service', () => {
       it('returns the image', () => {
-        const myImage = new Resource({
-          id: 'xyz',
-          service: [iiifLevel0Service],
-          type: 'Image',
+        const myImage = { id: 'xyz', service: [iiifLevel0Service], type: 'Image' };
+        const myCanvas = new Canvas({
+          height: 700,
+          id: 'abc',
+          items: [{
+            id: 'def',
+            items: [{
+              body: myImage,
+              id: 'ghi',
+              target: 'abc',
+              type: 'Annotation',
+            }],
+            type: 'AnnotationPage',
+          }],
+          type: 'Canvas',
+          width: 500,
         });
-        expect(getThumbnail(myImage, { maxHeight: 120 })).toEqual({ url: 'xyz' });
+        expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ url: 'xyz' });
       });
 
       it('uses embedded sizes to find an appropriate size', () => {
-        const myImage = new Resource({
+        const myImage = {
           id: 'xyz',
           service: [{
             ...iiifLevel0Service,
@@ -152,26 +175,58 @@ describe('ThumbnailFactory', () => {
             ],
           }],
           type: 'Image',
+        };
+        const myCanvas = new Canvas({
+          height: 1000,
+          id: 'abc',
+          items: [{
+            id: 'def',
+            items: [{
+              body: myImage,
+              id: 'ghi',
+              target: 'abc',
+              type: 'Annotation',
+            }],
+            type: 'AnnotationPage',
+          }],
+          type: 'Canvas',
+          width: 1000,
         });
-        expect(getThumbnail(myImage, { maxHeight: 120, maxWidth: 120 }))
+        expect(getThumbnail(myCanvas, { maxHeight: 120, maxWidth: 120 }))
           .toEqual({ height: 125, url: `${url}/full/125,125/0/default.jpg`, width: 125 });
       });
     });
 
     describe('with a IIIF service', () => {
       it('prefers the image service over a non-IIIF thumbnail', () => {
-        const myImage = new Resource({
+        const myImage = {
           height: 2000,
           id: 'xyz',
           service: [iiifLevel1Service],
           thumbnail: { '@id': 'some-url', height: 70, width: 50 },
           type: 'Image',
           width: 1000,
+        };
+        const myCanvas = new Canvas({
+          height: 2000,
+          id: 'abc',
+          items: [{
+            id: 'def',
+            items: [{
+              body: myImage,
+              id: 'ghi',
+              target: 'abc',
+              type: 'Annotation',
+            }],
+            type: 'AnnotationPage',
+          }],
+          type: 'Canvas',
+          width: 1000,
         });
-        expect(getThumbnail(myImage, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+        expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
       it('prefers a IIIF thumbnail over the image service', () => {
-        const myImage = new Resource({
+        const myImage = {
           id: 'xyz',
           service: [{
             ...iiifLevel1Service,
@@ -184,8 +239,24 @@ describe('ThumbnailFactory', () => {
             width: 1000,
           },
           type: 'Image',
+        };
+        const myCanvas = new Canvas({
+          height: 2000,
+          id: 'abc',
+          items: [{
+            id: 'def',
+            items: [{
+              body: myImage,
+              id: 'ghi',
+              target: 'abc',
+              type: 'Annotation',
+            }],
+            type: 'AnnotationPage',
+          }],
+          type: 'Canvas',
+          width: 1000,
         });
-        expect(getThumbnail(myImage, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
+        expect(getThumbnail(myCanvas, { maxHeight: 120 })).toEqual({ height: 120, url: `${url}/full/,120/0/default.jpg`, width: 60 });
       });
     });
   });
